@@ -1,14 +1,19 @@
 """
-
-	values of parameters to controllable actions can come from several sources:
-	
-		1) created as a result of other actions, either controllable or observable
-			(keep a pool of results obtained)
-		
-		2) specific sets of values enumerated in the model
-
-
-
+*******************************************************************
+  Copyright (c) 2013, 2014 IBM Corp.
+ 
+  All rights reserved. This program and the accompanying materials
+  are made available under the terms of the Eclipse Public License v1.0
+  and Eclipse Distribution License v1.0 which accompany this distribution. 
+ 
+  The Eclipse Public License is available at 
+     http://www.eclipse.org/legal/epl-v10.html
+  and the Eclipse Distribution License is available at 
+    http://www.eclipse.org/org/documents/edl-v10.php.
+ 
+  Contributors:
+     Ian Craggs - initial implementation and/or documentation
+*******************************************************************
 """
 
 __version__ = 0.1
