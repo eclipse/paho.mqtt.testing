@@ -1,0 +1,529 @@
+"""
+
+	values of parameters to controllable actions can come from several sources:
+	
+		1) created as a result of other actions, either controllable or observable
+			(keep a pool of results obtained)
+		
+		2) specific sets of values enumerated in the model
+
+
+"natural choices"
+    maximise the "distance" between last and next chosen routes from a particular node
+      academic notion of distance is well-defined
+      this is so that publish with many options is not tried immediately after a create too often - will this work?  what will work?  is this desirable?
+
+
+"""
+
+import random, traceback, time, sys, copy, shutil
+
+class Logs:
+
+	def __init__(self, filename="test.log"):
+		self.filename = filename
+		self.file = open(filename, "w")
+		self.index = 1
+
+	def __call__(self, *args):
+		string = ""
+		for a in args:
+			string += str(a) + " "
+		self.file.write(string+"\n")
+		print(string+"\n")
+
+	def restart(self):
+		self.file.close()
+		shutil.move(self.filename, "tests/test.log.%d" % (self.index,))
+		self.file = open(self.filename, "w")
+		self.index += 1
+		
+log = Logs()
+
+class TraceNodes:
+
+	def __init__(self, index):
+		self.arcsAdded = False # indicates if we have set the arcs field
+		self.arcs = {} # arcs leading from this node to another
+		self.used = False # have we executed this particular node?
+		self.leaf = False # is this the end of the line for this particular path?
+		self.index = index # we are counting the nodes
+
+	def addArc(self, key, value):
+		# add an arc from the current node
+		if type(value) != self.__class__:
+			print("error adding value", value)
+			traceback.print
+		self.arcs[key] = value
+
+	def isFree(self):
+		# determine whether the current node has some untrodden paths
+		#print("isFree curnode", self)
+		if self.leaf:
+			return None
+		elif not self.used:
+			return self
+		for arc in self.arcs.keys():
+			#print("isFree enabled", enabled)
+			rc = self.arcs[arc].isFree()
+			if rc:
+				return rc
+		return None
+
+	def __repr__(self):
+		return str(self.index)+", "+str(self.isSet)+", "+str(self.arcs)+\
+              ", "+str(self.used)+", "+str(self.reset)
+
+
+class Traces:
+	"""
+	A dynamic tree representing all the paths taken through the model up to now.
+	The purpose is to avoid repeating paths which have already been taken.
+	"""
+
+	def __init__(self):
+		self.nodeCount = 1
+		self.root = TraceNodes(self.nodeCount)
+		self.root.used = True
+		self.curnode = self.root
+		log("NODE index is now "+str(self.curnode.index))
+
+	def restart(self):
+		"""
+		Go back to the beginning, indicating that this node is an end of the line.
+		"""
+		self.curnode.leaf = True
+		self.curnode = self.root
+		log("NODE index is now "+str(self.curnode.index))
+
+	def addArcs(self, arcs):
+		""" 
+		In a particular state, enumerate all the paths available to leave that state.  
+		"""
+		if not self.curnode.arcsAdded:
+			for arc in arcs:
+				self.nodeCount += 1
+				self.curnode.addArc(arc, TraceNodes(self.nodeCount))
+			self.curnode.arcsAdded = True
+			log("Total number of nodes now "+str(self.nodeCount))
+
+	def selectAction(self, action, args):
+		"""
+		In the current state, goto the next state via (action, args)
+		"""
+		key = tuple([action] + args)
+		self.curnode = self.curnode.arcs[key]
+		self.curnode.used = True
+		log("NODE index is now "+str(self.curnode.index))
+
+	def findNextPath(self, callback):
+		"return one next path that isn't fully exercised"
+		found = None
+		frees = []
+		for arc in self.curnode.arcs.keys():
+			if self.curnode.arcs[arc].isFree():
+				frees.append(arc)
+
+		if len(frees) > 0:
+			if callback:
+				frees = callback(frees) # allow the test model to restrict choice
+			found = random.choice(frees) 
+
+		return found
+
+
+def combine(lista, listb):
+	""" 
+	lista is a list of lists
+	listb is a list of any sort of elements
+	"""
+	product = []
+	for elementb in listb:
+		product += [elementa + [elementb] for elementa in lista]
+	return product
+
+class Choices:
+
+	def __init__(self, value, returned=False, output=False):
+		self.value = value
+		self.returned = returned
+		self.used = 0
+		self.output = output
+
+	def valueOf(self):
+		self.used += 1
+		return self.value
+
+	def equals(self, value):
+		if self.output:
+			print("return value "+str(value)+" "+str(self.value))
+			input("input")
+		return self.value == value
+
+	def __repr__(self):
+		return str(self.value)
+
+class Actions:
+
+	def __init__(self, fn):
+		self.called = 0
+		self.fn = fn
+		self.parm_names = self.fn.__annotations__.keys() - set(["return"])
+
+	def __call__(self, *args, **kwargs):
+		self.called += 1
+		return self.fn(*args, **kwargs)
+
+	def __str__(self):
+		return self.getName()
+
+	def __repr__(self):
+		return self.getName()
+
+	def getName(self):
+		return self.fn.__name__
+
+	def getParmNames(self):
+		return self.parm_names
+
+	def getParmType(self, parm_name):
+		return self.fn.__annotations__[parm_name]
+
+	def getReturnType(self):
+		rc = None
+		if "return" in self.fn.__annotations__.keys():
+			rc = self.fn.__annotations__["return"]
+		return rc
+
+	def enumerateChoices(self, choices):
+		args = []
+		for parm_name in self.getParmNames():
+			parm_type = self.getParmType(parm_name)
+			if args == []:
+				args = [[(parm_type, i)] for i in range(len(choices[parm_type]))]
+			else:
+				args = combine(args, [(parm_type, i) for i in range(len(choices[parm_type]))])
+		return args
+
+class Models:
+
+	def __init__(self):
+		self.actions = [] # list of controllable actions defined in the model
+		self.choices = {} # data choices for parameters, including those returned from calls
+		self.return_types = [] # names of return_types
+		self.finisheds = {}
+		self.maxobjects = {}
+		self.selectCallback = None	
+
+	def getActionNames(self):
+		return [action.getName() for action in self.actions]
+
+	def addReturnType(self, return_type):
+		""" 
+		return types should not be in the datapools if they
+		can be created by having been mentioned in the data 
+		inputs
+		"""
+		if return_type not in self.choices.keys():
+			self.choices[return_type] = []
+			self.return_types.append(return_type)
+
+	def addAction(self, fn):
+		self.actions.append(Actions(fn))
+		if "return" in fn.__annotations__.keys():
+			self.addReturnType(fn.__annotations__["return"])
+		
+	def addChoice(self, varname, values, output=False):
+		""" 
+		Need to track choices for coverage - wrap each choice in a class so we can
+		keep track
+		"""
+		self.choices[varname] = [Choices(v) for v in values]
+		if output:
+			self.choices[varname] = tuple(self.choices[varname])   # indicate not mutable
+
+	def finishedWith(self, action, parm_name):
+		if action not in self.finisheds:
+			self.finisheds[action] = [parm_name]
+		else:
+			self.finisheds[action].append(parm_name)
+
+
+class Executions:
+
+	def __init__(self, model):
+		self.model = model
+		self.trace = Traces()
+		self.finished = False
+		self.steps = 0
+		self.observations = []
+
+		self.pools = copy.deepcopy(self.model.choices)
+
+	def addObservation(self, observation):
+		""" 
+		Used during model exploration to add an observation.
+		"""
+		self.observations.append(observation)
+		log("OBSERVED EVENT " + str(observation))
+
+	def removeFinisheds(self, action, kwargs):
+		"""
+		used during execution to remove choices which 
+		"""
+		removed = False
+		for parm_name in action.getParmNames():
+			parm_type = action.getParmType(parm_name)
+			if action.fn in self.model.finisheds.keys():
+				if parm_name in self.model.finisheds[action.fn]:
+					choice = kwargs[parm_name]
+					for c in self.pools[parm_type]:
+						if c.equals(choice):
+							self.pools[parm_type].remove(c)
+					removed = True
+
+	def coverage(self):
+		total = 0
+		used = 0
+		unused = []
+		counts = {}
+		for choice in self.pools.keys():
+			for c in self.pools[choice]:
+				total += 1
+				if c.used > 0:
+					used += 1
+				else:
+					unused.append((choice, c))
+		return int((used / total) * 100)
+
+	def getEnabledActions(self):
+		enableds = set()
+		for action in self.model.actions:
+			all_parms_available = True
+			for parm_name in action.getParmNames():
+				parm_type = action.getParmType(parm_name)
+				if parm_type not in self.pools.keys() or len(self.pools[parm_type]) == 0:
+					all_parms_available = False
+					break
+			if all_parms_available:
+				return_type = action.getReturnType()
+				#if return_type in self.choices.keys():
+				#	print("return type "+return_type+" pool class: "+str(self.choices[return_type].__class__.__name__))
+				if return_type in self.model.maxobjects.keys():
+					maxobjects = self.model.maxobjects[return_type]
+				else:
+					maxobjects = 1
+				if return_type == None or return_type not in self.pools.keys() or \
+					    (self.pools[return_type].__class__.__name__ != "list" or \
+					    len(self.pools[return_type]) < maxobjects):
+					enableds.add(action)
+		return enableds
+
+	def restartIfSameStateAsStart(self):
+		restart = True
+		for choice in self.model.choices.keys():
+			if self.pools[choice] != len(self.model.choices[choice]):
+				restart = False
+				break
+		if restart:
+			self.restart()
+
+	def restart(self):
+		print("Restart\n")
+		log("RESTART\n")
+		log.restart()
+		self.trace.restart()
+		self.pools = copy.deepcopy(self.model.choices)
+		#for type_name in self.model.return_types:
+		#	if self.pools[type_name].__class__.__name__ == "list":
+		#		self.pools[type_name] = []
+
+	def printStats(self):
+		log("action counts "+str([(a.getName(), a.called) for a in self.model.actions]))
+
+		counts = {}
+		for choice in self.pools.keys():
+			counts[choice] = [(c.value, c.used) for c in self.pools[choice]]
+		log("choice counts "+ str(counts))
+		log("coverage "+str(self.coverage())+"%")
+		
+	def __run__(self, interactive=True):
+		while not self.finished:
+			self.step(interactive)
+
+	def step(self, interactive=False):
+			restart = False
+			self.steps += 1 
+			log("Steps: "+str(self.steps)+" coverage "+str(self.coverage())+"%")
+			enableds = self.getEnabledActions()
+			log("Enabled", [e.getName() for e in enableds])
+			
+			self.trace.addArcs([tuple([action] + choice) for action in enableds \
+						    for choice in action.enumerateChoices(self.pools)])
+			
+			next = self.trace.findNextPath(self.model.selectCallback)
+			if next == None:
+				print("No more options available")
+				return
+			action = next[0]; args = list(next[1:])
+
+			kwargs = {}
+			exec_kwargs = {}
+			index = 0
+			for parm_name in action.getParmNames():
+				#print("kwargs" + str( self.choices[args[index][0]][args[index][1]]))
+				#print("kwargs "+parm_name+" "+str(self.choices[args[index][0]]))
+				try:
+					kwargs[parm_name] = self.pools[args[index][0]][args[index][1]].valueOf()
+					exec_kwargs[parm_name] = "self.pools['"+args[index][0]+"']["+str(args[index][1])+"]"
+				except:
+					print("exception "+traceback.format_exc())
+					import pdb
+					pdb.set_trace()
+				index += 1
+
+			log("CALL "+ action.getName()+" with "+str(kwargs))
+			log("EXEC_CALL "+ action.getName()+" with "+str(exec_kwargs))
+			if interactive and input("--->") == "q":
+				return
+			self.trace.selectAction(action, args)
+			rc = None
+
+			try:
+				rc = action(**kwargs)
+			except:
+				# if exception is not an expected result
+				log("RESULT from", action.getName(), "is exception", traceback.format_exc())
+				self.restart()
+				restart = True
+			else:
+				if rc != None:
+					log("RESULT from", action.getName(), "is", rc)
+					ret_type = action.getReturnType()
+					
+					if ret_type:
+						updated = False
+						for c in self.pools[ret_type]:
+							if c.equals(rc):
+								c.used += 1 
+								updated = True
+								break
+						if not updated and hasattr(self.pools[ret_type], "append"):
+							self.pools[ret_type].append(Choices(rc, returned=True))
+
+				self.removeFinisheds(action, kwargs)
+			return restart		
+
+	def run(self, interactive=True):
+		try:
+			self.__run__(interactive)
+		except KeyboardInterrupt:
+			self.printStats()
+
+class Tests:
+
+	def __init__(self, model, logfilename, checks={}):
+		self.model = model
+		self.logfilename = logfilename
+		self.checks = checks
+		self.added_results = {}
+
+	def handleCall(self, words):
+		action = self.actions[words[1]]
+		strargs = words[3]
+		for result in self.results:
+			loc = strargs.find(result)
+			if loc != -1:
+				print("replace", result, "with", 'self.results["'+result+'"]')
+				strargs = strargs[:loc]+'self.results["'+result+'"]'+strargs[loc + len(result):]
+				print(strargs)
+
+		kwargs = eval(strargs)
+		log("CALL "+ action.getName()+" with "+str(kwargs))
+		print("CALL "+ action.getName()+" with "+str(kwargs))
+		if self.stepping and input("--->") == "q":
+			return
+		try:
+			rc = action(**kwargs)           
+		except:
+			rc = "exception "+traceback.format_exc()
+		self.last_action = action
+		self.last_rc = rc
+
+	def handleResult(self, curline, words):
+		action = self.last_action
+		rc = self.last_rc
+		if action.getReturnType() in self.checks.keys():
+			check_result = self.checks[action.getReturnType()](rc, words[3].split(" ", 1)[1])
+		elif type(rc) == type('') and rc.startswith("exception") and "exception" in self.checks.keys():
+			check_result = self.checks["exception"](rc, words[3].split(" ", 1)[1])
+		else:
+			check_result = (curline == "RESULT from "+action.getName()+" is "+str(rc))
+		if check_result:
+			print("correct result", rc)
+			log("correct result"+str(rc))
+		else:
+			print("### incorrect result", rc)
+			return
+
+		value = words[3].strip().split(" ", 1)[1]
+		if not value.startswith("exception") and type(rc) not in [type(3), type('')]:
+			print("recording value of", value)
+			self.results[value] = rc
+
+	def handleObserved(self, curline):
+		# wait for result to be added to added_results, then move it to results
+		observation = curline.split(" ", 2)[2].strip()
+		while observation not in self.added_results.keys():
+			print("Waiting for observation '"+observation+"' in", self.added_results.keys())
+			time.sleep(1)
+		self.results[observation] = self.added_results[observation]
+		del self.added_results[observation]
+
+	def handleRestart(self):
+		log("Restarting")
+		print("Restarting")
+		self.results = {}
+		self.added_results = {}
+
+	def run(self, stepping=True):
+		self.actions = {}
+		self.results = {}
+		self.stepping = stepping
+		lineno = 0
+		for action in self.model.actions:
+			self.actions[action.getName()] = action
+		logfile = open(self.logfilename)
+		curline = logfile.readline()
+		while curline:
+			lineno += 1
+			curline = curline.strip()
+			words = curline.split(" ", 3)
+			print(lineno, curline)
+			if words[0] == "CALL":
+				self.handleCall(words)
+			elif words[0] == "RESULT":
+				self.handleResult(curline, words)
+			elif words[0] == "OBSERVED":
+				self.handleObserved(curline)
+			elif words[0] == "RESTART":
+				self.handleRestart()
+			curline = logfile.readline()
+		logfile.close()
+
+	def addResult(self, result):
+		print("adding result "+str(result))
+		self.added_results[str(result)] = result
+		
+
+			
+
+				
+
+			
+
+		
+		
+	
+		
+		
