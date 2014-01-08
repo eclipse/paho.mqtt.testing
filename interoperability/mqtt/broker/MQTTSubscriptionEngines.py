@@ -83,44 +83,21 @@ class MQTTSubscriptionEngines(SubscriptionEngines):
      "returns a list of topics for which retained publications exist"
      return self.__retained.keys()
  
-   def choose(self, new, old):
-     rc = False
-     if old == None:
-       rc = True
-     elif rule.properties["OVERLAPPING_QOS"] in ["ANY", "MULTIPLE"]:
-       rc = "DON'T_KNOW"
-     elif rule.properties["OVERLAPPING_QOS"] == "MOST_SPECIFIC":
-       new_start = len(re.split("[+|#]", new.getTopic())[0])
-       old_start = len(re.split("[+|#]", old.getTopic())[0])
-       if new_start == old_start:
-         if new.getTopic()[new_start] != old.getTopic()[old_start]:
-           rc = (new_start == '+')
-         else:
-           rc = "DON'T_KNOW"
-       else:
-         rc = new_start > old_start
-     else:
-       # MicroBroker V1 uses the latest matching subscription.
-       rc = new.getTimestamp() > old.getTimestamp()
-     return rc
-
    def qosOf(self, clientid, topic):
-     """ if there are overlapping subscriptions, which one do we choose?
-     """
-     rc = []
+     # if there are overlapping subscriptions, choose maximum QoS
      chosen = None
-     subs = SubscriptionEngines.subscriptions(self, clientid)
-     for s in subs:
-       if topics.topicMatches(s.getTopic(), topic):
-         ch = self.choose(s, chosen)
-         if ch == True:
-           rc = [s.getQoS()]
-           chosen = s
-         elif ch == "DON'T_KNOW":
-           rc.append(s.getQoS())
-           chosen = s
-     rc.sort()
-     return rc
+     for sub in SubscriptionEngines.subscriptions(self, clientid):
+       if topics.topicMatches(sub.getTopic(), topic):
+         if chosen == None:
+           chosen = sub.getQoS()
+         else:
+           logging.info("[MQTT-3.3.5-1] Overlapping subscriptions max QoS")
+           if sub.getQoS() > chosen:
+             chosen = sub.getQoS()
+         # Omit the following optimization because we want to check for condition [MQTT-3.3.5-1]
+         #if chosen == 2:
+         #  break
+     return chosen
  
 if __name__ == "__main__":
   se = MQTTSubscriptionEngines()

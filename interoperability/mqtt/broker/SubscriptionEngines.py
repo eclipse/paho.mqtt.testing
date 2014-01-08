@@ -76,8 +76,7 @@ class SubscriptionEngines:
      if aClientid == None:
        rc = self.__subscriptions
      else:
-       rc = filter(lambda s: s.getClientid() == aClientid, \
-            self.__subscriptions)
+       rc = [s for s in self.__subscriptions if s.getClientid() == aClientid]
      return rc
 
    def subscribers(self, aTopic):

@@ -16,7 +16,13 @@
 *******************************************************************
 """
 
+import logging
+
 # Low-level protocol interface
+
+class MQTTException(Exception):
+  pass
+   
 
 # Message types
 CONNECT, CONNACK, PUBLISH, PUBACK, PUBREC, PUBREL, \
@@ -132,12 +138,26 @@ def writeInt16(length):
 def readInt16(buf):
   return buf[0]*256 + buf[1]
 
-def writeUTF(aString):
-  return writeInt16(len(aString)) + bytes(aString, "utf8")
+def writeUTF(data):
+  # data could be a string, or bytes.  If string, encode into bytes with utf-8
+  return writeInt16(len(data)) + (data if type(data) == type(b"") else bytes(data, "utf-8"))
 
 def readUTF(buffer):
   length = readInt16(buffer)
-  return buffer[2:2+length].decode("utf-8")
+  buf = buffer[2:2+length].decode("utf-8")
+  zz = buf.find("\x00") # look for null in the UTF string
+  if zz != -1:
+    raise MQTTException("[MQTT-1.4.0-2] Null found in UTF data "+buf)
+  if buf.find("\uFEFF") != -1:
+    logging.info("[MQTT-1.2.0-3] U+FEFF in UTF string") 
+  return buf
+
+def writeBytes(buffer):
+  return writeInt16(len(buffer)) + buffer
+
+def readBytes(buffer):
+  length = readInt16(buffer)
+  return buffer[2:2+length]
 
 
 class Packets:
@@ -159,7 +179,7 @@ class Connects(Packets):
     self.fh = FixedHeaders(CONNECT)
 
     # variable header
-    self.ProtocolName = 'MQTT'
+    self.ProtocolName = "MQTT"
     self.ProtocolVersion = 4
     self.CleanStart = False
     self.WillFlag = False
@@ -170,29 +190,29 @@ class Connects(Packets):
     self.passwordFlag = False
 
     # Payload
-    self.ClientIdentifier = None
-    self.WillTopic = None
-    self.WillMessage = None
-    self.username = None
-    self.password = None
+    self.ClientIdentifier = None # UTF-8
+    self.WillTopic = None        # UTF-8
+    self.WillMessage = None      # binary
+    self.username = None         # UTF-8
+    self.password = None         # binary
 
     if buffer != None:
       self.unpack(buffer)
 
-  def pack(self):
+  def pack(self):    
     connectFlags = bytes([(self.CleanStart << 1) | (self.WillFlag << 2) | \
                        (self.WillQoS << 3) | (self.WillRETAIN << 5) | \
                        (self.usernameFlag << 6) | (self.passwordFlag << 7)])
     buffer = writeUTF(self.ProtocolName) + bytes([self.ProtocolVersion]) + \
               connectFlags + writeInt16(self.KeepAliveTimer)
-    buffer += writeUTF(self.ClientIdentifier)
+    buffer += writeUTF(self.ClientIdentifier) 
     if self.WillFlag:
-      buffer += writeUTF(self.WillTopic)
-      buffer += writeUTF(self.WillMessage)
+      buffer += writeUTF(self.WillTopic) 
+      buffer += writeBytes(self.WillMessage) 
     if self.usernameFlag:
-      buffer += writeUTF(self.username)
+      buffer += writeUTF(self.username) 
     if self.passwordFlag:
-      buffer += writeUTF(self.password)
+      buffer += writeBytes(self.password) 
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
@@ -227,7 +247,7 @@ class Connects(Packets):
     if self.WillFlag:
       self.WillTopic = readUTF(buffer[curlen:])
       curlen += len(self.WillTopic) + 2
-      self.WillMessage = readUTF(buffer[curlen:])
+      self.WillMessage = readBytes(buffer[curlen:])
       curlen += len(self.WillMessage) + 2
     else:
       self.WillTopic = self.WillMessage = None
@@ -238,7 +258,7 @@ class Connects(Packets):
       curlen += len(self.username) + 2
 
     if self.passwordFlag and len(buffer) > curlen+2:
-      self.password = readUTF(buffer[curlen:])
+      self.password = readBytes(buffer[curlen:])
       curlen += len(self.password) + 2
 
   def __repr__(self):

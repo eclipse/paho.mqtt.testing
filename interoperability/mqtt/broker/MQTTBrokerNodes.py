@@ -50,18 +50,11 @@ class MQTTBrokerNodes:
        del self.__publications[aClient.id]
 
   def connect(self, aClient, cleanstart=True):
-    if aClient.id in self.__clients.keys() and self.__clients[aClient.id][2]:
-      logging.info("[MQTT-3.1.0-2] Second connect packet")
-      raise Exception("[MQTT-3.1.0-2] Second connect packet")
     self.__clients[aClient.id] = [cleanstart, time.clock(), True, aClient]
     if cleanstart:
       self.cleanSession(aClient.id)
     else:
       self.__sendQueued__(aClient)
-      #if aClient.id in self.__publications.keys():
-      #  for p in self.__publications[aClient.id]:
-      #    self.__clients[aClient.id][3].publishArrived(p[0], p[1], p[2])
-      #  del self.__publications[aClient.id]
 
   def connectWill(self, aClient, cleanstart,
                         willtopic, willQoS, willmsg, willRetain):
@@ -96,20 +89,23 @@ class MQTTBrokerNodes:
     """
     if retained:
       self.se.setRetained(topic, message, qos)
-    for c in self.se.subscribers(topic):  # all subscribed clients
+
+    for subscriber in self.se.subscribers(topic):  # all subscribed clients
       # qos is lower of publication and subscription
-      thisqos = []
-      for x in self.se.qosOf(c, topic):
-        if min(x, qos) not in thisqos:
-          thisqos.append(min(x, qos))
-      if c in self.__clients.keys() and self.__clients[c][2]: # is connected?
+      out_qos = min(self.se.qosOf(subscriber, topic), qos)
+
+      if subscriber in self.__clients.keys() and self.__clients[subscriber][2]: # is connected?
         #if rule.properties["OVERLAPPING_QOS"] == "MULTIPLE":
         #  for q in thisqos:
         #    self.__clients[c][3].publishArrived(topic, message, [q])
         #else:
-        self.__clients[c][3].publishArrived(topic, message, thisqos)
+        self.__clients[subscriber][3].publishArrived(topic, message, out_qos)
       else:
-        if 1 in thisqos or 2 in thisqos:
+        if out_qos in [1, 2]:
+          if subscriber not in self.__publications.keys():
+            self.__publications[subscriber] = [(topic, message, out_qos)]
+          else:
+            self.__publications[subscriber].append((topic, message, out_qos))
           #if rule.properties["OVERLAPPING_QOS"] == "MULTIPLE":
           #  if 0 in thisqos:
           #    thisqos.remove(0) # only qos 1 and 2 are persisted
@@ -119,10 +115,6 @@ class MQTTBrokerNodes:
           #    else:
           #      self.__publications[c].append((topic, message, [q]))
           #else:
-          if c not in self.__publications.keys():
-            self.__publications[c] = [(topic, message, thisqos)]
-          else:
-            self.__publications[c].append((topic, message, thisqos))
 
   def __doRetained__(self, aClientid, topic, qos):
     if type(topic) != type([]):
@@ -141,20 +133,8 @@ class MQTTBrokerNodes:
       i += 1
 
   def subscribe(self, aClientid, topic, qos):
-    "send out retained publications"
     rc = self.se.subscribe(aClientid, topic, qos)
     self.__doRetained__(aClientid, topic, qos)
-    #i = 0
-    #for t in topic: # t is a wildcard subscription topic
-    #  topicsUsed = []
-    #  for s in self.se.retainedTopics(): # s is a non-wildcard retained topic
-    #    if s not in topicsUsed and topics.topicMatches(t, s):
-    #      # topic has retained publication
-    #      topicsUsed.append(s)
-    #      (ret_msg, ret_qos) = self.se.retained(s)
-    #      thisqos = min(ret_qos, qos[i])
-    #      self.__clients[aClientid][3].publishArrived(s, ret_msg, [thisqos], True)
-    #  i += 1
     return rc
 
   def unsubscribe(self, aClientid, topic):

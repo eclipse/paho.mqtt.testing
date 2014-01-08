@@ -30,6 +30,7 @@ def report_exception(exc):
 """
 
 from .MQTTProtocolNodes import MQTTProtocolNodes
+from ..formats.MQTTV311 import MQTTException
 
 broker = MQTTProtocolNodes()
 
@@ -49,6 +50,15 @@ class MyHandler(socketserver.StreamRequestHandler):
           break
       except socket.error: 
         # this is received from select if the client has normally disconnected
+        break
+      except UnicodeDecodeError:
+        logging.error("[MQTT-1.4.0-1] Unicode field encoding error")
+        break
+      except MQTTException as exc:
+        logging.error(exc.args[0])
+        break
+      except AssertionError as exc:
+        logging.error(exc.args[0])
         break
       except:
         logging.exception("MyHandler")

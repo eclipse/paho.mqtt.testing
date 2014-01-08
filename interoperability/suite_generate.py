@@ -33,37 +33,41 @@ Do store tests that reach a conformance statement in a different way.
 
 """
 
-import os, shutil, subprocess, MQTTV3_spec
+import os, shutil, subprocess, time, MQTTV311_spec
+
+output = None
 
 def create():
-	broker = subprocess.Popen(["python", "pybroker/startBroker.py"], stderr=subprocess.PIPE)
-	output = broker.stderr
+	global output
+	if not output:
+		broker = subprocess.Popen(["python3", "startbroker.py"], stderr=subprocess.PIPE)
+		output = broker.stderr
+		print(output.readline().decode("utf-8"))
 	conformances = []
-	print(output.readline().decode("utf-8"))
 	restart = False
 	while not restart:
 		print("stepping\n")
-		restart = MQTTV3_spec.mbt.step()
+		restart = MQTTV311_spec.mbt.step()
 		print("stepped\n")
 		data = output.readline().decode("utf-8")
-		data = data.split(" ", 3) if data else data
-		print("data", ' '.join(data))
-		while data and data[3] != "Waiting for request\n" and data[3][:9] != "Finishing":
-			if data[3].startswith("[MQTT"):
+		#data = data.split(" ", 3) if data else data
+		print("data", data)
+		while data and data.find("Waiting for request") == -1 and data.find("Finishing communications") == -1:
+			if data.find("[MQTT") != -1:
+				data = data.split(" ", 3) if data else data
 				print("Conformance statement ", data[3])
 				conformances.append(data[3])
 			data = output.readline().decode("utf-8")
-			data = data.split(" ", 3) if data else data
-			print("data", ' '.join(data))
+			print("data", data)
 		#if input("--->") == "q":
 		#		return
-	broker.terminate()
+	#broker.terminate()
 	return conformances
 
 
 if __name__ == "__main__":
 	#try:
-	os.system("kill `ps -ef | grep startBroker | grep -v grep | awk '{print $2}'`")
+	os.system("kill `ps -ef | grep startbroker | grep -v grep | awk '{print $2}'`")
 	os.system("rm -rf tests")
 	#except:
 	#	pass

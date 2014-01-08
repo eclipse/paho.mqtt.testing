@@ -55,7 +55,7 @@ class Clients:
     "required by broker node class"
     self.pub.topicName = topic
     self.pub.data = msg
-    self.pub.fh.QoS = qos[0]
+    self.pub.fh.QoS = qos
     self.pub.fh.RETAIN = retained
     if self.pub.fh.QoS == 0:
       self.pub.messageIdentifier = 1
@@ -65,9 +65,9 @@ class Clients:
         self.msgid = 1
       else:
         self.msgid += 1
-    if qos[0] == 1:
+    if qos == 1:
       self.qos1list.append(self.pub.messageIdentifier)
-    elif qos[0] == 2:
+    elif qos == 2:
       self.qos2list[self.pub.messageIdentifier] = "PUBREC"
     if ordering == "efficient":
       # most efficient ordering - no queueing
@@ -92,7 +92,10 @@ class MQTTProtocolNodes:
     "this is going to be called from multiple threads, so synchronize"
     self.lock.acquire()
     try:
-      packet = MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
+      raw_packet = MQTTV3.getPacket(sock)
+      if raw_packet == None:
+        raise socket.error # we had an error reading from the socket
+      packet = MQTTV3.unpackPacket(raw_packet)
       if packet:
         self.handlePacket(packet, sock)
       else:
@@ -104,9 +107,8 @@ class MQTTProtocolNodes:
     logging.info("in: "+repr(packet))
     if sock not in self.clientids.keys() and \
          MQTTV3.packetNames[packet.fh.MessageType] != "CONNECT":
-       self.disconnect(sock, packet)
-       logging.info("[MQTT-3.1.0-1] Connect was not first packet on socket")
-       raise Exception("Connect was not first packet on socket")
+      self.disconnect(sock, packet)
+      raise MQTTV3.MQTTException("[MQTT-3.1.0-1] Connect was not first packet on socket")
     else:
       getattr(self, MQTTV3.packetNames[packet.fh.MessageType].lower())(sock, packet)
       self.processOutput()
@@ -116,11 +118,10 @@ class MQTTProtocolNodes:
 
     """
     if packet.ProtocolName != "MQTT":
-      logging.info("[MQTT-3.1.2-1] Wrong protocol name %s", packet.ProtocolName)
       self.disconnect(sock, None)
-      return
+      raise MQTTV3.MQTTException("[MQTT-3.1.2-1] Wrong protocol name %s" % packet.ProtocolName)
     if packet.ProtocolVersion != 4:
-      logging.info("[MQTT-3.1.2-2] Wrong protocol version %d", packet.ProtocolVersion)
+      logging.error("[MQTT-3.1.2-2] Wrong protocol version %d", packet.ProtocolVersion)
       resp = MQTTV3.Connacks()
       resp.returnCode = 1
       respond(sock, resp)
@@ -129,9 +130,13 @@ class MQTTProtocolNodes:
     if packet.ClientIdentifier in self.clientids.values():
       for s in self.clientids.keys():
         if self.clientids[s] == packet.ClientIdentifier:
-          logging.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
-          self.disconnect(s, None)
-          break
+          if s == sock:
+            self.disconnect(sock, None)
+            raise MQTTV3.MQTTException("[MQTT-3.1.0-2] Second connect packet")
+          else:
+            logging.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
+            self.disconnect(s, None)
+            break
     self.clientids[sock] = packet.ClientIdentifier
     me = Clients(packet.ClientIdentifier, sock)
     self.clients[sock] = me

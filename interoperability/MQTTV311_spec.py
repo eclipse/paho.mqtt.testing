@@ -18,6 +18,8 @@
 
 import mbt, socket, time, _thread, sys, traceback, pdb, select, random, mqtt
 
+import mqtt.formats.MQTTV311 as MQTTV3
+
 clientlist = {}
 
 test = None
@@ -241,7 +243,7 @@ mbt.choices("topicLists", [(t,) for t in topics + wildTopics])
 mbt.choices("qosLists", [(0,), (1,), (2,)])
 
 
-mbt.choices("payloads", ("", "1", "333", "long"*512), sequenced=True)
+mbt.choices("payloads", (b"", b"1", b"333", b"long"*512), sequenced=True)
 
 mbt.choices("connackrc", (0, 2), output=True)
 

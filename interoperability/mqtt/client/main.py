@@ -76,22 +76,22 @@ class Client:
     self.callback = callback
 
 
-  def connect(self, host="localhost", port=1883, cleanstart=True):
-    self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #self.sock.settimeout(5.0)
-
-    self.sock.connect((host, port))
+  def connect(self, host="localhost", port=1883, cleanstart=True, newsocket=True, protocolName=None):
+    if newsocket:
+      self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      self.sock.connect((host, port))
 
     connect = MQTTV3.Connects()
     connect.ClientIdentifier = self.clientid
     connect.CleanStart = cleanstart
     connect.KeepAliveTimer = 0
+    if protocolName:
+      connect.ProtocolName = protocolName
     self.sock.send(connect.pack())
 
     response = MQTTV3.unpackPacket(MQTTV3.getPacket(self.sock))
     if not response:
-      # connect failed - socket closed, no connack
-      return
+      raise MQTTV3.MQTTException("connect failed - socket closed, no connack")
     assert response.fh.MessageType == MQTTV3.CONNACK
 
     self.__receiver = internal.Receivers(self.sock)

@@ -20,18 +20,29 @@ import mqtt.client, time
 
 if __name__ == "__main__":
 
-  callback = mqtt.client.Callback()
+  try:
+    callback = mqtt.client.Callback()
 
-  aclient = mqtt.client.Client("myclientid")
-  aclient.registerCallback(callback)
+    aclient = mqtt.client.Client(b"\xEF\xBB\xBF" + "myclientid".encode("utf-8"))
+    aclient.registerCallback(callback)
 
-  aclient.connect(port=1883)
-  aclient.disconnect()
+    aclient.connect(port=1883, protocolName="hj")
+    aclient.disconnect()
 
-  aclient.connect(port=1883)
-  aclient.subscribe(["k"], [2])
-  aclient.publish("k", b"qos 0")
-  aclient.publish("k", b"qos 1", 1)
-  aclient.publish("k", b"qos 2", 2)
-  time.sleep(1.0)
-  aclient.disconnect()
+    aclient.connect(port=1883)
+    aclient.subscribe(["k"], [2])
+    aclient.publish("k", b"qos 0")
+    aclient.publish("k", b"qos 1", 1)
+    aclient.publish("k", b"qos 2", 2)
+    time.sleep(1.0)
+    aclient.disconnect()
+
+    aclient.connect(port=1883)
+    aclient.connect(port=1883, newsocket=False)
+
+    aclient.connect(port=1883, protocolName="hj")
+  except Exception as exc:
+    print("Exception", exc)
+    
+
+
