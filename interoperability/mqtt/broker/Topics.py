@@ -73,56 +73,8 @@ def topicMatches(wild, nonwild, wildCheck=True):
     if re.compile(wild+'$').match(nonwild) != None:
       rc = True
   return rc
- 
-def topicIncludes(topic1, topic2):
-  "does topic1 subsume topic2, i.e. is topic2 a subset of topic1?"
-  rc = False
-  if topicMatches(topic1, topic2, False):
-    rc = True
-  return rc
- 
-def topicOverlaps(topic1, topic2):
-  "is the intersection of the two topics non-null?"
 
-  def reverse(string):
-    l = list(string)
-    l.reverse()
-    return ''.join(l)
 
-  def addto(topic, level):
-    if topic == '':
-      rc = level
-    else:
-      rc = topic+'/'+level
-    return rc
-
-  def test(topic1, topic2):
-    # construct example for topic2
-    global example
-    example = ''
-    topic1levels = topic1.split('/')
-    for topic2level in topic2.split('/'):
-      if topic2level == '+':
-        if len(topic1levels) > 0 and topic1levels[0] not in '+#':
-          level = topic1levels.pop(0)
-        else:
-          level = 'x'
-        example = addto(example, level)
-      elif topic2level != '#':
-        example = addto(example, topic2level)
-        if topic1levels[0] in [topic2level, '+']:
-          topic1levels.pop(0)
-    return topicMatches(topic1, example)
-
-  rc = False
-  if (topic1[0] == topic2[-1] == '#') or \
-     (topic1[-1] == topic2[0] == '#'):
-    rc = True
-  elif topic1[0] == '#' or topic2[0] == '#':
-    rc = test(reverse(topic1), reverse(topic2))
-  else:
-    rc = test(topic1, topic2)
-  return rc
 """ 
 topicCoverage = dataclasses("string", (1, 64),
                 ["TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA", "MQTTSAS topic"],
@@ -171,30 +123,6 @@ if __name__ == "__main__":
   for t in tests:
     topic, result = t
     assert isValidTopicName(topic) == result, "Topic validation failed for: "+topic
-
-  itests = \
-   [("#/a/+/+", "#/+/b/+"),
-    ("#/a/+/+", "#/a/b/+"),
-    ("#/a/+/+", "x/a/b/#")]
-
-
-  for i in itests:
-    def inc(t1, t2):
-      logging.info(t1, "includes", t2, topicIncludes(t1, t2))
-    inc(i[0], i[1])
-    inc(i[1], i[0])
-
-  otests = \
-    [("#/x/+/z", "#/a/b/c/+/y/+", True),
-     ("#/x/+/z", "a/b/c/+/y/#", True),
-     ("+/x/d/z", "a/b/c/+/y/#", False),
-     ("/#", "#/b/c/+/y", True),
-     ("+/b/+", "a/+/c", True),
-     ("+/b/d", "a/+/c", False),
-     ("+/b/c", "a/+/c", True)]
-  for o in otests:
-    logging.info(o[0], "overlaps", o[1], topicOverlaps(o[0], o[1]))
-    assert topicOverlaps(o[0], o[1]) == o[2]
 
   logging.info(not topicMatches("1/2/#", "1/2s/s"))
   assert not topicMatches("1/2/#", "1/2s/s")

@@ -26,7 +26,7 @@ if __name__ == "__main__":
     aclient = mqtt.client.Client(b"\xEF\xBB\xBF" + "myclientid".encode("utf-8"))
     aclient.registerCallback(callback)
 
-    aclient.connect(port=1883, protocolName="hj")
+    aclient.connect(port=1883)
     aclient.disconnect()
 
     aclient.connect(port=1883)

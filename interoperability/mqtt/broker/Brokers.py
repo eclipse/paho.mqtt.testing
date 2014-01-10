@@ -18,20 +18,16 @@
 
 import types, time, logging
 
-from . import topics
-
-from .MQTTSubscriptionEngines import MQTTSubscriptionEngines
+from . import Topics
+from .SubscriptionEngines import SubscriptionEngines
  
-class MQTTBrokerNodes:
+class Brokers:
 
   def __init__(self):
-    self.se = MQTTSubscriptionEngines()
-    self.__clients = {}
+    self.se = SubscriptionEngines()
+    self.__clients = {} # clientid -> Clients (cleansession, time, isConnected, clientObject)
     self.__publications = {} # for those that can't be delivered immediately
     self.__wills = {}
-
-  def getClients(self):
-    return self.__clients
 
   def reinit(self):
     self.__init__()
@@ -43,23 +39,25 @@ class MQTTBrokerNodes:
       del self.__publications[aClientid]
 
   def __sendQueued__(self, aClient):
-     # if we have queued publications, send them
-     if aClient.id in self.__publications.keys():
-       for p in self.__publications[aClient.id]:
-         self.__clients[aClient.id][3].publishArrived(p[0], p[1], p[2])
-       del self.__publications[aClient.id]
+    # if we have queued publications, send them
+    if aClient.id in self.__publications.keys():
+      for p in self.__publications[aClient.id]:
+        self.__clients[aClient.id].publishArrived(p[0], p[1], p[2])
+      del self.__publications[aClient.id]
 
-  def connect(self, aClient, cleanstart=True):
-    self.__clients[aClient.id] = [cleanstart, time.clock(), True, aClient]
-    if cleanstart:
+  def connect(self, aClient):
+    aClient.connected = True
+    aClient.timestamp = time.clock()
+    self.__clients[aClient.id] = aClient
+    if aClient.cleansession:
       self.cleanSession(aClient.id)
     else:
       self.__sendQueued__(aClient)
 
-  def connectWill(self, aClient, cleanstart,
+  def connectWill(self, aClient, cleansession,
                         willtopic, willQoS, willmsg, willRetain):
     self.__wills[aClient.id] = (willtopic, willQoS, willmsg, willRetain)
-    self.connect(aClient, cleanstart)
+    self.connect(aClient, cleansession)
 
   def terminate(self, aClientid):
     "Abrupt disconnect which also causes a will msg to be sent out"
@@ -70,22 +68,22 @@ class MQTTBrokerNodes:
         self.publish(aClientid, willtopic, willmsg, willQoS, willRetain)
 
   def disconnect(self, aClientid):
-   if aClientid in self.__clients.keys():
-     self.__clients[aClientid][3].connected = False
-     if self.__clients[aClientid][0]: # cleanstart
-       self.cleanSession(aClientid)
-       del self.__clients[aClientid]
-     else:
-       self.__clients[aClientid][1] = time.clock()
-       self.__clients[aClientid][2] = False # set to disconnected
+    if aClientid in self.__clients.keys():
+      self.__clients[aClientid].connected = False
+      if self.__clients[aClientid].cleansession:
+        self.cleanSession(aClientid)
+        del self.__clients[aClientid]
+      else:
+        self.__clients[aClientid].timestamp = time.clock()
+        self.__clients[aClientid].connected = False # set to disconnected
 
   def disconnectAll(self):
-    for c in self.__clients.keys()[:]:
+    for c in self.__clients.keys()[:]: # copy the array because disconnect will remove an element
       self.disconnect(c)
 
   def publish(self, aClientid, topic, message, qos, retained=False):
     """publish to all subscribed connected clients
-       also to any disconnected non-cleanstart clients with qos in [1,2]
+       also to any disconnected non-cleansession clients with qos in [1,2]
     """
     if retained:
       self.se.setRetained(topic, message, qos)
@@ -94,12 +92,12 @@ class MQTTBrokerNodes:
       # qos is lower of publication and subscription
       out_qos = min(self.se.qosOf(subscriber, topic), qos)
 
-      if subscriber in self.__clients.keys() and self.__clients[subscriber][2]: # is connected?
+      if subscriber in self.__clients.keys() and self.__clients[subscriber].connected:
         #if rule.properties["OVERLAPPING_QOS"] == "MULTIPLE":
         #  for q in thisqos:
-        #    self.__clients[c][3].publishArrived(topic, message, [q])
+        #    self.__clients[c].publishArrived(topic, message, [q])
         #else:
-        self.__clients[subscriber][3].publishArrived(topic, message, out_qos)
+        self.__clients[subscriber].publishArrived(topic, message, out_qos)
       else:
         if out_qos in [1, 2]:
           if subscriber not in self.__publications.keys():
@@ -124,12 +122,12 @@ class MQTTBrokerNodes:
     for t in topic: # t is a wildcard subscription topic
       topicsUsed = []
       for s in self.se.retainedTopics(): # s is a non-wildcard retained topic
-        if s not in topicsUsed and topics.topicMatches(t, s):
+        if s not in topicsUsed and Topics.topicMatches(t, s):
           # topic has retained publication
           topicsUsed.append(s)
           (ret_msg, ret_qos) = self.se.retained(s)
           thisqos = min(ret_qos, qos[i])
-          self.__clients[aClientid][3].publishArrived(s, ret_msg, [thisqos], True)
+          self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, True)
       i += 1
 
   def subscribe(self, aClientid, topic, qos):
@@ -143,8 +141,8 @@ class MQTTBrokerNodes:
   def subscriptions(self, aClientid=None):
     return self.se.subscriptions(aClientid)
  
-if __name__ == "__main__":
-  bn = MQTTBrokerNodes()
+def test():
+  bn = AbstractBrokers()
 
   class Clients:
 
@@ -163,18 +161,18 @@ if __name__ == "__main__":
   bn.subscribe(Client1.id, "topic1", 1)
   bn.publish(Client1.id, "topic1", "message 1", 1)
 
-  assert Client1.msgqueue.pop(0) == ("topic1", "message 1", [1])
+  assert Client1.msgqueue.pop(0) == ("topic1", "message 1", 1)
 
   bn.publish(Client1.id, "topic2", "message 2", 1, retained=True)
   bn.subscribe(Client1.id, "topic2", 2)
 
-  assert Client1.msgqueue.pop(0) == ("topic2", "message 2", [1])
+  assert Client1.msgqueue.pop(0) == ("topic2", "message 2", 1)
 
   bn.subscribe(Client1.id, "#", 2)
-  assert Client1.msgqueue.pop(0) == ("topic2", "message 2", [1])
+  assert Client1.msgqueue.pop(0) == ("topic2", "message 2", 1)
 
   bn.subscribe(Client1.id, "#", 0)
-  assert Client1.msgqueue.pop(0) == ("topic2", "message 2", [0])
+  assert Client1.msgqueue.pop(0) == ("topic2", "message 2", 0)
   bn.unsubscribe(Client1.id, "#")
 
   bn.publish(Client1.id, "topic2/next", "message 3", 2, retained=True)
@@ -184,10 +182,10 @@ if __name__ == "__main__":
   msg1 = Client1.msgqueue.pop(0)
   msg2 = Client1.msgqueue.pop(0)
 
-  assert (msg1 == ("topic2/next", "message 3", [2]) and \
-          msg2 == ("topic2/blah", "message 4", [1])) or \
-         (msg2 == ("topic2/next", "message 3", [2]) and \
-          msg1 == ("topic2/blah", "message 4", [1]))
+  assert (msg1 == ("topic2/next", "message 3", 2) and \
+          msg2 == ("topic2/blah", "message 4", 1)) or \
+         (msg2 == ("topic2/next", "message 3", 2) and \
+          msg1 == ("topic2/blah", "message 4", 1))
 
   assert Client1.msgqueue == []
 
@@ -200,8 +198,8 @@ if __name__ == "__main__":
   bn.publish(Client2.id, "topic2/a", "queued message 2", 2)
 
   bn.connect(Client1, False)
-  assert Client1.msgqueue.pop(0) == ("topic2/a", "queued message 1", [1])
-  assert Client1.msgqueue.pop(0) == ("topic2/a", "queued message 2", [2])
+  assert Client1.msgqueue.pop(0) == ("topic2/a", "queued message 1", 1)
+  assert Client1.msgqueue.pop(0) == ("topic2/a", "queued message 2", 2)
 
   bn.disconnect(Client1.id)
   bn.disconnect(Client2.id)

@@ -20,7 +20,7 @@ import traceback, random, sys, string, copy, threading, logging, socket
 
 from ..formats import MQTTV311 as MQTTV3
 
-from .MQTTBrokerNodes import MQTTBrokerNodes 
+from .Brokers import Brokers
  
 ordering = "efficient"
 
@@ -31,10 +31,11 @@ def respond(sock, packet):
   else:
     sock.send(packet.pack())
 
-class Clients:
+class MQTTClients:
 
-  def __init__(self, anId, socket):
+  def __init__(self, anId, cleansession, socket):
     self.id = anId # required
+    self.cleansession = cleansession
     self.socket = socket
     self.pub = MQTTV3.Publishes()
     self.msgid = 1
@@ -42,6 +43,8 @@ class Clients:
     self.qos1list = []
     self.qos2list = {}
     self.storedPubs = {} # stored inbound QoS 2 publications
+    self.connected = False
+    self.timestamp = None
 
   def reinit(self):
     self.__init__(self.id, self.socket)
@@ -52,7 +55,6 @@ class Clients:
     self.publications = []
 
   def publishArrived(self, topic, msg, qos, retained=False):
-    "required by broker node class"
     self.pub.topicName = topic
     self.pub.data = msg
     self.pub.fh.QoS = qos
@@ -76,10 +78,10 @@ class Clients:
       # 'correct' ordering?
       self.publications.append(copy.deepcopy(self.pub))
  
-class MQTTProtocolNodes:
+class MQTTBrokers:
 
   def __init__(self):
-    self.broker = MQTTBrokerNodes()
+    self.broker = Brokers()
     self.clientids = {}
     self.clients = {}
     self.lock = threading.RLock()
@@ -138,13 +140,13 @@ class MQTTProtocolNodes:
             self.disconnect(s, None)
             break
     self.clientids[sock] = packet.ClientIdentifier
-    me = Clients(packet.ClientIdentifier, sock)
+    me = MQTTClients(packet.ClientIdentifier, packet.CleanStart, sock)
     self.clients[sock] = me
     # queued up publications are delivered after connack
     resp = MQTTV3.Connacks()
     resp.returnCode = 0
     respond(sock, resp)
-    self.broker.connect(me, packet.CleanStart)
+    self.broker.connect(me)
 
   def disconnect(self, sock, packet):
     if sock in self.clientids.keys():

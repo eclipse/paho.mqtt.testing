@@ -20,10 +20,10 @@ import time, logging
  
 class Subscriptions:
 
-  def __init__(self, aClientid, aTopic):
+  def __init__(self, aClientid, aTopic, aQos):
     self.__clientid = aClientid
     self.__topic = aTopic
-    self.__timestamp = time.clock()
+    self.__qos = aQos
 
   def getClientid(self):
     return self.__clientid
@@ -31,13 +31,14 @@ class Subscriptions:
   def getTopic(self):
     return self.__topic
 
-  def resubscribe(self):
-    logging.info("[MQTT-1.1.0-1] resubscription for client %s on topic %s", self.__clientid, self.__topic)
-    self.__timestamp = time.clock()
+  def getQoS(self):
+    return self.__qos
 
-  def getTimestamp(self):
-    return self.__timestamp
+  def resubscribe(self, qos):
+    logging.info("[MQTT-1.1.0-1] resubscription for client %s on topic %s", self.__clientid, self.__topic)
+    self.__qos = qos
 
   def __repr__(self):
-    return repr((self.__clientid, self.__topic, self.__timestamp))
- 
+    return repr((self.__clientid, self.__topic, self.__qos))
+
+

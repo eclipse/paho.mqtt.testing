@@ -29,10 +29,10 @@ def report_exception(exc):
     print dd[:-1]
 """
 
-from .MQTTProtocolNodes import MQTTProtocolNodes
+from .MQTTBrokers import MQTTBrokers
 from ..formats.MQTTV311 import MQTTException
 
-broker = MQTTProtocolNodes()
+broker = MQTTBrokers()
 
 class MyHandler(socketserver.StreamRequestHandler):
 

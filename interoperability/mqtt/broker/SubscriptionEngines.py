@@ -18,7 +18,7 @@
 
 import types
 
-from . import topics, Subscriptions
+from . import Topics, Subscriptions
 
 from .Subscriptions import *
  
@@ -26,26 +26,29 @@ class SubscriptionEngines:
 
    def __init__(self):
      self.__subscriptions = [] # list of subscriptions
+     self.__retained = {}      # map of topics to retained msg+qos
 
-   def subscribe(self, aClientid, topic, subsClass=Subscriptions):
+   def subscribe(self, aClientid, topic, qos):
      if type(topic) == type([]):
        rc = []
-       for t in topic:
-         rc.append(self.__subscribe(aClientid, t, subsClass))
+       count = 0
+       for aTopic in topic:
+         rc.append(self.__subscribe(aClientid, aTopic, qos[count]))
+         count += 1
      else:
-       rc = self.__subscribe(aClientid, topic, subsClass)
+       rc = self.__subscribe(aClientid, topic, qos)
      return rc
 
-   def __subscribe(self, aClientid, aTopic, subsClass):
+   def __subscribe(self, aClientid, aTopic, aQos):
      "subscribe to one topic"
      rc = None
-     assert topics.isValidTopicName(aTopic)
+     assert Topics.isValidTopicName(aTopic)
      resubscribed = False
      for s in self.__subscriptions:
        if s.getClientid() == aClientid and s.getTopic() == aTopic:
-         s.resubscribe()
+         s.resubscribe(aQos)
          return s
-     rc = subsClass(aClientid, aTopic)
+     rc = Subscriptions(aClientid, aTopic, aQos)
      self.__subscriptions.append(rc)
      return rc
 
@@ -58,13 +61,10 @@ class SubscriptionEngines:
 
    def __unsubscribe(self, aClientid, aTopic):
      "unsubscribe to one topic"
-     if aTopic == '#':
-       self.clearSubscriptions(aClientid)
-     else:
-       for s in self.__subscriptions:
-         if s.getClientid() == aClientid and s.getTopic() == aTopic:
-           self.__subscriptions.remove(s)
-           return
+     for s in self.__subscriptions:
+       if s.getClientid() == aClientid and s.getTopic() == aTopic:
+         self.__subscriptions.remove(s)
+         break # once we've hit one, that's us done
 
    def clearSubscriptions(self, aClientid):
      for s in self.__subscriptions[:]:
@@ -79,15 +79,48 @@ class SubscriptionEngines:
        rc = [s for s in self.__subscriptions if s.getClientid() == aClientid]
      return rc
 
+   def qosOf(self, clientid, topic):
+     # if there are overlapping subscriptions, choose maximum QoS
+     chosen = None
+     for sub in self.subscriptions(clientid):
+       if Topics.topicMatches(sub.getTopic(), topic):
+         if chosen == None:
+           chosen = sub.getQoS()
+         else:
+           logging.info("[MQTT-3.3.5-1] Overlapping subscriptions max QoS")
+           if sub.getQoS() > chosen:
+             chosen = sub.getQoS()
+         # Omit the following optimization because we want to check for condition [MQTT-3.3.5-1]
+         #if chosen == 2:
+         #  break
+     return chosen
+
    def subscribers(self, aTopic):
      "list all clients subscribed to this (non-wildcard) topic"
      result = []
      for s in self.__subscriptions:
-       if topics.topicMatches(s.getTopic(), aTopic):
+       if Topics.topicMatches(s.getTopic(), aTopic):
          if s.getClientid() not in result: # don't add a client id twice
              result.append(s.getClientid())
      return result
- 
+
+   def setRetained(self, aTopic, aMessage, aQoS):
+     "set a retained message on a non-wildcard topic"
+     self.__retained[aTopic] = (aMessage, aQoS)
+
+   def retained(self, topic):
+     "returns (msg, QoS) for a topic"
+     if topic in self.__retained.keys():
+       result = self.__retained[topic]
+     else:
+       result = None
+     return result
+
+   def retainedTopics(self):
+     "returns a list of topics for which retained publications exist"
+     return self.__retained.keys()
+
+
 if __name__ == "__main__":
   se = SubscriptionEngines()
   se.subscribe("Client1", ["topic1", "topic2"])
