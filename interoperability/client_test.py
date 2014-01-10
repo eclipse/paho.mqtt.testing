@@ -23,7 +23,8 @@ if __name__ == "__main__":
   try:
     callback = mqtt.client.Callback()
 
-    aclient = mqtt.client.Client(b"\xEF\xBB\xBF" + "myclientid".encode("utf-8"))
+    #aclient = mqtt.client.Client(b"\xEF\xBB\xBF" + "myclientid".encode("utf-8"))
+    aclient = mqtt.client.Client("myclientid".encode("utf-8"))
     aclient.registerCallback(callback)
 
     aclient.connect(port=1883)
@@ -34,7 +35,6 @@ if __name__ == "__main__":
     aclient.publish("k", b"qos 0")
     aclient.publish("k", b"qos 1", 1)
     aclient.publish("k", b"qos 2", 2)
-    time.sleep(1.0)
     aclient.disconnect()
 
     aclient.connect(port=1883)
@@ -44,5 +44,22 @@ if __name__ == "__main__":
   except Exception as exc:
     print("Exception", exc)
     
+
+  aclient.connect(port=1883, cleansession=False)
+  aclient.subscribe(["#"], [2])
+  aclient.disconnect()
+
+  callback2 = mqtt.client.Callback()
+  bclient = mqtt.client.Client("myclientid2".encode("utf-8"))
+  bclient.registerCallback(callback2)
+  bclient.connect(port=1883)
+  bclient.publish("fromb qos 0", b"qos 0", 0)
+  bclient.publish("fromb qos 1", b"qos 1", 1)
+  bclient.publish("fromb qos 2", b"qos 2", 2)
+  bclient.disconnect()
+
+  aclient.connect(port=1883, cleansession=False)
+  time.sleep(.2)
+  aclient.disconnect()
 
 

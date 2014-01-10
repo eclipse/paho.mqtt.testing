@@ -25,25 +25,18 @@ class Brokers:
 
   def __init__(self):
     self.se = SubscriptionEngines()
-    self.__clients = {} # clientid -> Clients (cleansession, time, isConnected, clientObject)
-    self.__publications = {} # for those that can't be delivered immediately
+    self.__clients = {} 
     self.__wills = {}
 
   def reinit(self):
     self.__init__()
 
+  def getClient(self, clientid):
+    return self.__clients[clientid] if (clientid in self.__clients.keys()) else None
+
   def cleanSession(self, aClientid):
     "clear any outstanding subscriptions and publications"
     self.se.clearSubscriptions(aClientid)
-    if aClientid in self.__publications.keys():
-      del self.__publications[aClientid]
-
-  def __sendQueued__(self, aClient):
-    # if we have queued publications, send them
-    if aClient.id in self.__publications.keys():
-      for p in self.__publications[aClient.id]:
-        self.__clients[aClient.id].publishArrived(p[0], p[1], p[2])
-      del self.__publications[aClient.id]
 
   def connect(self, aClient):
     aClient.connected = True
@@ -51,8 +44,6 @@ class Brokers:
     self.__clients[aClient.id] = aClient
     if aClient.cleansession:
       self.cleanSession(aClient.id)
-    else:
-      self.__sendQueued__(aClient)
 
   def connectWill(self, aClient, cleansession,
                         willtopic, willQoS, willmsg, willRetain):
@@ -75,7 +66,7 @@ class Brokers:
         del self.__clients[aClientid]
       else:
         self.__clients[aClientid].timestamp = time.clock()
-        self.__clients[aClientid].connected = False # set to disconnected
+        self.__clients[aClientid].connected = False 
 
   def disconnectAll(self):
     for c in self.__clients.keys()[:]: # copy the array because disconnect will remove an element
@@ -92,27 +83,11 @@ class Brokers:
       # qos is lower of publication and subscription
       out_qos = min(self.se.qosOf(subscriber, topic), qos)
 
-      if subscriber in self.__clients.keys() and self.__clients[subscriber].connected:
-        #if rule.properties["OVERLAPPING_QOS"] == "MULTIPLE":
-        #  for q in thisqos:
-        #    self.__clients[c].publishArrived(topic, message, [q])
-        #else:
-        self.__clients[subscriber].publishArrived(topic, message, out_qos)
-      else:
-        if out_qos in [1, 2]:
-          if subscriber not in self.__publications.keys():
-            self.__publications[subscriber] = [(topic, message, out_qos)]
-          else:
-            self.__publications[subscriber].append((topic, message, out_qos))
-          #if rule.properties["OVERLAPPING_QOS"] == "MULTIPLE":
-          #  if 0 in thisqos:
-          #    thisqos.remove(0) # only qos 1 and 2 are persisted
-          #  for q in thisqos:
-          #    if c not in self.__publications.keys():
-          #      self.__publications[c] = [(topic, message, [q])]
-          #    else:
-          #      self.__publications[c].append((topic, message, [q]))
-          #else:
+      #if rule.properties["OVERLAPPING_QOS"] == "MULTIPLE":
+      #  for q in thisqos:
+      #    self.__clients[c].publishArrived(topic, message, [q])
+      #else:
+      self.__clients[subscriber].publishArrived(topic, message, out_qos)
 
   def __doRetained__(self, aClientid, topic, qos):
     if type(topic) != type([]):

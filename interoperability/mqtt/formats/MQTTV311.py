@@ -181,7 +181,7 @@ class Connects(Packets):
     # variable header
     self.ProtocolName = "MQTT"
     self.ProtocolVersion = 4
-    self.CleanStart = False
+    self.CleanSession = False
     self.WillFlag = False
     self.WillQoS = 0
     self.WillRETAIN = 0
@@ -200,7 +200,7 @@ class Connects(Packets):
       self.unpack(buffer)
 
   def pack(self):    
-    connectFlags = bytes([(self.CleanStart << 1) | (self.WillFlag << 2) | \
+    connectFlags = bytes([(self.CleanSession << 1) | (self.WillFlag << 2) | \
                        (self.WillQoS << 3) | (self.WillRETAIN << 5) | \
                        (self.usernameFlag << 6) | (self.passwordFlag << 7)])
     buffer = writeUTF(self.ProtocolName) + bytes([self.ProtocolVersion]) + \
@@ -231,7 +231,7 @@ class Connects(Packets):
 
     connectFlags = buffer[curlen]
     #print "connectFlags", connectFlags
-    self.CleanStart = (connectFlags >> 1) & 0x01
+    self.CleanSession = (connectFlags >> 1) & 0x01
     self.WillFlag = (connectFlags >> 2) & 0x01
     self.WillQoS = (connectFlags >> 3) & 0x03
     self.WillRETAIN = (connectFlags >> 5) & 0x01
@@ -263,7 +263,7 @@ class Connects(Packets):
 
   def __repr__(self):
     buf = repr(self.fh)+", ProtocolName "+str(self.ProtocolName)+", ProtocolVersion " +\
-          repr(self.ProtocolVersion)+", CleanStart "+repr(self.CleanStart) +\
+          repr(self.ProtocolVersion)+", CleanSession "+repr(self.CleanSession) +\
           ", WillFlag "+repr(self.WillFlag)+", KeepAliveTimer " +\
           repr(self.KeepAliveTimer)+", ClientId "+str(self.ClientIdentifier) +\
           ", usernameFlag "+repr(self.usernameFlag)+", passwordFlag "+repr(self.passwordFlag)
@@ -282,7 +282,7 @@ class Connects(Packets):
     rc = Packets.__eq__(self, packet) and \
            self.ProtocolName == packet.ProtocolName and \
            self.ProtocolVersion == packet.ProtocolVersion and \
-           self.CleanStart == packet.CleanStart and \
+           self.CleanSession == packet.CleanSession and \
            self.WillFlag == packet.WillFlag and \
            self.KeepAliveTimer == packet.KeepAliveTimer and \
            self.ClientIdentifier == packet.ClientIdentifier and \

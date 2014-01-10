@@ -21,8 +21,6 @@ import time, sys, socket, traceback, logging
 
 from ..formats import MQTTV311 as MQTTV3
 
-debug = False
-
 class Receivers:
 
   def __init__(self, socket):
@@ -50,8 +48,7 @@ class Receivers:
     if packet == None:
       time.sleep(0.1)
       return
-    elif debug:
-      logging.debug(str(packet))
+    logging.debug(str(packet))
 
     if packet.fh.MessageType == MQTTV3.SUBACK:
       if hasattr(callback, "subscribed"):
