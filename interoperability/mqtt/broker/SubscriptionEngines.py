@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import types
+import types, logging
 
 from . import Topics, Subscriptions
 
@@ -106,7 +106,12 @@ class SubscriptionEngines:
 
    def setRetained(self, aTopic, aMessage, aQoS):
      "set a retained message on a non-wildcard topic"
-     self.__retained[aTopic] = (aMessage, aQoS)
+     if len(aMessage) == 0:
+       if aTopic in self.__retained.keys():
+         logging.info("[MQTT-2.1.1-11] Deleting retained message")
+         del self.__retained[aTopic]
+     else:
+       self.__retained[aTopic] = (aMessage, aQoS)
 
    def retained(self, topic):
      "returns (msg, QoS) for a topic"

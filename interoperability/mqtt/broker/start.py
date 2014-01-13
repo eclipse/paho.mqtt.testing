@@ -20,15 +20,6 @@ import socketserver, select, sys, traceback, socket, logging
 
 logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',  datefmt='%Y%m%d %H%M%S', level=logging.INFO)
 
-"""
-def report_exception(exc):
-  print exc, "exception:"
-  debuglines = traceback.format_exception(sys.exc_type, \
-               sys.exc_value, sys.exc_traceback)
-  for dd in debuglines:
-    print dd[:-1]
-"""
-
 from .MQTTBrokers import MQTTBrokers
 from ..formats.MQTTV311 import MQTTException
 

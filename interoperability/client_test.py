@@ -16,12 +16,43 @@
 *******************************************************************
 """
 
-import mqtt.client, time
+import mqtt.client, time, logging
+
+class Callbacks(mqtt.client.Callback):
+
+  def __init__(self):
+    self.messages = []
+    self.publisheds = []
+    self.subscribeds = []
+    self.unsubscribeds = []
+
+  def clear(self):
+    self.__init__()
+
+  def connectionLost(self, cause):
+    logging.info("connectionLost %s", str(cause))
+
+  def publishArrived(self, topicName, payload, qos, retained, msgid):
+    logging.info("publishArrived %s %s %d %d %d", topicName, payload, qos, retained, msgid)
+    self.messages.append((topicName, payload, qos, retained, msgid))
+    return True
+
+  def published(self, msgid):
+    logging.info("published %d", msgid)
+    self.publisheds.append(msgid)
+
+  def subscribed(self, msgid):
+    logging.info("subscribed %d", msgid)
+    self.subscribeds.append(msgid)
+
+  def unsubscribed(self, msgid):
+    logging.info("unsubscribed %d", msgid)
+    self.unsubscribeds.append(msgid)
 
 if __name__ == "__main__":
 
   try:
-    callback = mqtt.client.Callback()
+    callback = Callbacks()
 
     #aclient = mqtt.client.Client(b"\xEF\xBB\xBF" + "myclientid".encode("utf-8"))
     aclient = mqtt.client.Client("myclientid".encode("utf-8"))
@@ -44,12 +75,13 @@ if __name__ == "__main__":
   except Exception as exc:
     print("Exception", exc)
     
+  callback.clear()
 
   aclient.connect(port=1883, cleansession=False)
   aclient.subscribe(["#"], [2])
   aclient.disconnect()
 
-  callback2 = mqtt.client.Callback()
+  callback2 = Callbacks()
   bclient = mqtt.client.Client("myclientid2".encode("utf-8"))
   bclient.registerCallback(callback2)
   bclient.connect(port=1883)
@@ -61,5 +93,47 @@ if __name__ == "__main__":
   aclient.connect(port=1883, cleansession=False)
   time.sleep(.2)
   aclient.disconnect()
+
+  print(callback.messages)
+  assert len(callback.messages) == 2
+
+
+  # retained messages
+  callback.clear()
+  aclient.connect(port=1883, cleansession=True)
+  aclient.publish("fromb qos 0", b"qos 0", 0, retained=True)
+  aclient.publish("fromb qos 1", b"qos 1", 1, retained=True)
+  aclient.publish("fromb qos 2", b"qos 2", 2, retained=True)
+  time.sleep(.2)
+  aclient.subscribe(["#"], [2])
+  time.sleep(.2)
+  aclient.disconnect()
+  
+  print(callback.messages)
+  assert len(callback.messages) == 3
+
+  # clear retained messages
+  callback.clear()
+  aclient.connect(port=1883, cleansession=True)
+  aclient.publish("fromb qos 0", b"", 0, retained=True)
+  aclient.publish("fromb qos 1", b"", 1, retained=True)
+  aclient.publish("fromb qos 2", b"", 2, retained=True)
+  time.sleep(.2) # wait for QoS 2 exchange to be completed
+  aclient.subscribe(["#"], [2])
+  time.sleep(.2)
+  aclient.disconnect()
+  
+  print(callback.messages)
+  assert len(callback.messages) == 0
+
+  # will messages
+  # keepalive
+
+
+
+
+
+
+
 
 

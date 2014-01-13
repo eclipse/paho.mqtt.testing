@@ -29,6 +29,22 @@ def respond(sock, packet):
   else:
     sock.send(packet.pack())
 
+"""
+class MessageQueues:
+
+  def __init__(self):
+    self.queue = []
+    self.messages = {}
+
+  def append(self, message):
+    self.queue.append(message)
+    self.messages[message.messageIdentifier] = message
+
+  def getMessage(self, msgid):
+    if self.messages.keys():
+    return self.messages[msgid]
+"""   
+
 class MQTTClients:
 
   def __init__(self, anId, cleansession, socket):
@@ -36,7 +52,8 @@ class MQTTClients:
     self.cleansession = cleansession
     self.socket = socket
     self.msgid = 1
-    self.outbound = []
+    self.outbound = [] # message objects - for ordering 
+    self.outmsgs = {} # msgids to message objects
     self.inbound = {} # stored inbound QoS 2 publications
     self.connected = False
     self.timestamp = None
@@ -74,51 +91,64 @@ class MQTTClients:
       else:
         self.msgid += 1
       self.outbound.append(pub)
+      self.outmsgs[pub.messageIdentifier] = pub
     if self.connected:
       respond(self.socket, pub)
     else:
       print(self.id, "publishArrived", self.outbound)
 
   def puback(self, msgid):
-    for pub in self.outbound:
-      if pub.messageIdentifier == msgid:
-        if pub.fh.QoS == 1:
-          self.outbound.remove(pub)
-          rc = True
-        else:
-          logging.error("Puback received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
-        return
-    logging.error("Puback received for msgid %d, but no message found", msgid)
+    if msgid in self.outmsgs.keys():
+      pub = self.outmsgs[msgid]
+      if pub.fh.QoS == 1:
+        self.outbound.remove(pub)
+        del self.outmsgs[msgid]
+      else:
+        logging.error("Puback received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+    else:
+      logging.error("Puback received for msgid %d, but no message found", msgid)
 
   def pubrec(self, msgid):
     rc = False
-    for pub in self.outbound:
-      if pub.messageIdentifier == msgid:
-        if pub.fh.QoS == 2:
-          if pub.qos2state == "PUBREC":
-            pub.qos2state = "PUBCOMP"
-            rc = True
-          else:
-            logging.error("Pubrec received for msgid %d, but message in wrong state", msgid)
+    if msgid in self.outmsgs.keys():
+      pub = self.outmsgs[msgid]
+      if pub.fh.QoS == 2:
+        if pub.qos2state == "PUBREC":
+          pub.qos2state = "PUBCOMP"
+          rc = True
         else:
-          logging.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
-      break
-    if not rc:
+          logging.error("Pubrec received for msgid %d, but message in wrong state", msgid)
+      else:
+        logging.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+    else:
       logging.error("Pubrec received for msgid %d, but no message found", msgid)
-    return rc 
+    return rc
 
   def pubcomp(self, msgid):
-    for pub in self.outbound:
-      if pub.messageIdentifier == msgid:
-        if pub.fh.QoS == 2:
-          if pub.qos2state == "PUBCOMP":
-            self.outbound.remove(pub)
-          else:
-            logging.error("Pubcomp received for msgid %d, but message in wrong state", msgid)
+    if msgid in self.outmsgs.keys():
+      pub = self.outmsgs[msgid]
+      if pub.fh.QoS == 2:
+        if pub.qos2state == "PUBCOMP":
+          self.outbound.remove(pub)
+          del self.outmsgs[msgid]
         else:
-          logging.error("Pubcomp received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
-      break
+          logging.error("Pubcomp received for msgid %d, but message in wrong state", msgid)
+      else:
+        logging.error("Pubcomp received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+    else:  
       logging.error("Pubcomp received for msgid %d, but no message found", msgid)
+
+  def pubrel(self, msgid):
+    rc = None
+    if msgid in self.inbound.keys():
+      pub = self.inbound[msgid]
+      if pub.fh.QoS == 2:
+        rc = pub
+      else:
+        logging.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+    else:
+      logging.error("Pubrec received for msgid %d, but no message found", msgid)
+    return rc 
   
 
 class MQTTBrokers:
@@ -140,7 +170,7 @@ class MQTTBrokers:
       if packet:
         self.handlePacket(packet, sock)
       else:
-        raise Exception("handleRequest: badly formed packet")
+        raise Exception("[MQTT-2.0.0-1] handleRequest: badly formed MQTT packet")
     finally:
       self.lock.release()
 
@@ -232,21 +262,27 @@ class MQTTBrokers:
       respond(sock, resp)
     elif packet.fh.QoS == 2:
       myclient = self.clients[sock]
-      myclient.inbound[packet.messageIdentifier] = packet
+      if packet.messageIdentifier in myclient.inbound.keys():
+        if packet.fh.DUP == 0:
+          logging.error("[MQTT-2.1.2-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
+        else:
+          logging.info("[MQTT-2.1.2-2] DUP flag is 1 on redelivery")
+      else:
+        myclient.inbound[packet.messageIdentifier] = packet
       resp = MQTTV3.Pubrecs()
       resp.messageIdentifier = packet.messageIdentifier
       respond(sock, resp)
 
   def pubrel(self, sock, packet):
     myclient = self.clients[sock]
-    key = packet.messageIdentifier
-    if key in myclient.inbound.keys():
-      packet = myclient.inbound[key]
-      self.broker.publish(myclient.id,
-             packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
-      resp = MQTTV3.Pubcomps()
-      resp.messageIdentifier = key
-      respond(sock, resp)
+    pub = myclient.pubrel(packet.messageIdentifier)
+    if pub:
+      self.broker.publish(myclient.id, pub.topicName, pub.data, pub.fh.QoS, pub.fh.RETAIN)
+      del myclient.inbound[packet.messageIdentifier]
+    # must respond with pubcomp regardless of whether a message was found
+    resp = MQTTV3.Pubcomps()
+    resp.messageIdentifier = packet.messageIdentifier
+    respond(sock, resp)
 
   def pingreq(self, sock, packet):
     resp = MQTTV3.Pingresps()
