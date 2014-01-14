@@ -23,25 +23,26 @@ logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',  datefmt='%Y
 from .MQTTBrokers import MQTTBrokers
 from ..formats.MQTTV311 import MQTTException
 
-broker = MQTTBrokers()
+broker = MQTTBrokers(publish_on_pubrel = False)
 
 class MyHandler(socketserver.StreamRequestHandler):
 
   def handle(self):
     sock = self.request
     sock_no = sock.fileno()
+    terminate = False
     logging.info("Starting communications for socket %d", sock_no)
-    while True:
+    while not terminate:
       try:
         logging.info("Waiting for request")
         (i, o, e) = select.select([sock], [], [])
         if i == [sock]:
-          broker.handleRequest(sock)
+          terminate = broker.handleRequest(sock)
         else:
           break
-      except socket.error: 
-        # this is received from select if the client has normally disconnected
-        break
+      #except socket.error: 
+      #  # this is received from select if the client has normally disconnected
+      #  break
       except UnicodeDecodeError:
         logging.error("[MQTT-1.4.0-1] Unicode field encoding error")
         break

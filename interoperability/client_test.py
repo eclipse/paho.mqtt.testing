@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import mqtt.client, time, logging
+import mqtt.client, time, logging, socket
 
 class Callbacks(mqtt.client.Callback):
 
@@ -127,6 +127,17 @@ if __name__ == "__main__":
   assert len(callback.messages) == 0
 
   # will messages
+  aclient.connect(port=1883, cleansession=True, willFlag=True, willTopic="willTopic", willMessage=b"client not disconnected") 
+  bclient.connect(port=1883, cleansession=False)
+  bclient.subscribe(["#"], [2])
+  time.sleep(.1)
+  aclient.sock.shutdown(socket.SHUT_RDWR)
+  aclient.sock.close()
+  time.sleep(.2)
+  bclient.disconnect()
+  assert len(callback2.messages) == 1 # should have the will message
+  print("messages %s", callback2.messages)
+
   # keepalive
 
 

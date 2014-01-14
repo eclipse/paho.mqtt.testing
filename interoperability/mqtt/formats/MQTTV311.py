@@ -271,7 +271,7 @@ class Connects(Packets):
       buf += ", WillQoS " + repr(self.WillQoS) +\
              ", WillRETAIN " + repr(self.WillRETAIN) +\
              ", WillTopic '"+ self.WillTopic +\
-             "', WillMessage '"+self.WillMessage+"'"
+             "', WillMessage '"+str(self.WillMessage)+"'"
     if self.username:
       buf += ", username "+self.username
     if self.password:

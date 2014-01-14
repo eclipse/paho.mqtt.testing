@@ -25,8 +25,7 @@ class Brokers:
 
   def __init__(self):
     self.se = SubscriptionEngines()
-    self.__clients = {} 
-    self.__wills = {}
+    self.__clients = {}
 
   def reinit(self):
     self.__init__()
@@ -45,18 +44,13 @@ class Brokers:
     if aClient.cleansession:
       self.cleanSession(aClient.id)
 
-  def connectWill(self, aClient, cleansession,
-                        willtopic, willQoS, willmsg, willRetain):
-    self.__wills[aClient.id] = (willtopic, willQoS, willmsg, willRetain)
-    self.connect(aClient, cleansession)
-
   def terminate(self, aClientid):
     "Abrupt disconnect which also causes a will msg to be sent out"
-    if aClientid in self.__clients.keys() and self.__clients[aClientid][2]:
-      self.disconnect(aClientid)
-      if aClientid in self.__wills.keys():
-        willtopic, willQoS, willmsg, willRetain = self.__wills[aClientid]
+    if aClientid in self.__clients.keys() and self.__clients[aClientid].connected:
+      if self.__clients[aClientid].will != None:
+        willtopic, willQoS, willmsg, willRetain = self.__clients[aClientid].will
         self.publish(aClientid, willtopic, willmsg, willQoS, willRetain)
+      self.disconnect(aClientid)
 
   def disconnect(self, aClientid):
     if aClientid in self.__clients.keys():
@@ -117,7 +111,7 @@ class Brokers:
     return self.se.subscriptions(aClientid)
  
 def test():
-  bn = AbstractBrokers()
+  bn = Brokers()
 
   class Clients:
 
