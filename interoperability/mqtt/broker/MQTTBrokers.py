@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import traceback, random, sys, string, copy, threading, logging, socket
+import traceback, random, sys, string, copy, threading, logging, socket, time
 
 from ..formats import MQTTV311 as MQTTV3
 
@@ -29,39 +29,24 @@ def respond(sock, packet):
   else:
     sock.send(packet.pack())
 
-"""
-class MessageQueues:
-
-  def __init__(self):
-    self.queue = []
-    self.messages = {}
-
-  def append(self, message):
-    self.queue.append(message)
-    self.messages[message.messageIdentifier] = message
-
-  def getMessage(self, msgid):
-    if self.messages.keys():
-    return self.messages[msgid]
-"""   
-
 class MQTTClients:
 
-  def __init__(self, anId, cleansession, socket, publish_on_pubrel=True):
+  def __init__(self, anId, cleansession, keepalive, socket, broker):
     self.id = anId # required
     self.cleansession = cleansession
     self.socket = socket
     self.msgid = 1
     self.outbound = [] # message objects - for ordering 
     self.outmsgs = {} # msgids to message objects
-    self.publish_on_pubrel = publish_on_pubrel
-    if publish_on_pubrel:
+    self.broker = broker
+    if broker.publish_on_pubrel:
       self.inbound = {} # stored inbound QoS 2 publications
     else:
       self.inbound = []
     self.connected = False
-    self.timestamp = None
     self.will = None
+    self.keepalive = keepalive
+    self.lastPacket = None
 
   def reinit(self):
     self.__init__(self.id, self.socket)
@@ -145,7 +130,7 @@ class MQTTClients:
 
   def pubrel(self, msgid):
     rc = None
-    if self.publish_on_pubrel:
+    if self.broker.publish_on_pubrel:
         pub = self.inbound[msgid]
         if pub.fh.QoS == 2:
           rc = pub
@@ -183,7 +168,7 @@ class MQTTBrokers:
       if raw_packet == None:
         # will message
         self.disconnect(sock, None, terminate=True)
-        logging.info("[MQTT-] sending will message")
+        logging.info("[MQTT-3.1.2-8] sending will message")
         terminate = True
       else:
         packet = MQTTV3.unpackPacket(raw_packet)
@@ -204,6 +189,8 @@ class MQTTBrokers:
       raise MQTTV3.MQTTException("[MQTT-3.1.0-1] Connect was not first packet on socket")
     else:
       getattr(self, MQTTV3.packetNames[packet.fh.MessageType].lower())(sock, packet)
+      if sock in self.clients.keys():
+        self.clients[sock].lastPacket = time.time()
     if MQTTV3.packetNames[packet.fh.MessageType] == "DISCONNECT":
       terminate = True
     return terminate
@@ -234,7 +221,7 @@ class MQTTBrokers:
     if not packet.CleanSession:
       me = self.broker.getClient(packet.ClientIdentifier) # find existing state, if there is any
     if me == None:
-      me = MQTTClients(packet.ClientIdentifier, packet.CleanSession, sock, self.publish_on_pubrel)
+      me = MQTTClients(packet.ClientIdentifier, packet.CleanSession, packet.KeepAliveTimer, sock, self)
     else: 
       me.socket = sock # set existing client state to new socket
     self.clients[sock] = me
@@ -280,6 +267,8 @@ class MQTTBrokers:
     respond(sock, resp)
 
   def publish(self, sock, packet):
+    if packet.topicName.find("+") != -1 or packet.topicName.find("#") != -1:
+      raise MqttException("[MQTT-3.3.2-2] wildcards not allowed in topic name")
     if packet.fh.QoS == 0:
       self.broker.publish(self.clientids[sock],
              packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
@@ -346,4 +335,14 @@ class MQTTBrokers:
     "confirmed reception of qos 2"
     self.clients[sock].pubcomp(packet.messageIdentifier)
 
- 
+  def keepalive(self, sock):
+    client = self.clients[sock]
+    if client.keepalive > 0 and time.time() - client.lastPacket > client.keepalive * 1.5:
+      # keep alive timeout
+      logging.info("[MQTT-3.1.2-22] keepalive timeout for client %s", client.id)
+      self.disconnect(sock, None, terminate=True)
+
+
+
+
+

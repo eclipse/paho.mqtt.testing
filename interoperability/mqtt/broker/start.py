@@ -34,15 +34,14 @@ class MyHandler(socketserver.StreamRequestHandler):
     logging.info("Starting communications for socket %d", sock_no)
     while not terminate:
       try:
-        logging.info("Waiting for request")
-        (i, o, e) = select.select([sock], [], [])
+        logging.debug("Waiting for request")
+        (i, o, e) = select.select([sock], [], [], 1)
         if i == [sock]:
           terminate = broker.handleRequest(sock)
+        elif (i, o, e) == ([], [], []):
+          broker.keepalive(sock)
         else:
           break
-      #except socket.error: 
-      #  # this is received from select if the client has normally disconnected
-      #  break
       except UnicodeDecodeError:
         logging.error("[MQTT-1.4.0-1] Unicode field encoding error")
         break

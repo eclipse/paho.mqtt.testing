@@ -131,14 +131,23 @@ if __name__ == "__main__":
   bclient.connect(port=1883, cleansession=False)
   bclient.subscribe(["#"], [2])
   time.sleep(.1)
-  aclient.sock.shutdown(socket.SHUT_RDWR)
-  aclient.sock.close()
+  aclient.terminate()
   time.sleep(.2)
   bclient.disconnect()
   assert len(callback2.messages) == 1 # should have the will message
   print("messages %s", callback2.messages)
 
   # keepalive
+  callback2.clear()
+  aclient.connect(port=1883, cleansession=True, keepalive=5, willFlag=True, willTopic="willTopic", willMessage=b"client not disconnected") 
+  bclient.connect(port=1883, cleansession=False, keepalive=0)
+  bclient.subscribe(["#"], [2])
+  time.sleep(10)
+  bclient.disconnect()
+  assert len(callback2.messages) == 1 # should have the will message
+  print("messages %s", callback2.messages)
+  
+  # username & password
 
 
 

@@ -42,7 +42,7 @@ class Receivers:
       packet = MQTTV3.unpackPacket(MQTTV3.getPacket(self.socket))
     except:
       if not self.stopping and sys.exc_info()[0] != socket.timeout:
-        logging.error("unexpected exception %s", str(sys.exc_info()))
+        logging.error("receive: unexpected exception %s", str(sys.exc_info()))
         traceback.print_exc()
         raise 
     if packet == None:
@@ -135,6 +135,6 @@ class Receivers:
       while True:
         self.receive(callback)
     except:
-      if sys.exc_info()[0] != socket.error:
-        logging.error("unexpected exception %s", str(sys.exc_info()))
+      if not self.stopping and sys.exc_info()[0] != socket.error:
+        logging.error("call: unexpected exception %s", str(sys.exc_info()))
         traceback.print_exc()

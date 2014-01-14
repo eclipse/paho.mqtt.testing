@@ -76,7 +76,7 @@ class Client:
     self.callback = callback
 
 
-  def connect(self, host="localhost", port=1883, cleansession=True, newsocket=True, protocolName=None,
+  def connect(self, host="localhost", port=1883, cleansession=True, keepalive=0, newsocket=True, protocolName=None,
               willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False):
     if newsocket:
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -85,7 +85,7 @@ class Client:
     connect = MQTTV3.Connects()
     connect.ClientIdentifier = self.clientid
     connect.CleanSession = cleansession
-    connect.KeepAliveTimer = 0
+    connect.KeepAliveTimer = keepalive
     if protocolName:
       connect.ProtocolName = protocolName
 
@@ -153,6 +153,13 @@ class Client:
     disconnect = MQTTV3.Disconnects()
     self.sock.send(disconnect.pack())
     time.sleep(0.1)
+    self.sock.close() # this will stop the receiver too
+    self.__receiver = None
+
+  def terminate(self):
+    if self.__receiver:
+      self.__receiver.stopping = True
+    self.sock.shutdown(socket.SHUT_RDWR)
     self.sock.close() # this will stop the receiver too
     self.__receiver = None
 

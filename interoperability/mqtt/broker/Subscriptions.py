@@ -39,6 +39,6 @@ class Subscriptions:
     self.__qos = qos
 
   def __repr__(self):
-    return repr((self.__clientid, self.__topic, self.__qos))
+    return repr({"clientid":self.__clientid, "topic":self.__topic, "qos":self.__qos})
 
 
