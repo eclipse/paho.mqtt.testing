@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import socketserver, select, sys, traceback, socket, logging
+import socketserver, select, sys, traceback, socket, logging, getopt
 
 logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',  datefmt='%Y%m%d %H%M%S', level=logging.INFO)
 
@@ -61,11 +61,10 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn,
   pass
 
 
-def run():
+def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True):
   global broker
-
   port = 1883
-  broker = MQTTBrokers(publish_on_pubrel = False)
+  broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0)
   logging.info("Starting the MQTT server on port %d", port)
   try:
     s = ThreadingTCPServer(("", port), MyHandler, False)
@@ -86,5 +85,29 @@ def run():
   logging.info("Stopping the MQTT server on port %d", port)
 
 
+def main(argv):
+  try:
+    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:", ["help", "publish_on_pubrel=", "overlapping_single=", "dropQoS0="])
+  except getopt.GetoptError as err:
+    print(err) # will print something like "option -a not recognized"
+    usage()
+    sys.exit(2)
+  publish_on_pubrel = overlapping_single = dropQoS0 = True
+  for o, a in opts:
+    if o in ("-h", "--help"):
+      usage()
+      sys.exit()
+    elif o in ("-p", "--publish_on_pubrel"):
+      publish_on_pubrel = False if a in ["off", "false", "0"] else True
+    elif o in ("-o", "--overlapping_single"):
+      overlapping_single = False if a in ["off", "false", "0"] else True
+    elif o in ("-d", "--dropQoS0"):
+      dropQoS0 = False if a in ["off", "false", "0"] else True
+    else:
+      assert False, "unhandled option"
+
+  run(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0)
+
+
 if __name__ == "__main__":
-  run()
+  main(sys.argv)

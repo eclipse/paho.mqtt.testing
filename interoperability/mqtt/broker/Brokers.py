@@ -23,9 +23,10 @@ from .SubscriptionEngines import SubscriptionEngines
  
 class Brokers:
 
-  def __init__(self):
+  def __init__(self, overlapping_single=True):
     self.se = SubscriptionEngines()
     self.__clients = {}
+    self.overlapping_single = overlapping_single
 
   def reinit(self):
     self.__init__()
@@ -75,13 +76,15 @@ class Brokers:
 
     for subscriber in self.se.subscribers(topic):  # all subscribed clients
       # qos is lower of publication and subscription
-      out_qos = min(self.se.qosOf(subscriber, topic), qos)
-
-      #if rule.properties["OVERLAPPING_QOS"] == "MULTIPLE":
-      #  for q in thisqos:
-      #    self.__clients[c].publishArrived(topic, message, [q])
-      #else:
-      self.__clients[subscriber].publishArrived(topic, message, out_qos)
+      if len(self.se.getSubscriptions(topic, subscriber)) > 1:
+        logging.info("[MQTT-3.3.5-1] overlapping subscriptions")
+      if self.overlapping_single:   
+        out_qos = min(self.se.qosOf(subscriber, topic), qos)
+        self.__clients[subscriber].publishArrived(topic, message, out_qos)
+      else:
+        for subscription in self.se.getSubscriptions(topic, subscriber):
+          out_qos = min(subscription.getQoS(), qos)
+          self.__clients[subscriber].publishArrived(topic, message, out_qos)
 
   def __doRetained__(self, aClientid, topic, qos):
     if type(topic) != type([]):
@@ -110,7 +113,7 @@ class Brokers:
   def getSubscriptions(self, aClientid=None):
     return self.se.getSubscriptions(aClientid)
  
-def test():
+def unit_tests():
   bn = Brokers()
 
   class Clients:
@@ -118,6 +121,7 @@ def test():
     def __init__(self, anId):
      self.id = anId # required
      self.msgqueue = []
+     self.cleansession = True
 
     def publishArrived(self, topic, msg, qos, retained=False):
       "required by broker node class"
@@ -125,8 +129,9 @@ def test():
       self.msgqueue.append((topic, msg, qos))
 
   Client1 = Clients("Client1")
+  Client1.cleansession = False
 
-  bn.connect(Client1, False)
+  bn.connect(Client1)
   bn.subscribe(Client1.id, "topic1", 1)
   bn.publish(Client1.id, "topic1", "message 1", 1)
 
@@ -161,12 +166,16 @@ def test():
   bn.disconnect(Client1.id)
 
   Client2 = Clients("Client2")
+  Client2.cleansession = False
   bn.connect(Client2)
   bn.publish(Client2.id, "topic2/a", "queued message 0", 0)
   bn.publish(Client2.id, "topic2/a", "queued message 1", 1)
   bn.publish(Client2.id, "topic2/a", "queued message 2", 2)
 
-  bn.connect(Client1, False)
+  bn.connect(Client1)
+  Client1.cleansession = False
+  print(Client1.msgqueue)
+  assert Client1.msgqueue.pop(0) == ("topic2/a", "queued message 0", 0)
   assert Client1.msgqueue.pop(0) == ("topic2/a", "queued message 1", 1)
   assert Client1.msgqueue.pop(0) == ("topic2/a", "queued message 2", 2)
 

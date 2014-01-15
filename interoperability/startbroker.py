@@ -16,6 +16,7 @@
 *******************************************************************
 """
 
-import mqtt.broker
+import mqtt.broker, sys
 
-mqtt.broker.run()
+if __name__ == "__main__":
+  mqtt.broker.main(sys.argv)

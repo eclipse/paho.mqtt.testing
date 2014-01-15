@@ -16,4 +16,4 @@
 *******************************************************************
 """
 
-from .start import run
+from .start import run, main

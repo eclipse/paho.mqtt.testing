@@ -138,16 +138,6 @@ if __name__ == "__main__":
   bclient.disconnect()
   assert len(callback2.messages) == 1 # should have the will message
   print("messages %s", callback2.messages)
-
-  # keepalive
-  callback2.clear()
-  aclient.connect(port=1883, cleansession=True, keepalive=5, willFlag=True, willTopic="willTopic", willMessage=b"keepalive expiry") 
-  bclient.connect(port=1883, cleansession=False, keepalive=0)
-  bclient.subscribe(["#"], [2])
-  time.sleep(10)
-  bclient.disconnect()
-  assert len(callback2.messages) == 1 # should have the will message
-  print("messages %s", callback2.messages)
   
   # $ topics
   callback2.clear()
@@ -167,10 +157,32 @@ if __name__ == "__main__":
   assert len(callback2.messages) == 2
   bclient.disconnect()
 
-  # username & password
+  # overlapping subscriptions
+  callback.clear()
+  callback2.clear()
+  aclient.connect(port=1883)
+  aclient.subscribe(["a/#", "a/+"], [2, 1])
+  aclient.publish("a/froma qos 2", b"overlapping topic filters", 2)
+  time.sleep(.1)
+  print("messages %s", callback.messages)
+  assert len(callback.messages) == 1
+  aclient.disconnect()
+
+  # username & password (subscribe failure)
 
 
   # redelivery on reconnect
+
+
+  # keepalive
+  callback2.clear()
+  aclient.connect(port=1883, cleansession=True, keepalive=5, willFlag=True, willTopic="willTopic", willMessage=b"keepalive expiry") 
+  bclient.connect(port=1883, cleansession=False, keepalive=0)
+  bclient.subscribe(["#"], [2])
+  time.sleep(10)
+  bclient.disconnect()
+  assert len(callback2.messages) == 1 # should have the will message
+  print("messages %s", callback2.messages)
 
  
 

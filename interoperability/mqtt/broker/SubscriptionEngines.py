@@ -81,25 +81,24 @@ class SubscriptionEngines:
      "return a list of subscriptions for this client"
      subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
      if aClientid == None:
-       rc = subscriptions
+       rc = [sub for sub in subscriptions if Topics.topicMatches(sub.getTopic(), aTopic)]
      else:
-       rc = [s for s in subscriptions if s.getClientid() == aClientid]
+       rc = [sub for sub in subscriptions if sub.getClientid() == aClientid and Topics.topicMatches(sub.getTopic(), aTopic)]
      return rc
 
    def qosOf(self, clientid, topic):
      # if there are overlapping subscriptions, choose maximum QoS
      chosen = None
      for sub in self.getSubscriptions(topic, clientid):
-       if Topics.topicMatches(sub.getTopic(), topic):
-         if chosen == None:
+       if chosen == None:
+         chosen = sub.getQoS()
+       else:
+         logging.info("[MQTT-3.3.5-1] Overlapping subscriptions max QoS")
+         if sub.getQoS() > chosen:
            chosen = sub.getQoS()
-         else:
-           logging.info("[MQTT-3.3.5-1] Overlapping subscriptions max QoS")
-           if sub.getQoS() > chosen:
-             chosen = sub.getQoS()
-         # Omit the following optimization because we want to check for condition [MQTT-3.3.5-1]
-         #if chosen == 2:
-         #  break
+       # Omit the following optimization because we want to check for condition [MQTT-3.3.5-1]
+       #if chosen == 2:
+       #  break
      return chosen
 
    def subscribers(self, aTopic):

@@ -147,20 +147,21 @@ class MQTTClients:
 
 class MQTTBrokers:
 
-  def __init__(self, publish_on_pubrel=True, overlapping_single = True, dropQoS0=True):
+  def __init__(self, publish_on_pubrel=True, overlapping_single=True, dropQoS0=True):
 
     # optional behaviour
     self.publish_on_pubrel = publish_on_pubrel
-    self.overlapping_single = overlapping_single # 
     self.dropQoS0 = dropQoS0                    # don't queue QoS 0 messages for disconnected clients
 
-    self.broker = Brokers()
+    self.broker = Brokers(overlapping_single)
     self.clientids = {}
     self.clients = {}
     self.lock = threading.RLock()
 
     logging.info("MQTT 3.1.1 Paho Test Broker")
     logging.info("Optional behaviour, publish on pubrel: %s", self.publish_on_pubrel)
+    logging.info("Optional behaviour, single publish on overlapping topics: %s", self.broker.overlapping_single)
+    logging.info("Optional behaviour, drop QoS 0 publications to disconnected clients: %s", self.dropQoS0)
 
   def handleRequest(self, sock):
     "this is going to be called from multiple threads, so synchronize"
@@ -227,6 +228,8 @@ class MQTTBrokers:
       me = MQTTClients(packet.ClientIdentifier, packet.CleanSession, packet.KeepAliveTimer, sock, self)
     else: 
       me.socket = sock # set existing client state to new socket
+      me.cleansession = packet.CleanSession
+      me.keepalive = packet.KeepAliveTimer
     self.clients[sock] = me
     me.will = (packet.WillTopic, packet.WillQoS, packet.WillMessage, packet.WillRETAIN) if packet.WillFlag else None
     self.broker.connect(me)
