@@ -23,7 +23,7 @@ logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',  datefmt='%Y
 from .MQTTBrokers import MQTTBrokers
 from ..formats.MQTTV311 import MQTTException
 
-broker = MQTTBrokers(publish_on_pubrel = False)
+broker = None
 
 class MyHandler(socketserver.StreamRequestHandler):
 
@@ -62,7 +62,10 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn,
 
 
 def run():
+  global broker
+
   port = 1883
+  broker = MQTTBrokers(publish_on_pubrel = False)
   logging.info("Starting the MQTT server on port %d", port)
   try:
     s = ThreadingTCPServer(("", port), MyHandler, False)

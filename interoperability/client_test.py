@@ -75,6 +75,8 @@ if __name__ == "__main__":
   except Exception as exc:
     print("Exception", exc)
     
+
+  # message queueing for offline clients
   callback.clear()
 
   aclient.connect(port=1883, cleansession=False)
@@ -139,7 +141,7 @@ if __name__ == "__main__":
 
   # keepalive
   callback2.clear()
-  aclient.connect(port=1883, cleansession=True, keepalive=5, willFlag=True, willTopic="willTopic", willMessage=b"client not disconnected") 
+  aclient.connect(port=1883, cleansession=True, keepalive=5, willFlag=True, willTopic="willTopic", willMessage=b"keepalive expiry") 
   bclient.connect(port=1883, cleansession=False, keepalive=0)
   bclient.subscribe(["#"], [2])
   time.sleep(10)
@@ -147,9 +149,30 @@ if __name__ == "__main__":
   assert len(callback2.messages) == 1 # should have the will message
   print("messages %s", callback2.messages)
   
+  # $ topics
+  callback2.clear()
+  aclient.connect(port=1883) 
+  bclient.connect(port=1883, cleansession=True, keepalive=0)
+  bclient.subscribe(["$SYS/#"], [2])
+  aclient.publish("fromb qos 1", b"", 1, retained=True)
+  time.sleep(.2)
+  assert len(callback2.messages) == 0 
+  aclient.publish("$SYS/fromb qos 1", b"", 1, retained=True)
+  time.sleep(.2)
+  assert len(callback2.messages) == 1
+  bclient.subscribe(["#"], [2])
+  aclient.publish("fromb qos 1", b"", 1, retained=True)
+  time.sleep(.2)
+  print("messages %s", callback2.messages)
+  assert len(callback2.messages) == 2
+  bclient.disconnect()
+
   # username & password
 
 
+  # redelivery on reconnect
+
+ 
 
 
 

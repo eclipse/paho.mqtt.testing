@@ -90,11 +90,11 @@ class Brokers:
     i = 0
     for t in topic: # t is a wildcard subscription topic
       topicsUsed = []
-      for s in self.se.retainedTopics(): # s is a non-wildcard retained topic
+      for s in self.se.getRetainedTopics(topic): # s is a non-wildcard retained topic
         if s not in topicsUsed and Topics.topicMatches(t, s):
           # topic has retained publication
           topicsUsed.append(s)
-          (ret_msg, ret_qos) = self.se.retained(s)
+          (ret_msg, ret_qos) = self.se.getRetained(s)
           thisqos = min(ret_qos, qos[i])
           self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, True)
       i += 1
@@ -107,8 +107,8 @@ class Brokers:
   def unsubscribe(self, aClientid, topic):
     self.se.unsubscribe(aClientid, topic)
 
-  def subscriptions(self, aClientid=None):
-    return self.se.subscriptions(aClientid)
+  def getSubscriptions(self, aClientid=None):
+    return self.se.getSubscriptions(aClientid)
  
 def test():
   bn = Brokers()

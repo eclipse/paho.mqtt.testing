@@ -83,7 +83,8 @@ wildTopicCoverage = dataclasses("string", (1, 64),
                     ["TopicA/+", "+/C", "#", "/#", "/+", "+/+"],
                     static=True)
 """ 
-if __name__ == "__main__":
+
+def unit_tests():
   topics = \
   ['level1', 'level1/level2', 'level1/level2/level3',
    'le(el1/le?el2', '/level1a']
@@ -108,7 +109,7 @@ if __name__ == "__main__":
     for i in range(len(results)):
       assert topicMatches(wildtopic, topics[i]) == results[i], \
         "Failed: "+ wildtopic+" "+topics[i]+" "+repr(results[i])
-      logging.info("Worked:", wildtopic, topics[i], results[i])
+      logging.info("Worked: %s %s %s", wildtopic, topics[i], results[i])
 
   tests = \
   [('level1/+/level3', True),

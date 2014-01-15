@@ -28,6 +28,9 @@ class SubscriptionEngines:
      self.__subscriptions = [] # list of subscriptions
      self.__retained = {}      # map of topics to retained msg+qos
 
+     self.__dollar_subscriptions = []
+     self.__dollar_retained = {}
+
    def subscribe(self, aClientid, topic, qos):
      if type(topic) == type([]):
        rc = []
@@ -43,13 +46,14 @@ class SubscriptionEngines:
      "subscribe to one topic"
      rc = None
      assert Topics.isValidTopicName(aTopic)
+     subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
      resubscribed = False
-     for s in self.__subscriptions:
+     for s in subscriptions:
        if s.getClientid() == aClientid and s.getTopic() == aTopic:
          s.resubscribe(aQos)
          return s
      rc = Subscriptions(aClientid, aTopic, aQos)
-     self.__subscriptions.append(rc)
+     subscriptions.append(rc)
      return rc
 
    def unsubscribe(self, aClientid, aTopic):
@@ -61,28 +65,31 @@ class SubscriptionEngines:
 
    def __unsubscribe(self, aClientid, aTopic):
      "unsubscribe to one topic"
-     for s in self.__subscriptions:
+     subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
+     for s in subscriptions:
        if s.getClientid() == aClientid and s.getTopic() == aTopic:
-         self.__subscriptions.remove(s)
+         subscriptions.remove(s)
          break # once we've hit one, that's us done
 
    def clearSubscriptions(self, aClientid):
-     for s in self.__subscriptions[:]:
-       if s.getClientid() == aClientid:
-         self.__subscriptions.remove(s)
+     for subscriptions in [self.__subscriptions, self.__dollar_subscriptions]:
+       for s in subscriptions[:]:
+         if s.getClientid() == aClientid:
+           subscriptions.remove(s)
 
-   def subscriptions(self, aClientid=None):
+   def getSubscriptions(self, aTopic, aClientid=None):
      "return a list of subscriptions for this client"
+     subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
      if aClientid == None:
-       rc = self.__subscriptions
+       rc = subscriptions
      else:
-       rc = [s for s in self.__subscriptions if s.getClientid() == aClientid]
+       rc = [s for s in subscriptions if s.getClientid() == aClientid]
      return rc
 
    def qosOf(self, clientid, topic):
      # if there are overlapping subscriptions, choose maximum QoS
      chosen = None
-     for sub in self.subscriptions(clientid):
+     for sub in self.getSubscriptions(topic, clientid):
        if Topics.topicMatches(sub.getTopic(), topic):
          if chosen == None:
            chosen = sub.getQoS()
@@ -97,8 +104,9 @@ class SubscriptionEngines:
 
    def subscribers(self, aTopic):
      "list all clients subscribed to this (non-wildcard) topic"
+     subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
      result = []
-     for s in self.__subscriptions:
+     for s in subscriptions:
        if Topics.topicMatches(s.getTopic(), aTopic):
          if s.getClientid() not in result: # don't add a client id twice
              result.append(s.getClientid())
@@ -106,43 +114,45 @@ class SubscriptionEngines:
 
    def setRetained(self, aTopic, aMessage, aQoS):
      "set a retained message on a non-wildcard topic"
+     retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
      if len(aMessage) == 0:
-       if aTopic in self.__retained.keys():
+       if aTopic in retained.keys():
          logging.info("[MQTT-2.1.1-11] Deleting retained message")
-         del self.__retained[aTopic]
+         del retained[aTopic]
      else:
-       self.__retained[aTopic] = (aMessage, aQoS)
+       retained[aTopic] = (aMessage, aQoS)
 
-   def retained(self, topic):
+   def getRetained(self, aTopic):
      "returns (msg, QoS) for a topic"
-     if topic in self.__retained.keys():
-       result = self.__retained[topic]
+     retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
+     if aTopic in retained.keys():
+       result = retained[aTopic]
      else:
        result = None
      return result
 
-   def retainedTopics(self):
+   def getRetainedTopics(self, aTopic):
      "returns a list of topics for which retained publications exist"
-     return self.__retained.keys()
+     retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
+     return retained.keys()
 
 
-if __name__ == "__main__":
+def unit_tests():
   se = SubscriptionEngines()
-  se.subscribe("Client1", ["topic1", "topic2"])
+  se.subscribe("Client1", ["topic1", "topic2"], [2, 1])
   assert se.subscribers("topic1") == ["Client1"]
-  se.subscribe("Client2", ["topic2", "topic3"])
+  se.subscribe("Client2", ["topic2", "topic3"], [2, 2])
   assert se.subscribers("topic1") == ["Client1"]
   assert se.subscribers("topic2") == ["Client1", "Client2"]
-  se.subscribe("Client2", ["#"])
+  se.subscribe("Client2", ["#"], [2])
   assert se.subscribers("topic1") == ["Client1", "Client2"]
   assert se.subscribers("topic2") == ["Client1", "Client2"]
   assert se.subscribers("topic3") == ["Client2"]
-  assert setEquals(map(lambda s:s.getTopic(), se.subscriptions("Client2")),
-                       ["#", "topic2", "topic3"])
-  logging.info("Before clear:", se.subscriptions("Client2"))
+  assert set(map(lambda s:s.getTopic(), se.getSubscriptions("Client2"))) == set(["#", "topic2", "topic3"])
+  logging.info("Before clear: %s", se.getSubscriptions("Client2"))
   se.clearSubscriptions("Client2")
-  assert se.subscriptions("Client2") == []
-  assert se.subscriptions("Client1") != []
-  logging.info("After clear, client1:", se.subscriptions("Client1"))
-  logging.info("After clear, client2:", se.subscriptions("Client2"))
+  assert se.getSubscriptions("Client2") == []
+  assert se.getSubscriptions("Client1") != []
+  logging.info("After clear, client1: %s", se.getSubscriptions("Client1"))
+  logging.info("After clear, client2: %s", se.getSubscriptions("Client2"))
  

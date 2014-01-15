@@ -82,6 +82,8 @@ class MQTTClients:
         self.msgid += 1
       self.outbound.append(pub)
       self.outmsgs[pub.messageIdentifier] = pub
+    if qos == 0 and not self.broker.dropQoS0:
+      self.outbound.append(pub)
     if self.connected:
       respond(self.socket, pub)
     else:
@@ -150,13 +152,14 @@ class MQTTBrokers:
     # optional behaviour
     self.publish_on_pubrel = publish_on_pubrel
     self.overlapping_single = overlapping_single # 
-    self.dropQoS0 = dropQoS0 # don't queue QoS 0 messages for disconnected clients
+    self.dropQoS0 = dropQoS0                    # don't queue QoS 0 messages for disconnected clients
 
     self.broker = Brokers()
     self.clientids = {}
     self.clients = {}
     self.lock = threading.RLock()
 
+    logging.info("MQTT 3.1.1 Paho Test Broker")
     logging.info("Optional behaviour, publish on pubrel: %s", self.publish_on_pubrel)
 
   def handleRequest(self, sock):
@@ -311,6 +314,8 @@ class MQTTBrokers:
       else:
         myclient.inbound.remove(packet.messageIdentifier)
     # must respond with pubcomp regardless of whether a message was found
+    if not pub:
+      logging.info("[MQTT-3.6.4-1] must respond with a pubcomp packet")
     resp = MQTTV3.Pubcomps()
     resp.messageIdentifier = packet.messageIdentifier
     respond(sock, resp)
