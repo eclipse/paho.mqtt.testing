@@ -18,43 +18,47 @@
 
 import socketserver, select, sys, traceback, socket, logging, getopt
 
-logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',  datefmt='%Y%m%d %H%M%S', level=logging.INFO)
-
 from .MQTTBrokers import MQTTBrokers
 from ..formats.MQTTV311 import MQTTException
 
 broker = None
+server = None
+
+logger = None
 
 class MyHandler(socketserver.StreamRequestHandler):
 
   def handle(self):
     sock = self.request
     sock_no = sock.fileno()
-    terminate = False
-    logging.info("Starting communications for socket %d", sock_no)
+    terminate = keptalive = False
+    logger.info("Starting communications for socket %d", sock_no)
     while not terminate:
       try:
-        logging.debug("Waiting for request")
+        if not keptalive:
+          logger.info("Waiting for request")
         (i, o, e) = select.select([sock], [], [], 1)
         if i == [sock]:
           terminate = broker.handleRequest(sock)
+          keptalive = False
         elif (i, o, e) == ([], [], []):
           broker.keepalive(sock)
+          keptalive = True
         else:
           break
       except UnicodeDecodeError:
-        logging.error("[MQTT-1.4.0-1] Unicode field encoding error")
+        logger.error("[MQTT-1.4.0-1] Unicode field encoding error")
         break
       except MQTTException as exc:
-        logging.error(exc.args[0])
+        logger.error(exc.args[0])
         break
       except AssertionError as exc:
-        logging.error(exc.args[0])
+        logger.error(exc.args[0])
         break
       except:
-        logging.exception("MyHandler")
+        logger.exception("MyHandler")
         break
-    logging.info("Finishing communications for socket %d", sock_no)
+    logger.info("Finishing communications for socket %d", sock_no)
 
 class ThreadingTCPServer(socketserver.ThreadingMixIn,
                            socketserver.TCPServer):
@@ -62,28 +66,38 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn,
 
 
 def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True):
-  global broker
+  global logger, broker, server
+  logger = logging.getLogger('MQTT broker')
+  logger.setLevel(logging.INFO)
   port = 1883
   broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0)
-  logging.info("Starting the MQTT server on port %d", port)
+  logger.info("Starting the MQTT server on port %d", port)
   try:
-    s = ThreadingTCPServer(("", port), MyHandler, False)
-    s.allow_reuse_address = True
-    s.server_bind()
-    s.server_activate()
-    s.serve_forever()
+    server = ThreadingTCPServer(("", port), MyHandler, False)
+    server.allow_reuse_address = True
+    server.server_bind()
+    server.server_activate()
+    server.serve_forever()
   except KeyboardInterrupt:
     pass 
   except:
-    logging.exception("startBroker")
+    logger.exception("startBroker")
   finally:
     try:
-      s.socket.shutdown(socket.SHUT_RDWR)
-      s.socket.close()
+      server.socket.shutdown(socket.SHUT_RDWR)
+      server.socket.close()
     except:
       pass
-  logging.info("Stopping the MQTT server on port %d", port)
+  server = None
+  logger.info("Stopping the MQTT server on port %d", port)
 
+def stop():
+  global server
+  server.shutdown()
+
+def reinitialize():
+  global broker
+  broker.reinitialize()
 
 def main(argv):
   try:

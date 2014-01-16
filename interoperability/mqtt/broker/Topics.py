@@ -19,6 +19,8 @@
 
 import re, logging
 
+logger = logging.getLogger('MQTT broker')
+
  
 def isValidTopicName(aName):
   rc = True
@@ -109,7 +111,7 @@ def unit_tests():
     for i in range(len(results)):
       assert topicMatches(wildtopic, topics[i]) == results[i], \
         "Failed: "+ wildtopic+" "+topics[i]+" "+repr(results[i])
-      logging.info("Worked: %s %s %s", wildtopic, topics[i], results[i])
+      logger.info("Worked: %s %s %s", wildtopic, topics[i], results[i])
 
   tests = \
   [('level1/+/level3', True),
@@ -125,7 +127,7 @@ def unit_tests():
     topic, result = t
     assert isValidTopicName(topic) == result, "Topic validation failed for: "+topic
 
-  logging.info(not topicMatches("1/2/#", "1/2s/s"))
+  logger.info(not topicMatches("1/2/#", "1/2s/s"))
   assert not topicMatches("1/2/#", "1/2s/s")
   assert topicMatches("1/2/#", "1/2/s")
 

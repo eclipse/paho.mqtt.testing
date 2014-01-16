@@ -33,53 +33,88 @@ Do store tests that reach a conformance statement in a different way.
 
 """
 
-import os, shutil, subprocess, time, MQTTV311_spec
+import os, shutil, threading, time, logging, logging.handlers, queue, sys
 
-output = None
+import mqtt, MQTTV311_spec
+
+class Brokers(threading.Thread):
+
+  def __init__(self):
+    threading.Thread.__init__(self)
+
+  def run(self):
+    mqtt.broker.run()
+    while not mqtt.broker.server:
+      time.sleep(.1)
+    time.sleep(1)
+
+  def stop(self):
+    mqtt.broker.stop()
+    while mqtt.broker.server:
+      time.sleep(.1) 
+    time.sleep(1)
+
+  def reinitialize(self):
+    mqtt.broker.reinitialize()
+
+qlog = queue.Queue()
+qh = logging.handlers.QueueHandler(qlog)
+formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
+qh.setFormatter(formatter)
+qh.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+ch.setFormatter(formatter)
+ch.setLevel(logging.ERROR)
+broker_logger = logging.getLogger('MQTT broker')
+broker_logger.addHandler(qh)
+broker_logger.addHandler(ch)
+
+logger = logging.getLogger('suite_generate')
+logger.setLevel(logging.DEBUG)
+#formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
+ch = logging.StreamHandler()
+ch.setFormatter(formatter)
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
+
 
 def create():
-	global output
-	if not output:
-		broker = subprocess.Popen(["python3", "startbroker.py"], stderr=subprocess.PIPE)
-		output = broker.stderr
-		print(output.readline().decode("utf-8"))
+	global logger, qlog
 	conformances = []
 	restart = False
 	while not restart:
-		print("stepping\n")
+		logger.debug("stepping")
 		restart = MQTTV311_spec.mbt.step()
-		print("stepped\n")
-		data = output.readline().decode("utf-8")
-		#data = data.split(" ", 3) if data else data
-		print("data", data)
+		logger.debug("stepped")
+		data = qlog.get().getMessage()
+		logger.debug("data %s", data)
 		while data and data.find("Waiting for request") == -1 and data.find("Finishing communications") == -1:
 			if data.find("[MQTT") != -1:
-				data = data.split(" ", 3) if data else data
-				print("Conformance statement ", data[3])
-				conformances.append(data[3])
-			data = output.readline().decode("utf-8")
-			print("data", data)
+				logger.debug("Conformance statement %s", data)
+				conformances.append(data + "\n" if data[-1] != "\n" else data)
+			data = qlog.get().getMessage()
+			logger.debug("data %s", data)
 		#if input("--->") == "q":
 		#		return
-	#broker.terminate()
 	return conformances
 
 
 if __name__ == "__main__":
 	#try:
-	os.system("kill `ps -ef | grep startbroker | grep -v grep | awk '{print $2}'`")
 	os.system("rm -rf tests")
 	#except:
 	#	pass
 	os.mkdir("tests")
 	test_no = 0
+	logger.info("Generation starting")
+
+	broker = Brokers() 
+	broker.start()
 	
-	while True:
+	while test_no < 10:
 		test_no += 1
 		conformance_statements = create()
-		print("Test created", conformance_statements)
-
-		#MQTTV3_spec.mbt.log.file.close()
+		logger.info("Test %d created", test_no)
 
 		# now tests/test.%d has the test
 		filename = "tests/test.log.%d" % (test_no,)
@@ -88,9 +123,13 @@ if __name__ == "__main__":
 		infile.close()
 		outfile = open(filename, "w")
 		outfile.writelines(conformance_statements + lines)
-		#print(conformance_statements + lines)
 		outfile.close()
-		#MQTTV3_spec.mbt.log = open("test.log", "w")
 	
 		#shorten()
 		#store()
+		broker.reinitialize()
+
+	broker.stop()
+
+	logger.info("Generation complete")
+	sys.exit()

@@ -21,6 +21,8 @@ import types, logging
 from . import Topics, Subscriptions
 
 from .Subscriptions import *
+
+logger = logging.getLogger('MQTT broker')
  
 class SubscriptionEngines:
 
@@ -30,6 +32,9 @@ class SubscriptionEngines:
 
      self.__dollar_subscriptions = []
      self.__dollar_retained = {}
+
+   def reinitialize(self):
+     self.__init__()
 
    def subscribe(self, aClientid, topic, qos):
      if type(topic) == type([]):
@@ -93,7 +98,7 @@ class SubscriptionEngines:
        if chosen == None:
          chosen = sub.getQoS()
        else:
-         logging.info("[MQTT-3.3.5-1] Overlapping subscriptions max QoS")
+         logger.info("[MQTT-3.3.5-1] Overlapping subscriptions max QoS")
          if sub.getQoS() > chosen:
            chosen = sub.getQoS()
        # Omit the following optimization because we want to check for condition [MQTT-3.3.5-1]
@@ -116,7 +121,7 @@ class SubscriptionEngines:
      retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
      if len(aMessage) == 0:
        if aTopic in retained.keys():
-         logging.info("[MQTT-2.1.1-11] Deleting retained message")
+         logger.info("[MQTT-2.1.1-11] Deleting retained message")
          del retained[aTopic]
      else:
        retained[aTopic] = (aMessage, aQoS)
@@ -148,10 +153,10 @@ def unit_tests():
   assert se.subscribers("topic2") == ["Client1", "Client2"]
   assert se.subscribers("topic3") == ["Client2"]
   assert set(map(lambda s:s.getTopic(), se.getSubscriptions("Client2"))) == set(["#", "topic2", "topic3"])
-  logging.info("Before clear: %s", se.getSubscriptions("Client2"))
+  logger.info("Before clear: %s", se.getSubscriptions("Client2"))
   se.clearSubscriptions("Client2")
   assert se.getSubscriptions("Client2") == []
   assert se.getSubscriptions("Client1") != []
-  logging.info("After clear, client1: %s", se.getSubscriptions("Client1"))
-  logging.info("After clear, client2: %s", se.getSubscriptions("Client2"))
+  logger.info("After clear, client1: %s", se.getSubscriptions("Client1"))
+  logger.info("After clear, client2: %s", se.getSubscriptions("Client2"))
  

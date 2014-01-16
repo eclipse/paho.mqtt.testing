@@ -16,7 +16,13 @@
 *******************************************************************
 """
 
-import mqtt.broker, sys
+import mqtt.broker, sys, logging
 
 if __name__ == "__main__":
+  formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(message)s',  datefmt='%Y%m%d %H%M%S')
+  ch = logging.StreamHandler()
+  ch.setFormatter(formatter)
+  ch.setLevel(logging.INFO)
+  broker_logger = logging.getLogger('MQTT broker')
+  broker_logger.addHandler(ch)
   mqtt.broker.main(sys.argv)

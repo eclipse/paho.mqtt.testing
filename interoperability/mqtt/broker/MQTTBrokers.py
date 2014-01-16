@@ -22,12 +22,17 @@ from ..formats import MQTTV311 as MQTTV3
 
 from .Brokers import Brokers
 
+logger = logging.getLogger('MQTT broker')
+
 def respond(sock, packet):
-  logging.info("out: "+repr(packet))
+  logger.info("out: "+repr(packet))
   if hasattr(sock, "handlePacket"):
     sock.handlePacket(packet)
   else:
-    sock.send(packet.pack())
+    try:
+      sock.send(packet.pack()) # Could get socket error on send
+    except:
+      pass
 
 class MQTTClients:
 
@@ -48,12 +53,9 @@ class MQTTClients:
     self.keepalive = keepalive
     self.lastPacket = None
 
-  def reinit(self):
-    self.__init__(self.id, self.socket)
-
   def resend(self):
     for pub in self.outbound:
-      logging.debug("resending", pub)
+      logger.debug("resending", pub)
       pub.fh.DUP = 1
       if pub.fh.QoS == 1:
         respond(self.socket, pub)
@@ -76,6 +78,7 @@ class MQTTClients:
       pub.qos2state = "PUBREC"
     if qos in [1, 2]:
       pub.messageIdentifier = self.msgid
+      print(self.id, "msgid ", self.msgid)
       if self.msgid == 65535:
         self.msgid = 1
       else:
@@ -86,8 +89,8 @@ class MQTTClients:
       self.outbound.append(pub)
     if self.connected:
       respond(self.socket, pub)
-    else:
-      print(self.id, "publishArrived", self.outbound)
+    #else:
+    #  logger.info("publish for disconnected client %s", self.id)
 
   def puback(self, msgid):
     if msgid in self.outmsgs.keys():
@@ -96,9 +99,9 @@ class MQTTClients:
         self.outbound.remove(pub)
         del self.outmsgs[msgid]
       else:
-        logging.error("Puback received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+        logger.error("Puback received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
     else:
-      logging.error("Puback received for msgid %d, but no message found", msgid)
+      logger.error("Puback received for msgid %d, but no message found", msgid)
 
   def pubrec(self, msgid):
     rc = False
@@ -109,11 +112,11 @@ class MQTTClients:
           pub.qos2state = "PUBCOMP"
           rc = True
         else:
-          logging.error("Pubrec received for msgid %d, but message in wrong state", msgid)
+          logger.error("Pubrec received for msgid %d, but message in wrong state", msgid)
       else:
-        logging.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+        logger.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
     else:
-      logging.error("Pubrec received for msgid %d, but no message found", msgid)
+      logger.error("Pubrec received for msgid %d, but no message found", msgid)
     return rc
 
   def pubcomp(self, msgid):
@@ -124,11 +127,11 @@ class MQTTClients:
           self.outbound.remove(pub)
           del self.outmsgs[msgid]
         else:
-          logging.error("Pubcomp received for msgid %d, but message in wrong state", msgid)
+          logger.error("Pubcomp received for msgid %d, but message in wrong state", msgid)
       else:
-        logging.error("Pubcomp received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+        logger.error("Pubcomp received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
     else:  
-      logging.error("Pubcomp received for msgid %d, but no message found", msgid)
+      logger.error("Pubcomp received for msgid %d, but no message found", msgid)
 
   def pubrel(self, msgid):
     rc = None
@@ -137,11 +140,11 @@ class MQTTClients:
         if pub.fh.QoS == 2:
           rc = pub
         else:
-          logging.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+          logger.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
     else:
       rc = msgid in self.inbound
     if not rc:
-      logging.error("Pubrec received for msgid %d, but no message found", msgid)
+      logger.error("Pubrec received for msgid %d, but no message found", msgid)
     return rc 
   
 
@@ -158,10 +161,17 @@ class MQTTBrokers:
     self.clients = {}
     self.lock = threading.RLock()
 
-    logging.info("MQTT 3.1.1 Paho Test Broker")
-    logging.info("Optional behaviour, publish on pubrel: %s", self.publish_on_pubrel)
-    logging.info("Optional behaviour, single publish on overlapping topics: %s", self.broker.overlapping_single)
-    logging.info("Optional behaviour, drop QoS 0 publications to disconnected clients: %s", self.dropQoS0)
+    logger.info("MQTT 3.1.1 Paho Test Broker")
+    logger.info("Optional behaviour, publish on pubrel: %s", self.publish_on_pubrel)
+    logger.info("Optional behaviour, single publish on overlapping topics: %s", self.broker.overlapping_single)
+    logger.info("Optional behaviour, drop QoS 0 publications to disconnected clients: %s", self.dropQoS0)
+
+
+  def reinitialize(self):
+    logger.info("Reinitializing broker")
+    self.clientids = {}
+    self.clients = {}
+    self.broker.reinitialize()
 
   def handleRequest(self, sock):
     "this is going to be called from multiple threads, so synchronize"
@@ -172,7 +182,6 @@ class MQTTBrokers:
       if raw_packet == None:
         # will message
         self.disconnect(sock, None, terminate=True)
-        logging.info("[MQTT-3.1.2-8] sending will message")
         terminate = True
       else:
         packet = MQTTV3.unpackPacket(raw_packet)
@@ -186,7 +195,7 @@ class MQTTBrokers:
 
   def handlePacket(self, packet, sock):
     terminate = False
-    logging.info("in: "+repr(packet))
+    logger.info("in: "+repr(packet))
     if sock not in self.clientids.keys() and \
          MQTTV3.packetNames[packet.fh.MessageType] != "CONNECT":
       self.disconnect(sock, packet)
@@ -204,7 +213,7 @@ class MQTTBrokers:
       self.disconnect(sock, None)
       raise MQTTV3.MQTTException("[MQTT-3.1.2-1] Wrong protocol name %s" % packet.ProtocolName)
     if packet.ProtocolVersion != 4:
-      logging.error("[MQTT-3.1.2-2] Wrong protocol version %d", packet.ProtocolVersion)
+      logger.error("[MQTT-3.1.2-2] Wrong protocol version %d", packet.ProtocolVersion)
       resp = MQTTV3.Connacks()
       resp.returnCode = 1
       respond(sock, resp)
@@ -217,7 +226,7 @@ class MQTTBrokers:
             self.disconnect(sock, None)
             raise MQTTV3.MQTTException("[MQTT-3.1.0-2] Second connect packet")
           else:
-            logging.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
+            logger.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
             self.disconnect(s, None)
             break
     self.clientids[sock] = packet.ClientIdentifier
@@ -289,17 +298,17 @@ class MQTTBrokers:
       if self.publish_on_pubrel:
         if packet.messageIdentifier in myclient.inbound.keys():
           if packet.fh.DUP == 0:
-            logging.error("[MQTT-2.1.2-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
+            logger.error("[MQTT-2.1.2-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
           else:
-            logging.info("[MQTT-2.1.2-2] DUP flag is 1 on redelivery")
+            logger.info("[MQTT-2.1.2-2] DUP flag is 1 on redelivery")
         else:
           myclient.inbound[packet.messageIdentifier] = packet
       else:
         if packet.messageIdentifier in myclient.inbound:
           if packet.fh.DUP == 0:
-            logging.error("[MQTT-2.1.2-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
+            logger.error("[MQTT-2.1.2-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
           else:
-            logging.info("[MQTT-2.1.2-2] DUP flag is 1 on redelivery")
+            logger.info("[MQTT-2.1.2-2] DUP flag is 1 on redelivery")
         else:
           myclient.inbound.append(packet.messageIdentifier)
           self.broker.publish(myclient, packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
@@ -318,7 +327,7 @@ class MQTTBrokers:
         myclient.inbound.remove(packet.messageIdentifier)
     # must respond with pubcomp regardless of whether a message was found
     if not pub:
-      logging.info("[MQTT-3.6.4-1] must respond with a pubcomp packet")
+      logger.info("[MQTT-3.6.4-1] must respond with a pubcomp packet")
     resp = MQTTV3.Pubcomps()
     resp.messageIdentifier = packet.messageIdentifier
     respond(sock, resp)
@@ -344,11 +353,12 @@ class MQTTBrokers:
     self.clients[sock].pubcomp(packet.messageIdentifier)
 
   def keepalive(self, sock):
-    client = self.clients[sock]
-    if client.keepalive > 0 and time.time() - client.lastPacket > client.keepalive * 1.5:
-      # keep alive timeout
-      logging.info("[MQTT-3.1.2-22] keepalive timeout for client %s", client.id)
-      self.disconnect(sock, None, terminate=True)
+    if sock in self.clients.keys():
+      client = self.clients[sock]
+      if client.keepalive > 0 and time.time() - client.lastPacket > client.keepalive * 1.5:
+        # keep alive timeout
+        logger.info("[MQTT-3.1.2-22] keepalive timeout for client %s", client.id)
+        self.disconnect(sock, None, terminate=True)
 
 
 

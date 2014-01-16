@@ -18,7 +18,7 @@
 
 __version__ = 0.1
 
-from mbt.main import Models, Executions, Choices, Tests, log
+from mbt.main import Models, Executions, Choices, Tests, logger
 
 model = Models()
 execution = None

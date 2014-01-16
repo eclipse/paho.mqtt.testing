@@ -34,29 +34,28 @@
 
 """
 
-import random, traceback, time, sys, copy, shutil
+import random, traceback, time, sys, copy, shutil, logging
 
-class Logs:
+logger = logging.getLogger("mbt")
+logger.setLevel(logging.DEBUG)
 
-	def __init__(self, filename="test.log"):
-		self.filename = filename
-		self.file = open(filename, "w")
-		self.index = 1
+formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
+fh = logging.FileHandler("tests/test.log.1", mode="w", delay=True)
+fh.setFormatter(formatter)
+fh.setLevel(logging.DEBUG)
+logger.addHandler(fh)
 
-	def __call__(self, *args):
-		string = ""
-		for a in args:
-			string += str(a) + " "
-		self.file.write(string+"\n")
-		print(string+"\n")
+testindex = 1
 
-	def restart(self):
-		self.file.close()
-		shutil.move(self.filename, "tests/test.log.%d" % (self.index,))
-		self.file = open(self.filename, "w")
-		self.index += 1
-		
-log = Logs()
+def logrestart():
+	global testindex, fh, formatter
+	fh.close()
+	logger.removeHandler(fh)
+	testindex += 1
+	fh = logging.FileHandler("tests/test.log.%d" % testindex, mode="w")
+	fh.setFormatter(formatter)
+	fh.setLevel(logging.DEBUG)
+	logger.addHandler(fh)
 
 class TraceNodes:
 
@@ -70,19 +69,19 @@ class TraceNodes:
 	def addArc(self, key, value):
 		# add an arc from the current node
 		if type(value) != self.__class__:
-			print("error adding value", value)
-			traceback.print
+			logger.error("error adding value %s", value)
+			#traceback.print
 		self.arcs[key] = value
 
 	def isFree(self):
 		# determine whether the current node has some untrodden paths
-		#print("isFree curnode", self)
+		#logger.debug("isFree curnode %s", self)
 		if self.leaf:
 			return None
 		elif not self.used:
 			return self
 		for arc in self.arcs.keys():
-			#print("isFree enabled", enabled)
+			#logger.debug("isFree enabled %s", enabled)
 			rc = self.arcs[arc].isFree()
 			if rc:
 				return rc
@@ -104,7 +103,7 @@ class Traces:
 		self.root = TraceNodes(self.nodeCount)
 		self.root.used = True
 		self.curnode = self.root
-		log("NODE index is now "+str(self.curnode.index))
+		logger.debug("NODE index is now %d", self.curnode.index)
 
 	def restart(self):
 		"""
@@ -112,7 +111,7 @@ class Traces:
 		"""
 		self.curnode.leaf = True
 		self.curnode = self.root
-		log("NODE index is now "+str(self.curnode.index))
+		logger.debug("NODE index is now %d", self.curnode.index)
 
 	def addArcs(self, arcs):
 		""" 
@@ -123,7 +122,7 @@ class Traces:
 				self.nodeCount += 1
 				self.curnode.addArc(arc, TraceNodes(self.nodeCount))
 			self.curnode.arcsAdded = True
-			log("Total number of nodes now "+str(self.nodeCount))
+			logger.debug("Total number of nodes now %d", self.nodeCount)
 
 	def selectAction(self, action, args):
 		"""
@@ -132,7 +131,7 @@ class Traces:
 		key = tuple([action] + args)
 		self.curnode = self.curnode.arcs[key]
 		self.curnode.used = True
-		log("NODE index is now "+str(self.curnode.index))
+		logger.debug("NODE index is now %d", self.curnode.index)
 
 	def findNextPath(self, callback):
 		"return one next path that isn't fully exercised"
@@ -174,7 +173,7 @@ class Choices:
 
 	def equals(self, value):
 		if self.output:
-			print("return value "+str(value)+" "+str(self.value))
+			logger.debug("return value %s %s", value, self.value)
 			input("input")
 		return self.value == value
 
@@ -283,7 +282,7 @@ class Executions:
 		Used during model exploration to add an observation.
 		"""
 		self.observations.append(observation)
-		log("OBSERVED EVENT " + str(observation))
+		logger.info("OBSERVED EVENT %s", observation)
 
 	def removeFinisheds(self, action, kwargs):
 		"""
@@ -347,9 +346,8 @@ class Executions:
 			self.restart()
 
 	def restart(self):
-		print("Restart\n")
-		log("RESTART\n")
-		log.restart()
+		logger.debug("RESTART")
+		logrestart()
 		self.trace.restart()
 		self.pools = copy.deepcopy(self.model.choices)
 		#for type_name in self.model.return_types:
@@ -357,13 +355,12 @@ class Executions:
 		#		self.pools[type_name] = []
 
 	def printStats(self):
-		log("action counts "+str([(a.getName(), a.called) for a in self.model.actions]))
-
+		logger.debug("action counts %s", str([(a.getName(), a.called) for a in self.model.actions]))
 		counts = {}
 		for choice in self.pools.keys():
 			counts[choice] = [(c.value, c.used) for c in self.pools[choice]]
-		log("choice counts "+ str(counts))
-		log("coverage "+str(self.coverage())+"%")
+		logger.debug("choice counts %d", counts)
+		logger.info("coverage %d%%", self.coverage())
 		
 	def __run__(self, interactive=True):
 		while not self.finished:
@@ -372,16 +369,16 @@ class Executions:
 	def step(self, interactive=False):
 			restart = False
 			self.steps += 1 
-			log("Steps: "+str(self.steps)+" coverage "+str(self.coverage())+"%")
+			logger.debug("Steps: %d coverage %d%%", self.steps, self.coverage())
 			enableds = self.getEnabledActions()
-			log("Enabled", [e.getName() for e in enableds])
+			logger.debug("Enabled %s", [e.getName() for e in enableds])
 			
 			self.trace.addArcs([tuple([action] + choice) for action in enableds \
 						    for choice in action.enumerateChoices(self.pools)])
 			
 			next = self.trace.findNextPath(self.model.selectCallback)
 			if next == None:
-				print("No more options available")
+				logger.debug("No more options available")
 				return
 			action = next[0]; args = list(next[1:])
 
@@ -400,8 +397,8 @@ class Executions:
 					pdb.set_trace()
 				index += 1
 
-			log("CALL "+ action.getName()+" with "+str(kwargs))
-			log("EXEC_CALL "+ action.getName()+" with "+str(exec_kwargs))
+			logger.info("CALL %s with %s", action.getName(), kwargs)
+			logger.debug("EXEC_CALL %s with %s", action.getName(), exec_kwargs)
 			if interactive and input("--->") == "q":
 				return
 			self.trace.selectAction(action, args)
@@ -411,12 +408,12 @@ class Executions:
 				rc = action(**kwargs)
 			except:
 				# if exception is not an expected result
-				log("RESULT from", action.getName(), "is exception", traceback.format_exc())
+				logger.info("RESULT from %s is exception %s", action.getName(), traceback.format_exc())
 				self.restart()
 				restart = True
 			else:
 				if rc != None:
-					log("RESULT from", action.getName(), "is", rc)
+					logger.info("RESULT from %s is %s", action.getName(), rc)
 					ret_type = action.getReturnType()
 					
 					if ret_type:

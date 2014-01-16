@@ -17,6 +17,8 @@
 """
 
 import time, logging
+
+logger = logging.getLogger('MQTT broker')
  
 class Subscriptions:
 
@@ -35,8 +37,8 @@ class Subscriptions:
     return self.__qos
 
   def resubscribe(self, qos):
-    logging.info("[MQTT-1.1.0-1] resubscription for client %s on topic %s", self.__clientid, self.__topic)
-    logging.info("[MQTT-3.8.4-3] resubscription for client %s on topic %s", self.__clientid, self.__topic)
+    logger.info("[MQTT-1.1.0-1] resubscription for client %s on topic %s", self.__clientid, self.__topic)
+    logger.info("[MQTT-3.8.4-3] resubscription for client %s on topic %s", self.__clientid, self.__topic)
     self.__qos = qos
 
   def __repr__(self):

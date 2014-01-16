@@ -16,13 +16,16 @@
 *******************************************************************
 """
 
-import mbt, socket, time, _thread, sys, traceback, pdb, select, random, mqtt
+import mbt, socket, time, _thread, sys, traceback, pdb, select, random, mqtt, logging
 
 import mqtt.formats.MQTTV311 as MQTTV3
 
 clientlist = {}
 
 test = None
+
+logger = logging.getLogger("MQTTV311_spec")
+logger.setLevel(logging.DEBUG)
 
 class Clients:
 	
@@ -41,7 +44,7 @@ class Clients:
 		return self.msgid
 
 	def __call__(self, sock):
-		mbt.log("*** running")
+		logger.debug("*** running")
 		clientlist[sock] = self
 		self.running = True
 		try:
@@ -50,10 +53,10 @@ class Clients:
 				if packet == None:
 					break
 				if test:
-					print("received result", packet)
-					test.addResult(packet)
+					logger.debug("received result %s", (sock, packet))
+					test.addResult((sock, packet))
 				else:
-					mbt.observe(packet)
+					mbt.observe((sock, packet))
 					if packet.fh.MessageType == MQTTV3.PUBREC:
 						mbt.execution.pools["pubrecs"].append(mbt.Choices((sock, packet)))
 					elif packet.fh.MessageType == MQTTV3.PUBLISH and packet.fh.QoS in [1, 2]:
@@ -64,11 +67,11 @@ class Clients:
 						self.packets.append(packet)
 		except:
 			if sys.exc_info()[0] != socket.error:
-				print("unexpected exception", sys.exc_info())
-			mbt.log(traceback.format_exc())
+				logger.debug("unexpected exception %s", sys.exc_info())
+			#mbt.log(traceback.format_exc())
 		self.running = False
 		del clientlist[sock]
-		mbt.log("*** stopping "+str(packet))
+		logger.debug("*** stopping "+str(packet))
 
 client = Clients()
 
@@ -120,7 +123,7 @@ def connect(sock : "socket", clientid : "clientids", cleansession : "boolean", #
 	sock.send(connect.pack())	
 	time.sleep(0.1)
 	response = clientlist[sock].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
-	print("+++connect response", response)
+	logger.debug("+++connect response", response)
 	if response == None or response.returnCode not in [0, 2]:
 		raise Exception("Return code "+str(response.returnCode)+" in connack")
 
@@ -259,10 +262,10 @@ after_socket_create = set()
 def select(frees):
 	global last_free_names, after_socket_create
 	free_names = set([f[0].getName() for f in frees])
-	print("*** after_socket_create", after_socket_create, last_free_names)
+	logger.debug("*** after_socket_create %s %s", after_socket_create, last_free_names)
 	if last_free_names == set(['socket_create']):
 		diff = set(free_names).difference(after_socket_create)
-		print("*** diff", diff)
+		logger.debug("*** diff %s", diff)
 		if diff == set():
 			frees = [f for f in frees if f[0].getName() == "connect"]
 		else:

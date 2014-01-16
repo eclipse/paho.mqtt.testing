@@ -20,6 +20,8 @@ import types, time, logging
 
 from . import Topics
 from .SubscriptionEngines import SubscriptionEngines
+
+logger = logging.getLogger('MQTT broker')
  
 class Brokers:
 
@@ -28,8 +30,9 @@ class Brokers:
     self.__clients = {}
     self.overlapping_single = overlapping_single
 
-  def reinit(self):
-    self.__init__()
+  def reinitialize(self):
+    self.__clients = {}
+    self.se.reinitialize()
 
   def getClient(self, clientid):
     return self.__clients[clientid] if (clientid in self.__clients.keys()) else None
@@ -49,6 +52,7 @@ class Brokers:
     "Abrupt disconnect which also causes a will msg to be sent out"
     if aClientid in self.__clients.keys() and self.__clients[aClientid].connected:
       if self.__clients[aClientid].will != None:
+        logger.info("[MQTT-3.1.2-8] sending will message for client %s", aClientid)
         willtopic, willQoS, willmsg, willRetain = self.__clients[aClientid].will
         self.publish(aClientid, willtopic, willmsg, willQoS, willRetain)
       self.disconnect(aClientid)
@@ -77,7 +81,7 @@ class Brokers:
     for subscriber in self.se.subscribers(topic):  # all subscribed clients
       # qos is lower of publication and subscription
       if len(self.se.getSubscriptions(topic, subscriber)) > 1:
-        logging.info("[MQTT-3.3.5-1] overlapping subscriptions")
+        logger.info("[MQTT-3.3.5-1] overlapping subscriptions")
       if self.overlapping_single:   
         out_qos = min(self.se.qosOf(subscriber, topic), qos)
         self.__clients[subscriber].publishArrived(topic, message, out_qos)
@@ -125,7 +129,7 @@ def unit_tests():
 
     def publishArrived(self, topic, msg, qos, retained=False):
       "required by broker node class"
-      logging.debug(self.id, "publishArrived", repr((topic, msg, qos, retained)))
+      logger.debug(self.id, "publishArrived", repr((topic, msg, qos, retained)))
       self.msgqueue.append((topic, msg, qos))
 
   Client1 = Clients("Client1")
@@ -152,7 +156,7 @@ def unit_tests():
   bn.publish(Client1.id, "topic2/next", "message 3", 2, retained=True)
   bn.publish(Client1.id, "topic2/blah", "message 4", 1, retained=True)
   bn.subscribe(Client1.id, "topic2/+", 2)
-  logging.debug(Client1.msgqueue)
+  logger.debug(Client1.msgqueue)
   msg1 = Client1.msgqueue.pop(0)
   msg2 = Client1.msgqueue.pop(0)
 
