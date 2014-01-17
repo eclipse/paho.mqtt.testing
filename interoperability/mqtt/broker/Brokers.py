@@ -27,7 +27,7 @@ class Brokers:
 
   def __init__(self, overlapping_single=True):
     self.se = SubscriptionEngines()
-    self.__clients = {}
+    self.__clients = {} # clientid -> client
     self.overlapping_single = overlapping_single
 
   def reinitialize(self):

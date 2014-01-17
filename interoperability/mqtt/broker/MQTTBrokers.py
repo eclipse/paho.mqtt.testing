@@ -78,7 +78,7 @@ class MQTTClients:
       pub.qos2state = "PUBREC"
     if qos in [1, 2]:
       pub.messageIdentifier = self.msgid
-      print(self.id, "msgid ", self.msgid)
+      print("cliend id:", self.id, "msgid:", self.msgid)
       if self.msgid == 65535:
         self.msgid = 1
       else:
@@ -99,9 +99,9 @@ class MQTTClients:
         self.outbound.remove(pub)
         del self.outmsgs[msgid]
       else:
-        logger.error("Puback received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+        logger.error("%s: Puback received for msgid %d, but QoS is %d", self.id, msgid, pub.fh.QoS)
     else:
-      logger.error("Puback received for msgid %d, but no message found", msgid)
+      logger.error("%s: Puback received for msgid %d, but no message found", self.id, msgid)
 
   def pubrec(self, msgid):
     rc = False
@@ -112,11 +112,11 @@ class MQTTClients:
           pub.qos2state = "PUBCOMP"
           rc = True
         else:
-          logger.error("Pubrec received for msgid %d, but message in wrong state", msgid)
+          logger.error("%s: Pubrec received for msgid %d, but message in wrong state", self.id, msgid)
       else:
-        logger.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+        logger.error("%s: Pubrec received for msgid %d, but QoS is %d", self.id, msgid, pub.fh.QoS)
     else:
-      logger.error("Pubrec received for msgid %d, but no message found", msgid)
+      logger.error("%s: Pubrec received for msgid %d, but no message found", self.id, msgid)
     return rc
 
   def pubcomp(self, msgid):
@@ -157,8 +157,7 @@ class MQTTBrokers:
     self.dropQoS0 = dropQoS0                    # don't queue QoS 0 messages for disconnected clients
 
     self.broker = Brokers(overlapping_single)
-    self.clientids = {}
-    self.clients = {}
+    self.clients = {}   # socket -> clients
     self.lock = threading.RLock()
 
     logger.info("MQTT 3.1.1 Paho Test Broker")
@@ -169,8 +168,7 @@ class MQTTBrokers:
 
   def reinitialize(self):
     logger.info("Reinitializing broker")
-    self.clientids = {}
-    self.clients = {}
+    self.clients = {}   
     self.broker.reinitialize()
 
   def handleRequest(self, sock):
@@ -196,7 +194,7 @@ class MQTTBrokers:
   def handlePacket(self, packet, sock):
     terminate = False
     logger.info("in: "+repr(packet))
-    if sock not in self.clientids.keys() and \
+    if sock not in self.clients.keys() and \
          MQTTV3.packetNames[packet.fh.MessageType] != "CONNECT":
       self.disconnect(sock, packet)
       raise MQTTV3.MQTTException("[MQTT-3.1.0-1] Connect was not first packet on socket")
@@ -219,17 +217,15 @@ class MQTTBrokers:
       respond(sock, resp)
       self.disconnect(sock, None)
       return
-    if packet.ClientIdentifier in self.clientids.values():
-      for s in self.clientids.keys():
-        if self.clientids[s] == packet.ClientIdentifier:
-          if s == sock:
-            self.disconnect(sock, None)
-            raise MQTTV3.MQTTException("[MQTT-3.1.0-2] Second connect packet")
-          else:
-            logger.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
-            self.disconnect(s, None)
-            break
-    self.clientids[sock] = packet.ClientIdentifier
+    if sock in self.clients.keys():    # is socket is already connected?
+      self.disconnect(sock, None)
+      raise MQTTV3.MQTTException("[MQTT-3.1.0-2] Second connect packet")
+    if packet.ClientIdentifier in [client.id for client in self.clients.values()]: # is this client already connected on a different socket?
+      for s in self.clients.keys():
+        if self.clients[s] == packet.ClientIdentifier:
+          logger.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
+          self.disconnect(s, None)
+          break
     me = None
     if not packet.CleanSession:
       me = self.broker.getClient(packet.ClientIdentifier) # find existing state, if there is any
@@ -248,19 +244,17 @@ class MQTTBrokers:
     me.resend()
 
   def disconnect(self, sock, packet, terminate=False):
-    if sock in self.clientids.keys():
-      if terminate:
-        self.broker.terminate(self.clientids[sock])
-      else:
-        self.broker.disconnect(self.clientids[sock])
-      del self.clientids[sock]
     if sock in self.clients.keys():
+      if terminate:
+        self.broker.terminate(self.clients[sock].id)
+      else:
+        self.broker.disconnect(self.clients[sock].id)
       del self.clients[sock]
     sock.shutdown(socket.SHUT_RDWR) # must call shutdown to close socket immediately
     sock.close()
 
   def disconnectAll(self, sock):
-    for sock in self.clientids.keys():
+    for sock in self.clients.keys():
       self.disconnect(sock, None)
 
   def subscribe(self, sock, packet):
@@ -269,14 +263,14 @@ class MQTTBrokers:
     for p in packet.data:
       topics.append(p[0])
       qoss.append(p[1])
-    self.broker.subscribe(self.clientids[sock], topics, qoss)
+    self.broker.subscribe(self.clients[sock].id, topics, qoss)
     resp = MQTTV3.Subacks()
     resp.messageIdentifier = packet.messageIdentifier
     resp.data = qoss
     respond(sock, resp)
 
   def unsubscribe(self, sock, packet):
-    self.broker.unsubscribe(self.clientids[sock], packet.data)
+    self.broker.unsubscribe(self.clients[sock].id, packet.data)
     resp = MQTTV3.Unsubacks()
     resp.messageIdentifier = packet.messageIdentifier
     respond(sock, resp)
@@ -285,10 +279,10 @@ class MQTTBrokers:
     if packet.topicName.find("+") != -1 or packet.topicName.find("#") != -1:
       raise MqttException("[MQTT-3.3.2-2] wildcards not allowed in topic name")
     if packet.fh.QoS == 0:
-      self.broker.publish(self.clientids[sock],
+      self.broker.publish(self.clients[sock].id,
              packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
     elif packet.fh.QoS == 1:
-      self.broker.publish(self.clientids[sock],
+      self.broker.publish(self.clients[sock].id,
              packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
       resp = MQTTV3.Pubacks()
       resp.messageIdentifier = packet.messageIdentifier
@@ -363,4 +357,4 @@ class MQTTBrokers:
 
 
 
-
+#
