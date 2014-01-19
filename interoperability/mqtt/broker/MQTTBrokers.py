@@ -194,15 +194,14 @@ class MQTTBrokers:
   def handlePacket(self, packet, sock):
     terminate = False
     logger.info("in: "+repr(packet))
-    if sock not in self.clients.keys() and \
-         MQTTV3.packetNames[packet.fh.MessageType] != "CONNECT":
+    if sock not in self.clients.keys() and packet.fh.MessageType != MQTTV3.CONNECT:
       self.disconnect(sock, packet)
       raise MQTTV3.MQTTException("[MQTT-3.1.0-1] Connect was not first packet on socket")
     else:
       getattr(self, MQTTV3.packetNames[packet.fh.MessageType].lower())(sock, packet)
       if sock in self.clients.keys():
         self.clients[sock].lastPacket = time.time()
-    if MQTTV3.packetNames[packet.fh.MessageType] == "DISCONNECT":
+    if packet.fh.MessageType == MQTTV3.DISCONNECT:
       terminate = True
     return terminate
 

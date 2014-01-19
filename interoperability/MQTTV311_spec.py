@@ -55,6 +55,8 @@ class Clients:
 				if test:
 					logger.debug("received result %s", (sock, packet))
 					test.addResult((sock, packet))
+					if packet.fh.MessageType == MQTTV3.CONNACK:
+						self.packets.append(packet)
 				else:
 					mbt.observe((sock, packet))
 					if packet.fh.MessageType == MQTTV3.PUBREC:
@@ -121,7 +123,7 @@ def connect(sock : "socket", clientid : "clientids", cleansession : "boolean", #
 	#	self.passwordFlag = True
 	#	self.password = password
 	sock.send(connect.pack())	
-	time.sleep(0.1)
+	time.sleep(0.5)
 	response = clientlist[sock].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
 	logger.debug("+++connect response", response)
 	if response == None or response.returnCode not in [0, 2]:
@@ -219,8 +221,6 @@ def pingreq():
 	sock.send(pingreq.pack())
 
 
-#print(mbt.model.getActionNames())
-
 """
  choice lists should be ordered but unique - ordered sets
    options: 
@@ -282,34 +282,47 @@ def select(frees):
 
 mbt.model.selectCallback = select
 
+def restart():
+	client.msgid = 1
 
-"""
-stepping = False
-if len(sys.argv) > 1:
-	stepping = True
-
-#mbt.run(stepping=stepping)
+mbt.model.restartCallback = restart	
 
 
-def socket_check(a, b):
-	# <socket.socket object, fd=3, family=2, type=1, proto=0>
-	awords = str(a).split()
-	del awords[2]
-	astr = ''.join(awords)
-	bwords = str(b).split()
-	del bwords[2]
-	bstr = ''.join(bwords)
-	print("checking sockets", astr, "and", bstr)
-	return astr == bstr
+def between(str, str1, str2):
+  start = str.find(str1)+len(str1)
+  end = str.find(str2, start)
+  if end == -1:
+    rc = str[start:]
+  else:
+    rc = str[start:end]
+  return rc
 
-def exception_check(a, b):
-	return True
 
-checks = {"socket": socket_check, "exception": exception_check}
+def replace(str, str1, str2, replace_str):
+  start = str.find(str1)+len(str1)
+  end = str.find(str2, start)
+  return str[:start] + replace_str + str[end:]
+  
 
-test = mbt.Tests(mbt.model, "spec.log", checks)
+def observationCheckCallback(observation, results):
+	# observation will be string representation of (socket, packet)
+	if observation.find("Publishes(") != -1:
+		# look for matches in everything but MsgId
+		observation = replace(observation, "MsgId=", ",", "000")
 
-test.run(stepping=False)
+		for k in results.keys():
+			if observation == replace(k, "MsgId=", ",", "000"):
+				print("observation found")
+				return k
+		return None
+	else:	
+		return observation if observation in results.keys()	else None
 
-"""
+if __name__ == "__main__":
+	stepping = False
+	if len(sys.argv) > 1:
+		stepping = True
+
+	mbt.run(stepping=stepping)
+
 

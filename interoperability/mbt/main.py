@@ -231,7 +231,8 @@ class Models:
 		self.finisheds = {}
 		self.maxobjects = {}
 		self.selectCallback = None	
-
+		self.restartCallback = None
+	
 	def getActionNames(self):
 		return [action.getName() for action in self.actions]
 
@@ -353,6 +354,8 @@ class Executions:
 		#for type_name in self.model.return_types:
 		#	if self.pools[type_name].__class__.__name__ == "list":
 		#		self.pools[type_name] = []
+		if self.model.restartCallback:
+			self.model.restartCallback()
 
 	def printStats(self):
 		logger.debug("action counts %s", str([(a.getName(), a.called) for a in self.model.actions]))
@@ -398,7 +401,7 @@ class Executions:
 				index += 1
 
 			logger.info("CALL %s with %s", action.getName(), kwargs)
-			logger.debug("EXEC_CALL %s with %s", action.getName(), exec_kwargs)
+			#logger.debug("EXEC_CALL %s with %s", action.getName(), exec_kwargs)
 			if interactive and input("--->") == "q":
 				return
 			self.trace.selectAction(action, args)
@@ -435,13 +438,27 @@ class Executions:
 		except KeyboardInterrupt:
 			self.printStats()
 
+from mqtt.formats.MQTTV311 import Pubrecs, Publishes, Pubrels
+
 class Tests:
 
-	def __init__(self, model, logfilename, checks={}):
+	def __init__(self, model, logfilename, checks={}, observationMatchCallback=None):
 		self.model = model
 		self.logfilename = logfilename
 		self.checks = checks
 		self.added_results = {}
+		self.passes = 0
+		self.failures = 0
+		self.observationMatchCallback = observationMatchCallback
+
+		self.logger = logging.getLogger("mbt-test")
+		self.logger.setLevel(logging.DEBUG)
+
+		formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
+		ch = logging.StreamHandler()
+		ch.setFormatter(formatter)
+		ch.setLevel(logging.INFO)
+		self.logger.addHandler(ch)
 
 	def handleCall(self, words):
 		action = self.actions[words[1]]
@@ -449,13 +466,12 @@ class Tests:
 		for result in self.results:
 			loc = strargs.find(result)
 			if loc != -1:
-				print("replace", result, "with", 'self.results["'+result+'"]')
+				self.logger.info("replace %s with %s", result, 'self.results["'+result+'"]')
 				strargs = strargs[:loc]+'self.results["'+result+'"]'+strargs[loc + len(result):]
-				print(strargs)
+				self.logger.debug("%s", strargs)
 
 		kwargs = eval(strargs)
-		log("CALL "+ action.getName()+" with "+str(kwargs))
-		print("CALL "+ action.getName()+" with "+str(kwargs))
+		self.logger.info("CALL %s with %s", action, kwargs)
 		if self.stepping and input("--->") == "q":
 			return
 		try:
@@ -475,29 +491,46 @@ class Tests:
 		else:
 			check_result = (curline == "RESULT from "+action.getName()+" is "+str(rc))
 		if check_result:
-			print("correct result", rc)
-			log("correct result"+str(rc))
+			self.logger.info("correct result %s", rc)
+			self.passes += 1
 		else:
-			print("### incorrect result", rc)
+			self.logger.info("### incorrect result %s", rc)
+			self.failures += 1
 			return
 
 		value = words[3].strip().split(" ", 1)[1]
 		if not value.startswith("exception") and type(rc) not in [type(3), type('')]:
-			print("recording value of", value)
+			self.logger.debug("recording value of %s", value)
 			self.results[value] = rc
 
 	def handleObserved(self, curline):
 		# wait for result to be added to added_results, then move it to results
 		observation = curline.split(" ", 2)[2].strip()
-		while observation not in self.added_results.keys():
-			print("Waiting for observation '"+observation+"' in", self.added_results.keys())
-			time.sleep(1)
-		self.results[observation] = self.added_results[observation]
-		del self.added_results[observation]
+
+		for result in self.results:
+			loc = observation.find(result)
+			if loc != -1:
+				self.logger.debug("replace %s with %s", result, 'self.results["'+result+'"]')
+				observation = observation[:loc]+str(self.results[result])+observation[loc + len(result):]
+				self.logger.debug("%s", observation)
+
+		if self.observationMatchCallback:
+			observation1 = self.observationMatchCallback(observation, self.added_results)
+			while observation1 == None:
+				self.logger.info("Waiting for observation '%s' in %s", observation, [x for x in self.added_results.keys()])
+				time.sleep(.1)
+				observation1 = self.observationMatchCallback(observation, self.added_results)
+		else:
+			observation1 = observation
+			while observation not in self.added_results.keys():
+				self.logger.info("Waiting for observation '%s' in %s", observation, [x for x in self.added_results.keys()])
+				time.sleep(.1)
+
+		self.results[observation] = self.added_results[observation1]
+		del self.added_results[observation1]
 
 	def handleRestart(self):
-		log("Restarting")
-		print("Restarting")
+		self.logger.info("Restarting")
 		self.results = {}
 		self.added_results = {}
 
@@ -513,21 +546,28 @@ class Tests:
 		while curline:
 			lineno += 1
 			curline = curline.strip()
-			words = curline.split(" ", 3)
-			print(lineno, curline)
-			if words[0] == "CALL":
-				self.handleCall(words)
-			elif words[0] == "RESULT":
-				self.handleResult(curline, words)
-			elif words[0] == "OBSERVED":
-				self.handleObserved(curline)
-			elif words[0] == "RESTART":
-				self.handleRestart()
+			if curline.startswith("INFO"):
+				words = curline.split(" ", 4)[4] # remove level, date, time, logname
+				curline = ''.join(words)
+				words = words.split(" ", 3)
+				self.logger.info("%d %s", lineno, curline)
+				if words[0] == "CALL":
+					self.handleCall(words)
+				elif words[0] == "RESULT":
+					self.handleResult(curline, words)
+				elif words[0] == "OBSERVED":
+					self.handleObserved(curline)
+				elif words[0] == "RESTART":
+					self.handleRestart()
 			curline = logfile.readline()
 		logfile.close()
+		if self.failures == 0:
+			self.logger.info("Successful. Tests passed %d", self.passes)
+		else:
+			self.logger.info("Unsuccessful.  Tests passed %d, failed %s", self.passes, self.failures)
 
 	def addResult(self, result):
-		print("adding result "+str(result))
+		self.logger.debug("adding result %s", result)
 		self.added_results[str(result)] = result
 		
 

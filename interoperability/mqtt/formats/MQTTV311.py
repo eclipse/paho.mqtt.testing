@@ -30,9 +30,15 @@ PUBCOMP, SUBSCRIBE, SUBACK, UNSUBSCRIBE, UNSUBACK, \
 PINGREQ, PINGRESP, DISCONNECT = range(1, 15)
 
 packetNames = [ "reserved", \
-"CONNECT", "CONNACK", "PUBLISH", "PUBACK", "PUBREC", "PUBREL", \
-"PUBCOMP", "SUBSCRIBE", "SUBACK", "UNSUBSCRIBE", "UNSUBACK", \
-"PINGREQ", "PINGRESP", "DISCONNECT"]
+"Connect", "Connack", "Publish", "Puback", "Pubrec", "Pubrel", \
+"Pubcomp", "Subscribe", "Suback", "Unsubscribe", "Unsuback", \
+"Pingreq", "Pingresp", "Disconnect"]
+
+classNames = [ "reserved", \
+"Connects", "Connacks", "Publishes", "Pubacks", "Pubrecs", "Pubrels", \
+"Pubcomps", "Subscribes", "Subacks", "Unsubscribes", "Unsubacks", \
+"Pingreqs", "Pingresps", "Disconnects"]
+
 
 def MessageType(byte):
   if byte != None:
@@ -83,8 +89,8 @@ class FixedHeaders:
 
   def __repr__(self):
     "return printable representation of our data"
-    return packetNames[self.MessageType]+': DUP '+repr(self.DUP)+ \
-           ", QoS "+repr(self.QoS)+", Retain "+repr(self.RETAIN)
+    return classNames[self.MessageType]+'(DUP='+repr(self.DUP)+ \
+           ", QoS="+repr(self.QoS)+", Retain="+repr(self.RETAIN)
 
   def pack(self, length):
     "pack data into string buffer ready for transmission down socket"
@@ -181,7 +187,7 @@ class Connects(Packets):
     # variable header
     self.ProtocolName = "MQTT"
     self.ProtocolVersion = 4
-    self.CleanSession = False
+    self.CleanSession = True
     self.WillFlag = False
     self.WillQoS = 0
     self.WillRETAIN = 0
@@ -190,7 +196,7 @@ class Connects(Packets):
     self.passwordFlag = False
 
     # Payload
-    self.ClientIdentifier = None # UTF-8
+    self.ClientIdentifier = ""   # UTF-8
     self.WillTopic = None        # UTF-8
     self.WillMessage = None      # binary
     self.username = None         # UTF-8
@@ -230,13 +236,12 @@ class Connects(Packets):
     curlen += 1
 
     connectFlags = buffer[curlen]
-    #print "connectFlags", connectFlags
-    self.CleanSession = (connectFlags >> 1) & 0x01
-    self.WillFlag = (connectFlags >> 2) & 0x01
+    self.CleanSession = ((connectFlags >> 1) & 0x01) == 1
+    self.WillFlag = ((connectFlags >> 2) & 0x01) == 1
     self.WillQoS = (connectFlags >> 3) & 0x03
     self.WillRETAIN = (connectFlags >> 5) & 0x01
-    self.usernameFlag = (connectFlags >> 6) & 0x01
-    self.passwordFlag = (connectFlags >> 7) & 0x01
+    self.usernameFlag = ((connectFlags >> 6) & 0x01) == 1
+    self.passwordFlag = ((connectFlags >> 7) & 0x01) == 1
     curlen +=1
 
     self.KeepAliveTimer = readInt16(buffer[curlen:])
@@ -252,7 +257,6 @@ class Connects(Packets):
     else:
       self.WillTopic = self.WillMessage = None
 
-    #print "usernameFlag", self.usernameFlag, len(buffer), curlen+2
     if self.usernameFlag and len(buffer) > curlen+2:
       self.username = readUTF(buffer[curlen:])
       curlen += len(self.username) + 2
@@ -262,21 +266,21 @@ class Connects(Packets):
       curlen += len(self.password) + 2
 
   def __repr__(self):
-    buf = repr(self.fh)+", ProtocolName "+str(self.ProtocolName)+", ProtocolVersion " +\
-          repr(self.ProtocolVersion)+", CleanSession "+repr(self.CleanSession) +\
-          ", WillFlag "+repr(self.WillFlag)+", KeepAliveTimer " +\
-          repr(self.KeepAliveTimer)+", ClientId "+str(self.ClientIdentifier) +\
-          ", usernameFlag "+repr(self.usernameFlag)+", passwordFlag "+repr(self.passwordFlag)
+    buf = repr(self.fh)+", ProtocolName="+str(self.ProtocolName)+", ProtocolVersion=" +\
+          repr(self.ProtocolVersion)+", CleanSession="+repr(self.CleanSession) +\
+          ", WillFlag="+repr(self.WillFlag)+", KeepAliveTimer=" +\
+          repr(self.KeepAliveTimer)+", ClientId="+str(self.ClientIdentifier) +\
+          ", usernameFlag="+repr(self.usernameFlag)+", passwordFlag="+repr(self.passwordFlag)
     if self.WillFlag:
-      buf += ", WillQoS " + repr(self.WillQoS) +\
-             ", WillRETAIN " + repr(self.WillRETAIN) +\
-             ", WillTopic '"+ self.WillTopic +\
-             "', WillMessage '"+str(self.WillMessage)+"'"
+      buf += ", WillQoS=" + repr(self.WillQoS) +\
+             ", WillRETAIN=" + repr(self.WillRETAIN) +\
+             ", WillTopic='"+ self.WillTopic +\
+             "', WillMessage='"+str(self.WillMessage)+"'"
     if self.username:
-      buf += ", username "+self.username
+      buf += ", username="+self.username
     if self.password:
-      buf += ", password "+self.password
-    return buf
+      buf += ", password="+self.password
+    return buf+")"
 
   def __eq__(self, packet):
     rc = Packets.__eq__(self, packet) and \
@@ -297,9 +301,12 @@ class Connects(Packets):
 
 class Connacks(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, ReturnCode=0):
     self.fh = FixedHeaders(CONNACK)
-    self.returnCode = 0
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
+    self.returnCode = ReturnCode
     if buffer != None:
       self.unpack(buffer)
 
@@ -315,7 +322,7 @@ class Connacks(Packets):
     self.returnCode = buffer[3]
 
   def __repr__(self):
-    return repr(self.fh)+", ReturnCode "+repr(self.returnCode)
+    return repr(self.fh)+", ReturnCode="+repr(self.returnCode)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -324,8 +331,11 @@ class Connacks(Packets):
 
 class Disconnects(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False):
     self.fh = FixedHeaders(DISCONNECT)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     if buffer != None:
       self.unpack(buffer)
 
@@ -334,16 +344,22 @@ class Disconnects(Packets):
     assert MessageType(buffer) == DISCONNECT
     self.fh.unpack(buffer)
 
+  def __repr__(self):
+    return repr(self.fh)+")"
+
 
 class Publishes(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0, TopicName="", Payload=b""):
     self.fh = FixedHeaders(PUBLISH)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     # variable header
-    self.topicName = ""
-    self.messageIdentifier = 0
+    self.topicName = TopicName
+    self.messageIdentifier = MsgId
     # payload
-    self.data = b""
+    self.data = Payload
     if buffer != None:
       self.unpack(buffer)
 
@@ -374,8 +390,8 @@ class Publishes(Packets):
   def __repr__(self):
     rc = repr(self.fh)
     if self.fh.QoS != 0:
-      rc += ", MsgId "+repr(self.messageIdentifier)
-    rc += ", TopicName "+repr(self.topicName)+", "+repr(self.data)
+      rc += ", MsgId="+repr(self.messageIdentifier)
+    rc += ", TopicName="+repr(self.topicName)+", Payload="+repr(self.data)+")"
     return rc
 
   def __eq__(self, packet):
@@ -389,10 +405,13 @@ class Publishes(Packets):
 
 class Pubacks(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0):
     self.fh = FixedHeaders(PUBACK)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     # variable header
-    self.messageIdentifier = 0
+    self.messageIdentifier = MsgId
     if buffer != None:
       self.unpack(buffer)
 
@@ -419,10 +438,13 @@ class Pubacks(Packets):
 
 class Pubrecs(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0):
     self.fh = FixedHeaders(PUBREC)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     # variable header
-    self.messageIdentifier = 0
+    self.messageIdentifier = MsgId
     if buffer != None:
       self.unpack(buffer)
 
@@ -440,7 +462,7 @@ class Pubrecs(Packets):
     return fhlen + 2
 
   def __repr__(self):
-    return repr(self.fh)+", MsgId "+repr(self.messageIdentifier)
+    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -449,10 +471,13 @@ class Pubrecs(Packets):
 
 class Pubrels(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0):
     self.fh = FixedHeaders(PUBREL)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     # variable header
-    self.messageIdentifier = 0
+    self.messageIdentifier = MsgId
     if buffer != None:
       self.unpack(buffer)
 
@@ -470,7 +495,7 @@ class Pubrels(Packets):
     return fhlen + 2
 
   def __repr__(self):
-    return repr(self.fh)+", MsgId "+repr(self.messageIdentifier)
+    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -479,10 +504,13 @@ class Pubrels(Packets):
 
 class Pubcomps(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0):
     self.fh = FixedHeaders(PUBCOMP)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     # variable header
-    self.messageIdentifier = 0
+    self.messageIdentifier = MsgId
     if buffer != None:
       self.unpack(buffer)
 
@@ -500,7 +528,7 @@ class Pubcomps(Packets):
     return fhlen + 2
 
   def __repr__(self):
-    return repr(self.fh)+", MsgId "+repr(self.messageIdentifier)
+    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -509,12 +537,15 @@ class Pubcomps(Packets):
 
 class Subscribes(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=0, Data=[]):
     self.fh = FixedHeaders(SUBSCRIBE)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     # variable header
-    self.messageIdentifier = 0
+    self.messageIdentifier = MsgId
     # payload - list of topic, qos pairs
-    self.data = []
+    self.data = Data[:]
     if buffer != None:
       self.unpack(buffer)
 
@@ -543,8 +574,8 @@ class Subscribes(Packets):
     return fhlen + self.fh.remainingLength
 
   def __repr__(self):
-    return repr(self.fh)+", MsgId "+repr(self.messageIdentifier)+\
-           ", "+repr(self.data)
+    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+\
+           ", Data="+repr(self.data)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -554,13 +585,15 @@ class Subscribes(Packets):
 
 class Subacks(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=0, Data=[]):
     self.fh = FixedHeaders(SUBACK)
-    self.fh.QoS = 1
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     # variable header
-    self.messageIdentifier = 0
+    self.messageIdentifier = MsgId
     # payload - list of qos
-    self.data = []
+    self.data = Data[:]
     if buffer != None:
       self.unpack(buffer)
 
@@ -587,8 +620,8 @@ class Subacks(Packets):
     return fhlen + self.fh.remainingLength
 
   def __repr__(self):
-    return repr(self.fh)+", MsgId "+repr(self.messageIdentifier)+\
-           ", "+repr(self.data)
+    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+\
+           ", Data="+repr(self.data)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -598,12 +631,15 @@ class Subacks(Packets):
 
 class Unsubscribes(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=0, Data=[]):
     self.fh = FixedHeaders(UNSUBSCRIBE)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     # variable header
-    self.messageIdentifier = 0
+    self.messageIdentifier = MsgId
     # payload - list of topics
-    self.data = []
+    self.data = Data[:]
     if buffer != None:
       self.unpack(buffer)
 
@@ -630,8 +666,8 @@ class Unsubscribes(Packets):
     return fhlen + self.fh.remainingLength
 
   def __repr__(self):
-    return repr(self.fh)+", MsgId "+repr(self.messageIdentifier)+\
-           ", "+repr(self.data)
+    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+\
+           ", Data="+repr(self.data)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -641,11 +677,13 @@ class Unsubscribes(Packets):
 
 class Unsubacks(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=0):
     self.fh = FixedHeaders(UNSUBACK)
-    self.fh.QoS = 1
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     # variable header
-    self.messageIdentifier = 0
+    self.messageIdentifier = MsgId
     if buffer != None:
       self.unpack(buffer)
 
@@ -663,7 +701,7 @@ class Unsubacks(Packets):
     return fhlen + self.fh.remainingLength
 
   def __repr__(self):
-    return repr(self.fh)+", MsgId "+repr(self.messageIdentifier)
+    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -672,8 +710,11 @@ class Unsubacks(Packets):
 
 class Pingreqs(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False):
     self.fh = FixedHeaders(PINGREQ)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     if buffer != None:
       self.unpack(buffer)
 
@@ -684,11 +725,17 @@ class Pingreqs(Packets):
     assert self.fh.remainingLength == 0
     return fhlen
 
+  def __repr__(self):
+    return repr(self.fh)+")"
+
 
 class Pingresps(Packets):
 
-  def __init__(self, buffer = None):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False):
     self.fh = FixedHeaders(PINGRESP)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.Retain = Retain
     if buffer != None:
       self.unpack(buffer)
 
@@ -699,13 +746,16 @@ class Pingresps(Packets):
     assert self.fh.remainingLength == 0
     return fhlen
 
-objects = [None, Connects, Connacks, Publishes, Pubacks, Pubrecs,
+  def __repr__(self):
+    return repr(self.fh)+")"
+
+classes = [None, Connects, Connacks, Publishes, Pubacks, Pubrecs,
            Pubrels, Pubcomps, Subscribes, Subacks, Unsubscribes,
            Unsubacks, Pingreqs, Pingresps, Disconnects]
 
 def unpackPacket(buffer):
   if MessageType(buffer) != None:
-    packet = objects[MessageType(buffer)]()
+    packet = classes[MessageType(buffer)]()
     packet.unpack(buffer)
   else:
     packet = None
@@ -725,4 +775,13 @@ if __name__ == "__main__":
     print("Error")
   except AssertionError:
     pass
+
+  for packet in classes[1:]:
+    before = str(packet())   
+    after = str(unpackPacket(packet().pack()))
+    try:
+      assert before == after
+    except:
+      print("before:", before, "\nafter:", after)
+  print("End")
 
