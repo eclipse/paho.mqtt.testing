@@ -25,7 +25,7 @@ clientlist = {}
 test = None
 
 logger = logging.getLogger("MQTTV311_spec")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 class Clients:
 	

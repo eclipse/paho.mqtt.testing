@@ -18,9 +18,9 @@
 
 __version__ = "3.1.1"
 
-from . import formats, broker
+from . import formats, broker, client
 
-__all__ = ["formats", "broker"]
+__all__ = ["formats", "broker", "client", "proxy"]
 		
 
 

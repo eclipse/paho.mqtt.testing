@@ -40,6 +40,7 @@ class SubscriptionEngines:
      if type(topic) == type([]):
        rc = []
        count = 0
+       logger.info("[MQTT-3.8.4-4] Multiple topics in one subscribe")
        for aTopic in topic:
          rc.append(self.__subscribe(aClientid, aTopic, qos[count]))
          count += 1
@@ -62,19 +63,28 @@ class SubscriptionEngines:
      return rc
 
    def unsubscribe(self, aClientid, aTopic):
+     matched = False
      if type(aTopic) == type([]):
+       if len(aTopic) > 1:
+         logger.info("[MQTT-3.10.3-6] each topic must be processed in sequence")
        for t in aTopic:
-         self.__unsubscribe(aClientid, t)
+         if not matched:
+           matched = self.__unsubscribe(aClientid, t)
      else:
-       self.__unsubscribe(aClientid, aTopic)
+       matched = self.__unsubscribe(aClientid, aTopic)
+     if not matched:
+       logger.info("[MQTT-3.10.3-5] Unsuback must be sent even if no topics are matched")
 
    def __unsubscribe(self, aClientid, aTopic):
      "unsubscribe to one topic"
+     matched = False
      subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
      for s in subscriptions:
        if s.getClientid() == aClientid and s.getTopic() == aTopic:
          subscriptions.remove(s)
+         matched = True
          break # once we've hit one, that's us done
+     return matched
 
    def clearSubscriptions(self, aClientid):
      for subscriptions in [self.__subscriptions, self.__dollar_subscriptions]:

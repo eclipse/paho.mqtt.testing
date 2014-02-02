@@ -48,7 +48,7 @@ class Receivers:
     if packet == None:
       time.sleep(0.1)
       return
-    logging.debug(str(packet))
+    logging.debug("in :%s", str(packet))
 
     if packet.fh.MessageType == MQTTV3.SUBACK:
       if hasattr(callback, "subscribed"):
@@ -71,6 +71,7 @@ class Receivers:
     elif packet.fh.MessageType == MQTTV3.PUBREC:
       if packet.messageIdentifier in self.outMsgs.keys():
         self.pubrel.messageIdentifier = packet.messageIdentifier
+        logging.debug("out: %s", str(self.pubrel))
         self.socket.send(self.pubrel.pack())
       else:
         raise Exception("PUBREC received for unknown msg id "+ \
@@ -88,6 +89,7 @@ class Receivers:
                            pub.fh.RETAIN, pub.messageIdentifier):
           del self.inMsgs[packet.messageIdentifier]
           self.pubcomp.messageIdentifier = packet.messageIdentifier
+          logging.debug("out: %s", str(self.pubcomp))
           self.socket.send(self.pubcomp.pack())
         if callback == None:
           return (pub.topicName, pub.data, 2,
@@ -120,6 +122,7 @@ class Receivers:
           if callback.publishArrived(packet.topicName, packet.data, 1,
                            packet.fh.RETAIN, packet.messageIdentifier):
             self.puback.messageIdentifier = packet.messageIdentifier
+            logging.debug("out: %s", str(self.puback))
             self.socket.send(self.puback.pack())
       elif packet.fh.QoS == 2:
         self.inMsgs[packet.messageIdentifier] = packet

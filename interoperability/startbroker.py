@@ -25,4 +25,5 @@ if __name__ == "__main__":
   ch.setLevel(logging.INFO)
   broker_logger = logging.getLogger('MQTT broker')
   broker_logger.addHandler(ch)
+  broker_logger.propagate = False # don't pass log entries up to the root logger 
   mqtt.broker.main(sys.argv)

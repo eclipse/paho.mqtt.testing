@@ -95,6 +95,7 @@ class Client:
       connect.WillMessage = willMessage
       connect.WillQoS = willQoS
       connect.WillRETAIN = willRetain
+    logging.debug("out: %s", str(connect))
     self.sock.send(connect.pack())
 
     response = MQTTV3.unpackPacket(MQTTV3.getPacket(self.sock))
@@ -114,6 +115,7 @@ class Client:
     for t in topics:
       subscribe.data.append((t, qoss[count]))
       count += 1
+    logging.debug("out: %s", str(subscribe))
     self.sock.send(subscribe.pack())
     return subscribe.messageIdentifier
 
@@ -122,6 +124,7 @@ class Client:
     unsubscribe = MQTTV3.Unsubscribes()
     unsubscribe.messageIdentifier = self.__nextMsgid()
     unsubscribe.data = topics
+    logging.debug("out: %s", str(unsubscribe))
     self.sock.send(unsubscribe.pack())
     return unsubscribe.messageIdentifier
 
@@ -137,6 +140,7 @@ class Client:
       self.__receiver.outMsgs[publish.messageIdentifier] = publish
     publish.topicName = topic
     publish.data = payload
+    logging.debug("out: %s", str(publish))
     self.sock.send(publish.pack())
     return publish.messageIdentifier
 
@@ -146,11 +150,13 @@ class Client:
       self.__receiver.stopping = True
       while len(self.__receiver.inMsgs) > 0 or len(self.__receiver.outMsgs) > 0:
         logging.debug(self.__receiver.inMsgs, self.__receiver.outMsgs)
+        print(self.__receiver.inMsgs, self.__receiver.outMsgs)
         time.sleep(.1)
     if self.__receiver:
       assert self.__receiver.inMsgs == {}
       assert self.__receiver.outMsgs == {}
     disconnect = MQTTV3.Disconnects()
+    logging.debug("out: %s", str(disconnect))
     self.sock.send(disconnect.pack())
     time.sleep(0.1)
     self.sock.close() # this will stop the receiver too

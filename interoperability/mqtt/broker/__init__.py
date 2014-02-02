@@ -17,3 +17,4 @@
 """
 
 from .start import run, main, stop, server, reinitialize
+import coverage

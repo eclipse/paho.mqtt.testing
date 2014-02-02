@@ -39,6 +39,8 @@ class Brokers:
 
   def cleanSession(self, aClientid):
     "clear any outstanding subscriptions and publications"
+    if len(self.se.getRetainedTopics("#")) > 0:
+      logger.info("[MQTT-3.1.2-7] retained messages not cleaned up as part of session state for client %s", aClientid)
     self.se.clearSubscriptions(aClientid)
 
   def connect(self, aClient):
@@ -54,6 +56,10 @@ class Brokers:
       if self.__clients[aClientid].will != None:
         logger.info("[MQTT-3.1.2-8] sending will message for client %s", aClientid)
         willtopic, willQoS, willmsg, willRetain = self.__clients[aClientid].will
+        if willRetain:
+          logger.info("[MQTT-3.1.2-15] sending will message retained for client %s", aClientid)
+        else:
+          logger.info("[MQTT-3.1.2-14] sending will message non-retained for client %s", aClientid)
         self.publish(aClientid, willtopic, willmsg, willQoS, willRetain)
       self.disconnect(aClientid)
 
@@ -61,11 +67,16 @@ class Brokers:
     if aClientid in self.__clients.keys():
       self.__clients[aClientid].connected = False
       if self.__clients[aClientid].cleansession:
+        logger.info("[MQTT-3.1.2-6] broker must discard the session data for client %s", aClientid)
         self.cleanSession(aClientid)
         del self.__clients[aClientid]
       else:
+        logger.info("[MQTT-3.1.2-4] broker must store the session data for client %s", aClientid)
         self.__clients[aClientid].timestamp = time.clock()
         self.__clients[aClientid].connected = False 
+        logger.info("[MQTT-3.1.2-10] will message is deleted after use or disconnect, for client %s", aClientid)
+        logger.info("[MQTT-3.14.4-3] on receipt of disconnect, will message is deleted")
+        self.__clients[aClientid].will = None
 
   def disconnectAll(self):
     for c in self.__clients.keys()[:]: # copy the array because disconnect will remove an element
@@ -76,12 +87,17 @@ class Brokers:
        also to any disconnected non-cleansession clients with qos in [1,2]
     """
     if retained:
+      logger.info("[MQTT-2.1.2-6] store retained message and QoS")
       self.se.setRetained(topic, message, qos)
+    else:
+      logger.info("[MQTT-2.1.2-12] non-retained message - do not store")
 
     for subscriber in self.se.subscribers(topic):  # all subscribed clients
       # qos is lower of publication and subscription
       if len(self.se.getSubscriptions(topic, subscriber)) > 1:
         logger.info("[MQTT-3.3.5-1] overlapping subscriptions")
+      if retained:
+        logger.info("[MQTT-2.1.2-10] outgoing publish does not have retained flag set")
       if self.overlapping_single:   
         out_qos = min(self.se.qosOf(subscriber, topic), qos)
         self.__clients[subscriber].publishArrived(topic, message, out_qos)
@@ -91,6 +107,7 @@ class Brokers:
           self.__clients[subscriber].publishArrived(topic, message, out_qos)
 
   def __doRetained__(self, aClientid, topic, qos):
+    # topic can be single, or a list
     if type(topic) != type([]):
       topic = [topic]
       qos = [qos]
