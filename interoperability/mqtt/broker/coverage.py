@@ -61,7 +61,6 @@ def getCoverage():
 
   exceptions = set([])
   coverages = set([])
-  assertions = set([])
 
   for module in modules:
     lines = getSources(module)
@@ -69,13 +68,11 @@ def getCoverage():
       line = line.strip()
       if line.find("[MQTT") != -1:
         statement = "[MQTT"+between(line, "[MQTT", "]")+"]"
-        if line.startswith("assert"):
-          assertions.add(statement)
-        elif line.startswith("raise"):
+        if line.startswith("assert") or line.startswith("raise"):
           exceptions.add(statement)
         else:
           coverages.add(statement)
-  return ({"exceptions" : exceptions, "coverages" : coverages, "assertions" : assertions})
+  return ({"exceptions" : exceptions, "coverages" : coverages})
 
 class Handlers(logging.Handler):
 
