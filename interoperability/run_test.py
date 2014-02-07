@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import mbt, sys, mqtt, glob, time
+import mbt, sys, mqtt, glob, time, logging
 
 import MQTTV311_spec, client_test
 
@@ -28,14 +28,14 @@ def socket_check(a, b):
 	bwords = str(b).split()
 	del bwords[2]
 	bstr = ''.join(bwords)
-	print("checking sockets", astr, "and", bstr)
+	#print("checking sockets", astr, "and", bstr)
 	return astr == bstr
 
 def exception_check(a, b):
 	return True
 
 def cleanup():
-
+	logging.info("Cleaning up")
 	# clean all client state
 	clientids = ("", "normal", "23 characters4567890123", "A clientid that is too long - should fail")
 	hostname = "localhost" #"9.20.87.54"
@@ -62,6 +62,7 @@ def cleanup():
 	time.sleep(.1)
 
 	MQTTV311_spec.client.__init__()
+	logging.info("Cleaned up")
 
 
 if __name__ == "__main__":
@@ -69,7 +70,7 @@ if __name__ == "__main__":
 		testnames = [sys.argv[1]]
 	else:
 		testnames = glob.glob("tests/*")
-
+	testnames.sort(key=lambda x: int(x.split(".")[-1])) # filename index order
 	cleanup()
 	for testname in testnames:
 		checks = {"socket": socket_check, "exception": exception_check}

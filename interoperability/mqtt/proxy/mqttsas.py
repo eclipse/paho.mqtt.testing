@@ -89,6 +89,7 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
   pass
 
 def run():
+  global brokerhost, brokerport
   myhost = 'localhost'
   if len(sys.argv) > 1:
     brokerhost = sys.argv[1]

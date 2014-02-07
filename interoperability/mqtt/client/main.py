@@ -24,26 +24,34 @@ from . import internal
 from ..formats import MQTTV311 as MQTTV3
 
 
-logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',  datefmt='%Y%m%d %H%M%S', level=logging.INFO)
+logger = logging.getLogger("mqtt-client")
+logger.setLevel(logging.ERROR)
+#logger.propagate = 0
+
+formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
+ch = logging.StreamHandler()
+ch.setFormatter(formatter)
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
 
 
 class Callback:
 
   def connectionLost(self, cause):
-    logging.info("default connectionLost %s", str(cause))
+    logger.debug("default connectionLost %s", str(cause))
 
   def publishArrived(self, topicName, payload, qos, retained, msgid):
-    logging.info("default publishArrived %s %s %d %d %d", topicName, payload, qos, retained, msgid)
+    logger.debug("default publishArrived %s %s %d %d %d", topicName, payload, qos, retained, msgid)
     return True
 
   def published(self, msgid):
-    logging.info("default published %d", msgid)
+    logger.debug("default published %d", msgid)
 
   def subscribed(self, msgid):
-    logging.info("default subscribed %d", msgid)
+    logger.debug("default subscribed %d", msgid)
 
   def unsubscribed(self, msgid):
-    logging.info("default unsubscribed %d", msgid)
+    logger.debug("default unsubscribed %d", msgid)
 
 
 
@@ -95,7 +103,7 @@ class Client:
       connect.WillMessage = willMessage
       connect.WillQoS = willQoS
       connect.WillRETAIN = willRetain
-    logging.debug("out: %s", str(connect))
+    logger.debug("out: %s", str(connect))
     self.sock.send(connect.pack())
 
     response = MQTTV3.unpackPacket(MQTTV3.getPacket(self.sock))
@@ -103,6 +111,7 @@ class Client:
       raise MQTTV3.MQTTException("connect failed - socket closed, no connack")
     assert response.fh.MessageType == MQTTV3.CONNACK
 
+    assert response.returnCode == 0
     self.__receiver = internal.Receivers(self.sock)
     if self.callback:
       id = _thread.start_new_thread(self.__receiver, (self.callback,))
@@ -115,7 +124,7 @@ class Client:
     for t in topics:
       subscribe.data.append((t, qoss[count]))
       count += 1
-    logging.debug("out: %s", str(subscribe))
+    logger.debug("out: %s", str(subscribe))
     self.sock.send(subscribe.pack())
     return subscribe.messageIdentifier
 
@@ -124,7 +133,7 @@ class Client:
     unsubscribe = MQTTV3.Unsubscribes()
     unsubscribe.messageIdentifier = self.__nextMsgid()
     unsubscribe.data = topics
-    logging.debug("out: %s", str(unsubscribe))
+    logger.debug("out: %s", str(unsubscribe))
     self.sock.send(unsubscribe.pack())
     return unsubscribe.messageIdentifier
 
@@ -140,7 +149,7 @@ class Client:
       self.__receiver.outMsgs[publish.messageIdentifier] = publish
     publish.topicName = topic
     publish.data = payload
-    logging.debug("out: %s", str(publish))
+    logger.debug("out: %s", str(publish))
     self.sock.send(publish.pack())
     return publish.messageIdentifier
 
@@ -149,14 +158,14 @@ class Client:
     if self.__receiver:
       self.__receiver.stopping = True
       while len(self.__receiver.inMsgs) > 0 or len(self.__receiver.outMsgs) > 0:
-        logging.debug(self.__receiver.inMsgs, self.__receiver.outMsgs)
+        logger.debug(self.__receiver.inMsgs, self.__receiver.outMsgs)
         print(self.__receiver.inMsgs, self.__receiver.outMsgs)
         time.sleep(.1)
     if self.__receiver:
       assert self.__receiver.inMsgs == {}
       assert self.__receiver.outMsgs == {}
     disconnect = MQTTV3.Disconnects()
-    logging.debug("out: %s", str(disconnect))
+    logger.debug("out: %s", str(disconnect))
     self.sock.send(disconnect.pack())
     time.sleep(0.1)
     self.sock.close() # this will stop the receiver too

@@ -89,7 +89,7 @@ if __name__ == "__main__":
     port=1883
 
   cleanup()
-
+  """
   try:
     callback = Callbacks()
 
@@ -193,7 +193,7 @@ if __name__ == "__main__":
   bclient.subscribe(["fromb/#"], [2])
   aclient.publish("fromb/qos 1", b"", 1, retained=True)
   time.sleep(.2)
-  print("messages %s", callback2.messages)
+  print("messages", callback2.messages)
   assert len(callback2.messages) in [2, 0]
   bclient.disconnect()
 
@@ -204,7 +204,7 @@ if __name__ == "__main__":
   aclient.subscribe(["a/#", "a/+"], [2, 1])
   aclient.publish("a/froma qos 2", b"overlapping topic filters", 2)
   time.sleep(1)
-  print("messages %s", callback.messages)
+  print("messages", callback.messages)
   assert len(callback.messages) in [1, 2]
   aclient.disconnect()
 
@@ -221,9 +221,24 @@ if __name__ == "__main__":
   bclient.subscribe(["froma/willTopic"], [2])
   time.sleep(15)
   bclient.disconnect()
-  assert len(callback2.messages) == 1 # should have the will message
-  print("messages %s", callback2.messages)
-
+  assert len(callback2.messages) == 1, "length should be 1: %s" % callback2.messages # should have the will message
+  print("messages", callback2.messages)
+  """
+  # 0 length clientid
+  client0 = mqtt.client.Client("")
+  fails = False
+  try:
+    client0.connect(host=host, port=port, cleansession=False) # should be rejected
+  except:
+    fails = True
+  assert fails == True
+  fails = False
+  try:
+    client0.connect(host=host, port=port, cleansession=True) # should work
+  except:
+    fails = True
+  assert fails == False
+  client0.disconnect()
  
 
 

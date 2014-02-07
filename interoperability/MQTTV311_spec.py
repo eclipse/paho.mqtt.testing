@@ -25,7 +25,7 @@ clientlist = {}
 test = None
 
 logger = logging.getLogger("MQTTV311_spec")
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.INFO)
 
 class Clients:
 	
@@ -312,7 +312,7 @@ def observationCheckCallback(observation, results):
 
 		for k in results.keys():
 			if observation == replace(k, "MsgId=", ",", "000"):
-				print("observation found")
+				logger.debug("observation found")
 				return k
 		return None
 	else:	

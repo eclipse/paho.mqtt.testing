@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import traceback, random, sys, string, copy, threading, logging, socket, time
+import traceback, random, sys, string, copy, threading, logging, socket, time, uuid
 
 from ..formats import MQTTV311 as MQTTV3
 
@@ -226,18 +226,26 @@ class MQTTBrokers:
       resp.returnCode = 1
       respond(sock, resp)
       self.disconnect(sock, None)
+      logger.info("[MQTT-3.1.4-3] When rejecting connect, no more data must be processed")
       return
     if sock in self.clients.keys():    # is socket is already connected?
       self.disconnect(sock, None)
+      logger.info("[MQTT-3.1.4-3] When rejecting connect, no more data must be processed")
       raise MQTTV3.MQTTException("[MQTT-3.1.0-2] Second connect packet")
-    if len(packet.ClientIdentifier) == 0 and packet.Cleansession == False:
-      logger.info("[MQTT-3.1.3-8] Reject 0-length clientid with cleansession false")
-      logger.info("[MQTT-3.1.3-9] if clientid is rejected, must send connack 2 and close connection")
-      resp = MQTTV3.Connacks()
-      resp.returnCode = 2
-      respond(sock, resp)
-      self.disconnect(sock, None)
-      return
+    if len(packet.ClientIdentifier) == 0:
+      if packet.CleanSession == False:
+        logger.info("[MQTT-3.1.3-8] Reject 0-length clientid with cleansession false")
+        logger.info("[MQTT-3.1.3-9] if clientid is rejected, must send connack 2 and close connection")
+        resp = MQTTV3.Connacks()
+        resp.returnCode = 2
+        respond(sock, resp)
+        self.disconnect(sock, None)
+        logger.info("[MQTT-3.1.4-3] When rejecting connect, no more data must be processed")
+        return
+      else:
+        logger.info("[MQTT-3.1.3-7] 0-length clientid must have cleansession true")
+        packet.ClientIdentifier = uuid.uuid4() # give the client a unique clientid
+        logger.info("[MQTT-3.1.3-6] 0-length clientid must be assigned a unique id %s", packet.ClientIdentifier)
     logger.info("[MQTT-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed")
     if packet.ClientIdentifier in [client.id for client in self.clients.values()]: # is this client already connected on a different socket?
       for s in self.clients.keys():

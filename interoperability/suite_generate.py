@@ -80,7 +80,7 @@ logger.addHandler(ch)
 
 def create():
 	global logger, qlog
-	conformances = []
+	conformances = set([])
 	restart = False
 	while not restart:
 		logger.debug("stepping")
@@ -91,7 +91,7 @@ def create():
 		while data and data.find("Waiting for request") == -1 and data.find("Finishing communications") == -1:
 			if data.find("[MQTT") != -1:
 				logger.debug("Conformance statement %s", data)
-				conformances.append(data + "\n" if data[-1] != "\n" else data)
+				conformances.add(data + "\n" if data[-1] != "\n" else data)
 			data = qlog.get().getMessage()
 			logger.debug("data %s", data)
 		#if input("--->") == "q":
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 		lines = infile.readlines()
 		infile.close()
 		outfile = open(filename, "w")
-		outfile.writelines(conformance_statements + lines)
+		outfile.writelines(list(conformance_statements) + lines)
 		outfile.close()
 	
 		#shorten()

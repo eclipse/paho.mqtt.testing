@@ -40,10 +40,11 @@ class SubscriptionEngines:
      if type(topic) == type([]):
        rc = []
        count = 0
-       logger.info("[MQTT-3.8.4-4] Multiple topics in one subscribe")
        for aTopic in topic:
          rc.append(self.__subscribe(aClientid, aTopic, qos[count]))
          count += 1
+       if count > 1:
+         logger.info("[MQTT-3.8.4-4] Multiple topics in one subscribe")
      else:
        rc = self.__subscribe(aClientid, topic, qos)
      return rc

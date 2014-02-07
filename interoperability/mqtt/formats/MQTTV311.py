@@ -158,7 +158,7 @@ def writeUTF(data):
   return writeInt16(len(data)) + (data if type(data) == type(b"") else bytes(data, "utf-8"))
 
 def readUTF(buffer, maxlen):
-  if maxlen > 2:
+  if maxlen >= 2:
     length = readInt16(buffer)
   else:
     raise MQTTException("Not enough data to read string length")
