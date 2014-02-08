@@ -47,6 +47,7 @@ class Clients:
 		logger.debug("*** running")
 		clientlist[sock] = self
 		self.running = True
+		packet = None
 		try:
 			while True:		
 				packet = MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
@@ -299,19 +300,22 @@ def between(str, str1, str2):
 
 
 def replace(str, str1, str2, replace_str):
+  rc = str
   start = str.find(str1)+len(str1)
   end = str.find(str2, start)
-  return str[:start] + replace_str + str[end:]
+  if start != -1 and end != -1:
+    rc = str[:start] + replace_str + str[end:]
+  return rc
   
 
 def observationCheckCallback(observation, results):
 	# observation will be string representation of (socket, packet)
-	if observation.find("Publishes(") != -1:
+	if (observation.find("Publishes(") != -1 and observation.find("MsgId=") != -1) or observation.find("Pubrels(") != -1:
 		# look for matches in everything but MsgId
-		observation = replace(observation, "MsgId=", ",", "000")
-
+		endchar = ")" if observation.find("Pubrels") != -1 else ","
+		changed_observation = replace(observation, "MsgId=", endchar, "000")
 		for k in results.keys():
-			if observation == replace(k, "MsgId=", ",", "000"):
+			if changed_observation == replace(k, "MsgId=", endchar, "000"):
 				logger.debug("observation found")
 				return k
 		return None

@@ -653,7 +653,7 @@ class Subscribes(Packets):
       topic = readUTF(buffer[-leftlen:], leftlen)
       leftlen -= len(topic) + 2
       qos = buffer[-leftlen]
-      assert qos in [0, 1, 2], "[MQTT-3-8.3-2] reserved bits must be zero"
+      assert qos in [0, 1, 2], "[MQTT-3-8.3-2] reserved bits must be zero"
       leftlen -= 1
       self.data.append((topic, qos))
     assert len(self.data) > 0, "[MQTT-3.8.3-1] at least one topic, qos pair must be in subscribe"
@@ -762,7 +762,7 @@ class Unsubscribes(Packets):
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 1, "[MQTT-2.1.2-1]"
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
-    logger.info("[MQTT-3-10.1-1] fixed header bits arebe 0,0,1,0")
+    logger.info("[MQTT-3-10.1-1] fixed header bits are 0,0,1,0")
     return fhlen + self.fh.remainingLength
 
   def __repr__(self):

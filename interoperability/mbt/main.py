@@ -347,7 +347,7 @@ class Executions:
 			self.restart()
 
 	def restart(self):
-		logger.debug("RESTART")
+		logger.info("RESTART")
 		logrestart()
 		self.trace.restart()
 		self.pools = copy.deepcopy(self.model.choices)
@@ -395,7 +395,7 @@ class Executions:
 					kwargs[parm_name] = self.pools[args[index][0]][args[index][1]].valueOf()
 					exec_kwargs[parm_name] = "self.pools['"+args[index][0]+"']["+str(args[index][1])+"]"
 				except:
-					print("exception "+traceback.format_exc())
+					logger.info("exception %s" % traceback.format_exc())
 					import pdb
 					pdb.set_trace()
 				index += 1
@@ -469,15 +469,19 @@ class Tests:
 		self.logger = logging.getLogger("mbt-test")
 
 	def replaceResults(self, aString, strresult=False):
-		result_keys = sorted(self.results.keys(), key=len) # sort keys to avoid subs within subs
+		# returns a string suitable for call to eval()
+		result_keys = sorted(self.results.keys(), key=len, reverse=False) # sort keys to do the shortest first
+		change_count = 0
+		valstring = aString
 		for result in result_keys:
 			loc = aString.find(result)
 			if loc != -1:
-				self.logger.debug("replace %s with %s", result, 'self.results["'+result+'"]')
-				replacement = str(self.results[result]) if strresult else 'self.results["'+result+'"]'
-				aString = aString[:loc] + replacement + aString[loc + len(result):]
+				change_count += 1
+				self.logger.debug("%d replace %s with %s" % (change_count, result, 'self.results["'+result+'"]'))
+				valstring = aString[:loc] + 'self.results["'+result+'"]'  + aString[loc + len(result):]
+				aString = aString[:loc] + str(self.results[result]) + aString[loc + len(result):]
 				self.logger.debug("%s", aString)
-		return aString
+		return aString if strresult else valstring
 
 	def handleCall(self, words):
 		action = self.actions[words[1]]
@@ -485,8 +489,8 @@ class Tests:
 		try:
 			kwargs = eval(strargs)
 		except:
-			print("before", words[3])
-			print("self.results.keys()", self.results.keys())
+			logger.info("strargs %s" % strargs)
+			logger.info("results %s" % self.results)
 			raise
 		self.logger.debug("CALL %s with %s", action, kwargs)
 		if self.stepping and input("--->") == "q":
@@ -543,9 +547,12 @@ class Tests:
 				time.sleep(wait_interval)
 				count += 1
 		if count == max_wait_count:
-			self.logger.info("### observation %s not found", observation)
+			self.logger.info("### line %d, observation not found %s", self.lineno, observation)
 			self.failures += 1
 		else:
+			if observation != observation1:
+				self.logger.debug("*** observations equal %s %s" % (observation, observation1))
+			self.passes += 1
 			self.results[observation] = self.added_results[observation1]
 			del self.added_results[observation1]
 
@@ -553,25 +560,27 @@ class Tests:
 		self.logger.debug("Restarting")
 		self.results = {}
 		self.added_results = {}
+		if self.model.restartCallback:
+			self.model.restartCallback()
 
 	def run(self, stepping=True):
 		self.logger.info("Starting test %s", self.logfilename)
 		self.actions = {}
 		self.results = {}
 		self.stepping = stepping
-		lineno = 0
+		self.lineno = 0
 		for action in self.model.actions:
 			self.actions[action.getName()] = action
 		logfile = open(self.logfilename)
 		curline = logfile.readline()
 		while curline:
-			lineno += 1
+			self.lineno += 1
 			curline = curline.strip()
 			if curline.startswith("INFO"):
 				words = curline.split(" ", 4)[4] # remove level, date, time, logname
 				curline = ''.join(words)
 				words = words.split(" ", 3)
-				self.logger.debug("%d %s", lineno, curline)
+				self.logger.debug("%d %s", self.lineno, curline)
 				if words[0] == "CALL":
 					self.handleCall(words)
 				elif words[0] == "RESULT":
