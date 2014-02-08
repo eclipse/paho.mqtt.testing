@@ -1,0 +1,44 @@
+[MQTT-3.1.3-3] Clientid must be present, and first field
+[MQTT-3.1.3-4] Clientid must be Unicode, and between 0 and 65535 bytes long
+[MQTT-3.1.2-16] username must not be in payload if user name flag is 0
+[MQTT-3.1.2-16] username must not be in payload if user name flag is 0
+[MQTT-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-3.1.2-6] broker must discard the session data for client normal
+[MQTT-3.1.2-7] retained messages not cleaned up as part of session state for client normal
+DEBUG 20140206 233141 mbt NODE index is now 1
+DEBUG 20140206 233141 mbt Steps: 110 coverage 0%
+DEBUG 20140206 233141 mbt Enabled ['socket_create']
+INFO 20140206 233141 mbt CALL socket_create with {'port': 1883, 'hostname': 'localhost'}
+DEBUG 20140206 233141 mbt NODE index is now 2
+INFO 20140206 233141 mbt RESULT from socket_create is <socket.socket object, fd=11, family=2, type=1, proto=0>
+DEBUG 20140206 233141 mbt Steps: 111 coverage 5%
+DEBUG 20140206 233141 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+INFO 20140206 233141 mbt CALL connect with {'sock': <socket.socket object, fd=11, family=2, type=1, proto=0>, 'cleansession': False, 'clientid': 'normal'}
+DEBUG 20140206 233141 mbt NODE index is now 128
+INFO 20140206 233141 mbt OBSERVED EVENT (<socket.socket object, fd=11, family=2, type=1, proto=0>, Connacks(DUP=False, QoS=0, Retain=False, ReturnCode=0))
+INFO 20140206 233141 mbt RESULT from connect is 0
+DEBUG 20140206 233141 mbt Steps: 112 coverage 16%
+DEBUG 20140206 233141 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233141 mbt Total number of nodes now 16746
+INFO 20140206 233141 mbt CALL publish with {'retained': True, 'qos': 0, 'topic': 'TopicA', 'sock': <socket.socket object, fd=11, family=2, type=1, proto=0>, 'payload': b'333'}
+DEBUG 20140206 233141 mbt NODE index is now 16634
+INFO 20140206 233141 mbt RESULT from publish is 0
+DEBUG 20140206 233141 mbt Steps: 113 coverage 27%
+DEBUG 20140206 233141 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233141 mbt Total number of nodes now 16920
+INFO 20140206 233141 mbt CALL disconnect with {'sock': <socket.socket object, fd=11, family=2, type=1, proto=0>}
+DEBUG 20140206 233141 mbt NODE index is now 16868
+INFO 20140206 233141 mbt RESULT from disconnect is exception Traceback (most recent call last):
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 411, in step
+    rc = action(**kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 192, in __call__
+    return self.fn(*args, **kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 144, in disconnect
+    checksocket(sock)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 138, in checksocket
+    raise Exception("Must have been socket error")
+Exception: Must have been socket error
+
+DEBUG 20140206 233141 mbt RESTART

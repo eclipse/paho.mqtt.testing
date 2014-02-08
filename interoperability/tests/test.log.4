@@ -1,0 +1,36 @@
+[MQTT-2.3.1-1] packet indentifier must be in unsubscribe
+[MQTT-3-10.1-1] fixed header bits arebe 0,0,1,0
+[MQTT-3.1.0-1] Connect was not first packet on socket
+DEBUG 20140206 233132 mbt NODE index is now 1
+DEBUG 20140206 233132 mbt Steps: 7 coverage 0%
+DEBUG 20140206 233132 mbt Enabled ['socket_create']
+INFO 20140206 233132 mbt CALL socket_create with {'port': 1883, 'hostname': 'localhost'}
+DEBUG 20140206 233132 mbt NODE index is now 2
+INFO 20140206 233132 mbt RESULT from socket_create is <socket.socket object, fd=6, family=2, type=1, proto=0>
+DEBUG 20140206 233132 mbt Steps: 8 coverage 5%
+DEBUG 20140206 233132 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+INFO 20140206 233132 mbt CALL socket_close with {'sock': <socket.socket object, fd=6, family=2, type=1, proto=0>}
+DEBUG 20140206 233132 mbt NODE index is now 3
+DEBUG 20140206 233132 mbt Steps: 9 coverage 5%
+DEBUG 20140206 233132 mbt Enabled ['socket_create']
+DEBUG 20140206 233132 mbt Total number of nodes now 177
+INFO 20140206 233132 mbt CALL socket_create with {'port': 1883, 'hostname': 'localhost'}
+DEBUG 20140206 233132 mbt NODE index is now 177
+INFO 20140206 233132 mbt RESULT from socket_create is <socket.socket object, fd=6, family=2, type=1, proto=0>
+DEBUG 20140206 233132 mbt Steps: 10 coverage 5%
+DEBUG 20140206 233132 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233132 mbt Total number of nodes now 351
+INFO 20140206 233132 mbt CALL unsubscribe with {'sock': <socket.socket object, fd=6, family=2, type=1, proto=0>, 'topics': ('TopicA/B',)}
+DEBUG 20140206 233132 mbt NODE index is now 342
+INFO 20140206 233132 mbt RESULT from unsubscribe is exception Traceback (most recent call last):
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 411, in step
+    rc = action(**kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 192, in __call__
+    return self.fn(*args, **kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 167, in unsubscribe
+    checksocket(sock)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 138, in checksocket
+    raise Exception("Must have been socket error")
+Exception: Must have been socket error
+
+DEBUG 20140206 233132 mbt RESTART

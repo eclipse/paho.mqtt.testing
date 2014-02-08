@@ -1,0 +1,824 @@
+[MQTT-3.1.3-3] Clientid must be present, and first field
+[MQTT-3.1.3-4] Clientid must be Unicode, and between 0 and 65535 bytes long
+[MQTT-3.1.2-16] username must not be in payload if user name flag is 0
+[MQTT-3.1.2-16] username must not be in payload if user name flag is 0
+[MQTT-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-6] pubrec messge id same as publish
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-2.3.1-6] pubcomp messge id same as publish
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-6] pubrec messge id same as publish
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-2.3.1-6] pubcomp messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-1.1.0-1] resubscription for client 23 characters4567890123 on topic TopicA/+
+[MQTT-3.8.4-3] resubscription for client 23 characters4567890123 on topic TopicA/+
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe
+[MQTT-2.1.2-9] Set retained flag on retained messages
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe
+[MQTT-2.1.2-9] Set retained flag on retained messages
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe
+[MQTT-2.1.2-9] Set retained flag on retained messages
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in unsubscribe
+[MQTT-3-10.1-1] fixed header bits arebe 0,0,1,0
+[MQTT-2.3.1-7] Unsuback has same message id as unsubscribe
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-6] pubrec messge id same as publish
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-2.3.1-6] pubcomp messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-6] pubrec messge id same as publish
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-3.3.5-1] overlapping subscriptions
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.3.5-1] Overlapping subscriptions max QoS
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] pubcomp messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-3.5.4-1] must reply with pubrel in response to pubrec
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.3.5-1] overlapping subscriptions
+[MQTT-3.3.5-1] Overlapping subscriptions max QoS
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.1-11] Deleting retained message
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-6] pubrec messge id same as publish
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.3.5-1] overlapping subscriptions
+[MQTT-3.3.5-1] Overlapping subscriptions max QoS
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] pubcomp messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-3.5.4-1] must reply with pubrel in response to pubrec
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-1.1.0-1] resubscription for client 23 characters4567890123 on topic TopicA/+
+[MQTT-3.8.4-3] resubscription for client 23 characters4567890123 on topic TopicA/+
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe
+[MQTT-2.1.2-9] Set retained flag on retained messages
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-6] pubrec messge id same as publish
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] pubcomp messge id same as publish
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-1.1.0-1] resubscription for client 23 characters4567890123 on topic TopicA/B
+[MQTT-3.8.4-3] resubscription for client 23 characters4567890123 on topic TopicA/B
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe
+[MQTT-2.1.2-9] Set retained flag on retained messages
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-3.5.4-1] must reply with pubrel in response to pubrec
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] puback messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-6] pubrec messge id same as publish
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-6] pubcomp messge id same as publish
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-3.5.4-1] must reply with pubrel in response to pubrec
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-1.1.0-1] resubscription for client 23 characters4567890123 on topic TopicA/B
+[MQTT-3.8.4-3] resubscription for client 23 characters4567890123 on topic TopicA/B
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe
+[MQTT-2.1.2-9] Set retained flag on retained messages
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-3.5.4-1] must reply with pubrel in response to pubrec
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe
+[MQTT-2.1.2-9] Set retained flag on retained messages
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe
+[MQTT-2.1.2-9] Set retained flag on retained messages
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-3.3.5-1] overlapping subscriptions
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.3.5-1] Overlapping subscriptions max QoS
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-4] Multiple topics in one subscribe
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe
+[MQTT-2.1.2-9] Set retained flag on retained messages
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-3.5.4-1] must reply with pubrel in response to pubrec
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-3.1.3-3] Clientid must be present, and first field
+[MQTT-3.1.3-4] Clientid must be Unicode, and between 0 and 65535 bytes long
+[MQTT-3.1.2-16] username must not be in payload if user name flag is 0
+[MQTT-3.1.2-16] username must not be in payload if user name flag is 0
+[MQTT-3.1.2-6] broker must discard the session data for client 23 characters4567890123
+[MQTT-3.1.2-7] retained messages not cleaned up as part of session state for client 23 characters4567890123
+[MQTT-3.1.4-3] When rejecting connect, no more data must be processed
+[MQTT-3.1.0-2] Second connect packet
+DEBUG 20140206 233144 mbt NODE index is now 1
+DEBUG 20140206 233144 mbt Steps: 140 coverage 0%
+DEBUG 20140206 233144 mbt Enabled ['socket_create']
+INFO 20140206 233144 mbt CALL socket_create with {'port': 1883, 'hostname': 'localhost'}
+DEBUG 20140206 233144 mbt NODE index is now 2
+INFO 20140206 233144 mbt RESULT from socket_create is <socket.socket object, fd=13, family=2, type=1, proto=0>
+DEBUG 20140206 233144 mbt Steps: 141 coverage 5%
+DEBUG 20140206 233144 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+INFO 20140206 233144 mbt CALL connect with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'cleansession': False, 'clientid': '23 characters4567890123'}
+DEBUG 20140206 233144 mbt NODE index is now 130
+INFO 20140206 233144 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Connacks(DUP=False, QoS=0, Retain=False, ReturnCode=0))
+INFO 20140206 233145 mbt RESULT from connect is 0
+DEBUG 20140206 233145 mbt Steps: 142 coverage 16%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 21278
+INFO 20140206 233145 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('TopicA/+',), 'qoss': (1,)}
+DEBUG 20140206 233145 mbt NODE index is now 21251
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=2, Data=[1]))
+INFO 20140206 233145 mbt RESULT from subscribe is 2
+DEBUG 20140206 233145 mbt Steps: 143 coverage 21%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 21452
+INFO 20140206 233145 mbt CALL publish with {'retained': False, 'qos': 1, 'topic': 'TopicA/B', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b''}
+DEBUG 20140206 233145 mbt NODE index is now 21289
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=1, TopicName='TopicA/B', Payload=b''))
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 3)
+INFO 20140206 233145 mbt RESULT from publish is 3
+DEBUG 20140206 233145 mbt Steps: 144 coverage 28%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233145 mbt Total number of nodes now 21627
+INFO 20140206 233145 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=1, TopicName='TopicA/B', Payload=b''))}
+DEBUG 20140206 233145 mbt NODE index is now 21627
+DEBUG 20140206 233145 mbt Steps: 145 coverage 29%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 21801
+INFO 20140206 233145 mbt CALL publish with {'retained': False, 'qos': 2, 'topic': 'Topic/C', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'333'}
+DEBUG 20140206 233145 mbt NODE index is now 21706
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=4))
+INFO 20140206 233145 mbt RESULT from publish is 4
+DEBUG 20140206 233145 mbt Steps: 146 coverage 36%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'pubrel', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 21976
+INFO 20140206 233145 mbt CALL pubrel with {'pubrec': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=4))}
+DEBUG 20140206 233145 mbt NODE index is now 21923
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubcomps(DUP=False, QoS=0, Retain=False, MsgId=4))
+DEBUG 20140206 233145 mbt Steps: 147 coverage 37%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 22150
+INFO 20140206 233145 mbt CALL publish with {'retained': True, 'qos': 0, 'topic': 'TopicA/C', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b''}
+DEBUG 20140206 233145 mbt NODE index is now 21996
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='TopicA/C', Payload=b''))
+INFO 20140206 233145 mbt RESULT from publish is 0
+DEBUG 20140206 233145 mbt Steps: 148 coverage 45%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 22324
+INFO 20140206 233145 mbt CALL publish with {'retained': False, 'qos': 2, 'topic': 'TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b''}
+DEBUG 20140206 233145 mbt NODE index is now 22157
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=5))
+INFO 20140206 233145 mbt RESULT from publish is 5
+DEBUG 20140206 233145 mbt Steps: 149 coverage 47%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'pubrel', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 22499
+INFO 20140206 233145 mbt CALL pubrel with {'pubrec': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=5))}
+DEBUG 20140206 233145 mbt NODE index is now 22446
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubcomps(DUP=False, QoS=0, Retain=False, MsgId=5))
+DEBUG 20140206 233145 mbt Steps: 150 coverage 48%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 22673
+INFO 20140206 233145 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('/+',), 'qoss': (2,)}
+DEBUG 20140206 233145 mbt NODE index is now 22661
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=6, Data=[2]))
+INFO 20140206 233145 mbt RESULT from subscribe is 6
+DEBUG 20140206 233145 mbt Steps: 151 coverage 54%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 22847
+INFO 20140206 233145 mbt CALL publish with {'retained': True, 'qos': 0, 'topic': 'TopicA/B', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'}
+DEBUG 20140206 233145 mbt NODE index is now 22771
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233145 mbt RESULT from publish is 0
+DEBUG 20140206 233145 mbt Steps: 152 coverage 56%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233145 mbt Total number of nodes now 23021
+INFO 20140206 233145 mbt CALL publish with {'retained': False, 'qos': 1, 'topic': '/TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b''}
+DEBUG 20140206 233145 mbt NODE index is now 22876
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=2, TopicName='/TopicA', Payload=b''))
+INFO 20140206 233145 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 7)
+INFO 20140206 233145 mbt RESULT from publish is 7
+DEBUG 20140206 233145 mbt Steps: 153 coverage 57%
+DEBUG 20140206 233145 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233145 mbt Total number of nodes now 23196
+INFO 20140206 233145 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=2, TopicName='/TopicA', Payload=b''))}
+DEBUG 20140206 233145 mbt NODE index is now 23196
+DEBUG 20140206 233145 mbt Steps: 154 coverage 59%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 23370
+INFO 20140206 233146 mbt CALL publish with {'retained': False, 'qos': 0, 'topic': 'TopicA/B', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'333'}
+DEBUG 20140206 233146 mbt NODE index is now 23265
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='TopicA/B', Payload=b'333'))
+INFO 20140206 233146 mbt RESULT from publish is 0
+DEBUG 20140206 233146 mbt Steps: 155 coverage 59%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 23544
+INFO 20140206 233146 mbt CALL publish with {'retained': False, 'qos': 0, 'topic': '/TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'333'}
+DEBUG 20140206 233146 mbt NODE index is now 23457
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='/TopicA', Payload=b'333'))
+INFO 20140206 233146 mbt RESULT from publish is 0
+DEBUG 20140206 233146 mbt Steps: 156 coverage 59%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 23718
+INFO 20140206 233146 mbt CALL publish with {'retained': True, 'qos': 1, 'topic': 'TopicA/C', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'}
+DEBUG 20140206 233146 mbt NODE index is now 23656
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=3, TopicName='TopicA/C', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 8)
+INFO 20140206 233146 mbt RESULT from publish is 8
+DEBUG 20140206 233146 mbt Steps: 157 coverage 57%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233146 mbt Total number of nodes now 23893
+INFO 20140206 233146 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=3, TopicName='TopicA/C', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))}
+DEBUG 20140206 233146 mbt NODE index is now 23893
+DEBUG 20140206 233146 mbt Steps: 158 coverage 59%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 24067
+INFO 20140206 233146 mbt CALL publish with {'retained': True, 'qos': 0, 'topic': '/TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b''}
+DEBUG 20140206 233146 mbt NODE index is now 23919
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='/TopicA', Payload=b''))
+INFO 20140206 233146 mbt RESULT from publish is 0
+DEBUG 20140206 233146 mbt Steps: 159 coverage 59%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 24241
+INFO 20140206 233146 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('TopicA/+',), 'qoss': (2,)}
+DEBUG 20140206 233146 mbt NODE index is now 24225
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=True, MsgId=4, TopicName='TopicA/C', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=True, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=9, Data=[2]))
+INFO 20140206 233146 mbt RESULT from subscribe is 9
+DEBUG 20140206 233146 mbt Steps: 160 coverage 57%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233146 mbt Total number of nodes now 24416
+INFO 20140206 233146 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=True, MsgId=4, TopicName='TopicA/C', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))}
+DEBUG 20140206 233146 mbt NODE index is now 24416
+DEBUG 20140206 233146 mbt Steps: 161 coverage 59%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 24590
+INFO 20140206 233146 mbt CALL publish with {'retained': True, 'qos': 0, 'topic': 'TopicA/C', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'}
+DEBUG 20140206 233146 mbt NODE index is now 24526
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='TopicA/C', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233146 mbt RESULT from publish is 0
+DEBUG 20140206 233146 mbt Steps: 162 coverage 59%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 24764
+INFO 20140206 233146 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('TopicA',), 'qoss': (2,)}
+DEBUG 20140206 233146 mbt NODE index is now 24743
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=10, Data=[2]))
+INFO 20140206 233146 mbt RESULT from subscribe is 10
+DEBUG 20140206 233146 mbt Steps: 163 coverage 62%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 24938
+INFO 20140206 233146 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('TopicA/B',), 'qoss': (0,)}
+DEBUG 20140206 233146 mbt NODE index is now 24896
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=True, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=11, Data=[0]))
+INFO 20140206 233146 mbt RESULT from subscribe is 11
+DEBUG 20140206 233146 mbt Steps: 164 coverage 67%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 25112
+INFO 20140206 233146 mbt CALL publish with {'retained': False, 'qos': 0, 'topic': 'TopicA/C', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'}
+DEBUG 20140206 233146 mbt NODE index is now 25049
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='TopicA/C', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233146 mbt RESULT from publish is 0
+DEBUG 20140206 233146 mbt Steps: 165 coverage 67%
+DEBUG 20140206 233146 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233146 mbt Total number of nodes now 25286
+INFO 20140206 233146 mbt CALL unsubscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('/+',)}
+DEBUG 20140206 233146 mbt NODE index is now 25285
+INFO 20140206 233146 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Unsubacks(DUP=False, QoS=0, Retain=False, MsgId=12))
+INFO 20140206 233147 mbt RESULT from unsubscribe is 12
+DEBUG 20140206 233147 mbt Steps: 166 coverage 67%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 25460
+INFO 20140206 233147 mbt CALL publish with {'retained': False, 'qos': 2, 'topic': '/TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'}
+DEBUG 20140206 233147 mbt NODE index is now 25407
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=13))
+INFO 20140206 233147 mbt RESULT from publish is 13
+DEBUG 20140206 233147 mbt Steps: 167 coverage 65%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'pubrel', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 25635
+INFO 20140206 233147 mbt CALL pubrel with {'pubrec': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=13))}
+DEBUG 20140206 233147 mbt NODE index is now 25582
+DEBUG 20140206 233147 mbt Steps: 168 coverage 67%
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubcomps(DUP=False, QoS=0, Retain=False, MsgId=13))
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 25809
+INFO 20140206 233147 mbt CALL publish with {'retained': True, 'qos': 2, 'topic': 'TopicA/B', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'}
+DEBUG 20140206 233147 mbt NODE index is now 25737
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=14))
+INFO 20140206 233147 mbt RESULT from publish is 14
+DEBUG 20140206 233147 mbt Steps: 169 coverage 65%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'pubrel', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 25984
+INFO 20140206 233147 mbt CALL pubrel with {'pubrec': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=14))}
+DEBUG 20140206 233147 mbt NODE index is now 25931
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=False, MsgId=5, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+DEBUG 20140206 233147 mbt Steps: 170 coverage 65%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233147 mbt Total number of nodes now 26159
+INFO 20140206 233147 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=False, MsgId=5, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))}
+DEBUG 20140206 233147 mbt NODE index is now 26159
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubcomps(DUP=False, QoS=0, Retain=False, MsgId=14))
+DEBUG 20140206 233147 mbt Steps: 171 coverage 67%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 26333
+INFO 20140206 233147 mbt CALL publish with {'retained': False, 'qos': 1, 'topic': 'TopicA/B', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b''}
+DEBUG 20140206 233147 mbt NODE index is now 26170
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=5))
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=6, TopicName='TopicA/B', Payload=b''))
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 15)
+INFO 20140206 233147 mbt RESULT from publish is 15
+DEBUG 20140206 233147 mbt Steps: 172 coverage 64%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'pubcomp', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233147 mbt Total number of nodes now 26509
+INFO 20140206 233147 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=6, TopicName='TopicA/B', Payload=b''))}
+DEBUG 20140206 233147 mbt NODE index is now 26509
+DEBUG 20140206 233147 mbt Steps: 173 coverage 65%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'pubcomp', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 26684
+INFO 20140206 233147 mbt CALL pubcomp with {'pubrel': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=5))}
+DEBUG 20140206 233147 mbt NODE index is now 26631
+DEBUG 20140206 233147 mbt Steps: 174 coverage 67%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 26858
+INFO 20140206 233147 mbt CALL publish with {'retained': False, 'qos': 0, 'topic': 'TopicA/C', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'333'}
+DEBUG 20140206 233147 mbt NODE index is now 26765
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='TopicA/C', Payload=b'333'))
+INFO 20140206 233147 mbt RESULT from publish is 0
+DEBUG 20140206 233147 mbt Steps: 175 coverage 67%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 27032
+INFO 20140206 233147 mbt CALL publish with {'retained': True, 'qos': 1, 'topic': 'TopicA/C', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'333'}
+DEBUG 20140206 233147 mbt NODE index is now 26940
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=7, TopicName='TopicA/C', Payload=b'333'))
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 16)
+INFO 20140206 233147 mbt RESULT from publish is 16
+DEBUG 20140206 233147 mbt Steps: 176 coverage 65%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233147 mbt Total number of nodes now 27207
+INFO 20140206 233147 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=7, TopicName='TopicA/C', Payload=b'333'))}
+DEBUG 20140206 233147 mbt NODE index is now 27207
+DEBUG 20140206 233147 mbt Steps: 177 coverage 67%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 27381
+INFO 20140206 233147 mbt CALL publish with {'retained': True, 'qos': 1, 'topic': 'TopicA/C', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b''}
+DEBUG 20140206 233147 mbt NODE index is now 27229
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=8, TopicName='TopicA/C', Payload=b''))
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 17)
+INFO 20140206 233147 mbt RESULT from publish is 17
+DEBUG 20140206 233147 mbt Steps: 178 coverage 65%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233147 mbt Total number of nodes now 27556
+INFO 20140206 233147 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=8, TopicName='TopicA/C', Payload=b''))}
+DEBUG 20140206 233147 mbt NODE index is now 27556
+DEBUG 20140206 233147 mbt Steps: 179 coverage 67%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 27730
+INFO 20140206 233147 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('Topic/C',), 'qoss': (1,)}
+DEBUG 20140206 233147 mbt NODE index is now 27700
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=18, Data=[1]))
+INFO 20140206 233147 mbt RESULT from subscribe is 18
+DEBUG 20140206 233147 mbt Steps: 180 coverage 70%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 27904
+INFO 20140206 233147 mbt CALL publish with {'retained': False, 'qos': 1, 'topic': 'TopicA/C', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'333'}
+DEBUG 20140206 233147 mbt NODE index is now 27813
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=9, TopicName='TopicA/C', Payload=b'333'))
+INFO 20140206 233147 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 19)
+INFO 20140206 233147 mbt RESULT from publish is 19
+DEBUG 20140206 233147 mbt Steps: 181 coverage 68%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233147 mbt Total number of nodes now 28079
+INFO 20140206 233147 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=9, TopicName='TopicA/C', Payload=b'333'))}
+DEBUG 20140206 233147 mbt NODE index is now 28079
+DEBUG 20140206 233147 mbt Steps: 182 coverage 70%
+DEBUG 20140206 233147 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233147 mbt Total number of nodes now 28253
+INFO 20140206 233147 mbt CALL publish with {'retained': False, 'qos': 2, 'topic': 'TopicA/B', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'1'}
+DEBUG 20140206 233147 mbt NODE index is now 28122
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=20))
+INFO 20140206 233148 mbt RESULT from publish is 20
+DEBUG 20140206 233148 mbt Steps: 183 coverage 71%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'pubrel', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 28428
+INFO 20140206 233148 mbt CALL pubrel with {'pubrec': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=20))}
+DEBUG 20140206 233148 mbt NODE index is now 28375
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=False, MsgId=10, TopicName='TopicA/B', Payload=b'1'))
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubcomps(DUP=False, QoS=0, Retain=False, MsgId=20))
+DEBUG 20140206 233148 mbt Steps: 184 coverage 71%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233148 mbt Total number of nodes now 28603
+INFO 20140206 233148 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=False, MsgId=10, TopicName='TopicA/B', Payload=b'1'))}
+DEBUG 20140206 233148 mbt NODE index is now 28603
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=10))
+DEBUG 20140206 233148 mbt Steps: 185 coverage 72%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'pubcomp', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 28778
+INFO 20140206 233148 mbt CALL pubcomp with {'pubrel': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=10))}
+DEBUG 20140206 233148 mbt NODE index is now 28725
+DEBUG 20140206 233148 mbt Steps: 186 coverage 72%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 28952
+INFO 20140206 233148 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('TopicA/+',), 'qoss': (0,)}
+DEBUG 20140206 233148 mbt NODE index is now 28914
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=True, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=21, Data=[0]))
+INFO 20140206 233148 mbt RESULT from subscribe is 21
+DEBUG 20140206 233148 mbt Steps: 187 coverage 72%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 29126
+INFO 20140206 233148 mbt CALL publish with {'retained': False, 'qos': 1, 'topic': 'TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'}
+DEBUG 20140206 233148 mbt NODE index is now 29047
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=11, TopicName='TopicA', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 22)
+INFO 20140206 233148 mbt RESULT from publish is 22
+DEBUG 20140206 233148 mbt Steps: 188 coverage 71%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233148 mbt Total number of nodes now 29301
+INFO 20140206 233148 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=11, TopicName='TopicA', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))}
+DEBUG 20140206 233148 mbt NODE index is now 29301
+DEBUG 20140206 233148 mbt Steps: 189 coverage 72%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 29475
+INFO 20140206 233148 mbt CALL publish with {'retained': True, 'qos': 1, 'topic': 'TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'}
+DEBUG 20140206 233148 mbt NODE index is now 29395
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=12, TopicName='TopicA', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 23)
+INFO 20140206 233148 mbt RESULT from publish is 23
+DEBUG 20140206 233148 mbt Steps: 190 coverage 71%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233148 mbt Total number of nodes now 29650
+INFO 20140206 233148 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=12, TopicName='TopicA', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))}
+DEBUG 20140206 233148 mbt NODE index is now 29650
+DEBUG 20140206 233148 mbt Steps: 191 coverage 72%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 29824
+INFO 20140206 233148 mbt CALL publish with {'retained': False, 'qos': 1, 'topic': '/TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'1'}
+DEBUG 20140206 233148 mbt NODE index is now 29709
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 24)
+INFO 20140206 233148 mbt RESULT from publish is 24
+DEBUG 20140206 233148 mbt Steps: 192 coverage 72%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 29998
+INFO 20140206 233148 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('/TopicA',), 'qoss': (0,)}
+DEBUG 20140206 233148 mbt NODE index is now 29959
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=25, Data=[0]))
+INFO 20140206 233148 mbt RESULT from subscribe is 25
+DEBUG 20140206 233148 mbt Steps: 193 coverage 75%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 30172
+INFO 20140206 233148 mbt CALL publish with {'retained': True, 'qos': 2, 'topic': '/TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b''}
+DEBUG 20140206 233148 mbt NODE index is now 30028
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=26))
+INFO 20140206 233148 mbt RESULT from publish is 26
+DEBUG 20140206 233148 mbt Steps: 194 coverage 73%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'pubrel', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 30347
+INFO 20140206 233148 mbt CALL pubrel with {'pubrec': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=26))}
+DEBUG 20140206 233148 mbt NODE index is now 30294
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='/TopicA', Payload=b''))
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubcomps(DUP=False, QoS=0, Retain=False, MsgId=26))
+DEBUG 20140206 233148 mbt Steps: 195 coverage 75%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 30521
+INFO 20140206 233148 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('TopicA/B',), 'qoss': (2,)}
+DEBUG 20140206 233148 mbt NODE index is now 30501
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=True, MsgId=13, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=27, Data=[2]))
+INFO 20140206 233148 mbt RESULT from subscribe is 27
+DEBUG 20140206 233148 mbt Steps: 196 coverage 73%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233148 mbt Total number of nodes now 30696
+INFO 20140206 233148 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=True, MsgId=13, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))}
+DEBUG 20140206 233148 mbt NODE index is now 30696
+DEBUG 20140206 233148 mbt Steps: 197 coverage 75%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 30870
+INFO 20140206 233148 mbt CALL publish with {'retained': True, 'qos': 1, 'topic': 'TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'333'}
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=13))
+DEBUG 20140206 233148 mbt NODE index is now 30760
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=14, TopicName='TopicA', Payload=b'333'))
+INFO 20140206 233148 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 28)
+INFO 20140206 233148 mbt RESULT from publish is 28
+DEBUG 20140206 233148 mbt Steps: 198 coverage 71%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'pubcomp', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233148 mbt Total number of nodes now 31046
+INFO 20140206 233148 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=False, MsgId=14, TopicName='TopicA', Payload=b'333'))}
+DEBUG 20140206 233148 mbt NODE index is now 31046
+DEBUG 20140206 233148 mbt Steps: 199 coverage 73%
+DEBUG 20140206 233148 mbt Enabled ['socket_close', 'publish', 'pubcomp', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233148 mbt Total number of nodes now 31221
+INFO 20140206 233148 mbt CALL pubcomp with {'pubrel': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=13))}
+DEBUG 20140206 233148 mbt NODE index is now 31168
+DEBUG 20140206 233149 mbt Steps: 200 coverage 75%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 31395
+INFO 20140206 233149 mbt CALL publish with {'retained': False, 'qos': 2, 'topic': 'TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'333'}
+DEBUG 20140206 233149 mbt NODE index is now 31288
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=29))
+INFO 20140206 233149 mbt RESULT from publish is 29
+DEBUG 20140206 233149 mbt Steps: 201 coverage 73%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'pubrel', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 31570
+INFO 20140206 233149 mbt CALL pubrel with {'pubrec': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=29))}
+DEBUG 20140206 233149 mbt NODE index is now 31517
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=False, MsgId=15, TopicName='TopicA', Payload=b'333'))
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubcomps(DUP=False, QoS=0, Retain=False, MsgId=29))
+DEBUG 20140206 233149 mbt Steps: 202 coverage 73%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233149 mbt Total number of nodes now 31745
+INFO 20140206 233149 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=False, MsgId=15, TopicName='TopicA', Payload=b'333'))}
+DEBUG 20140206 233149 mbt NODE index is now 31745
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=15))
+DEBUG 20140206 233149 mbt Steps: 203 coverage 73%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'pubcomp', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 31920
+INFO 20140206 233149 mbt CALL pubcomp with {'pubrel': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=15))}
+DEBUG 20140206 233149 mbt NODE index is now 31867
+DEBUG 20140206 233149 mbt Steps: 204 coverage 75%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 32094
+INFO 20140206 233149 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('TopicA/B',), 'qoss': (2,)}
+DEBUG 20140206 233149 mbt NODE index is now 32074
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=True, MsgId=16, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=30, Data=[2]))
+INFO 20140206 233149 mbt RESULT from subscribe is 30
+DEBUG 20140206 233149 mbt Steps: 205 coverage 73%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233149 mbt Total number of nodes now 32269
+INFO 20140206 233149 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=True, MsgId=16, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))}
+DEBUG 20140206 233149 mbt NODE index is now 32269
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=16))
+DEBUG 20140206 233149 mbt Steps: 206 coverage 73%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'pubcomp', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 32444
+INFO 20140206 233149 mbt CALL pubcomp with {'pubrel': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=16))}
+DEBUG 20140206 233149 mbt NODE index is now 32391
+DEBUG 20140206 233149 mbt Steps: 207 coverage 75%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 32618
+INFO 20140206 233149 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('TopicA/C',), 'qoss': (0,)}
+DEBUG 20140206 233149 mbt NODE index is now 32578
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=31, Data=[0]))
+INFO 20140206 233149 mbt RESULT from subscribe is 31
+DEBUG 20140206 233149 mbt Steps: 208 coverage 78%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 32792
+INFO 20140206 233149 mbt CALL publish with {'retained': False, 'qos': 0, 'topic': 'TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'333'}
+DEBUG 20140206 233149 mbt NODE index is now 32681
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='TopicA', Payload=b'333'))
+INFO 20140206 233149 mbt RESULT from publish is 0
+DEBUG 20140206 233149 mbt Steps: 209 coverage 78%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 32966
+INFO 20140206 233149 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('#',), 'qoss': (1,)}
+DEBUG 20140206 233149 mbt NODE index is now 32941
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=True, MsgId=17, TopicName='TopicA', Payload=b'333'))
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=True, MsgId=18, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=32, Data=[1]))
+INFO 20140206 233149 mbt RESULT from subscribe is 32
+DEBUG 20140206 233149 mbt Steps: 210 coverage 76%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233149 mbt Total number of nodes now 33142
+INFO 20140206 233149 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=True, MsgId=18, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))}
+DEBUG 20140206 233149 mbt NODE index is now 33142
+DEBUG 20140206 233149 mbt Steps: 211 coverage 78%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233149 mbt Total number of nodes now 33317
+INFO 20140206 233149 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=1, Retain=True, MsgId=17, TopicName='TopicA', Payload=b'333'))}
+DEBUG 20140206 233149 mbt NODE index is now 33317
+DEBUG 20140206 233149 mbt Steps: 212 coverage 81%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 33491
+INFO 20140206 233149 mbt CALL publish with {'retained': True, 'qos': 0, 'topic': '/TopicA', 'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'payload': b'1'}
+DEBUG 20140206 233149 mbt NODE index is now 33373
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=0, Retain=False, TopicName='/TopicA', Payload=b'1'))
+INFO 20140206 233149 mbt RESULT from publish is 0
+DEBUG 20140206 233149 mbt Steps: 213 coverage 81%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 33665
+INFO 20140206 233149 mbt CALL subscribe with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'topics': ('+/+',), 'qoss': (2,)}
+DEBUG 20140206 233149 mbt NODE index is now 33654
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=True, MsgId=19, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Subacks(DUP=False, QoS=0, Retain=False, MsgId=33, Data=[2]))
+INFO 20140206 233149 mbt RESULT from subscribe is 33
+DEBUG 20140206 233149 mbt Steps: 214 coverage 81%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe', 'puback']
+DEBUG 20140206 233149 mbt Total number of nodes now 33840
+INFO 20140206 233149 mbt CALL puback with {'publish': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Publishes(DUP=False, QoS=2, Retain=True, MsgId=19, TopicName='TopicA/B', Payload=b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong'))}
+DEBUG 20140206 233149 mbt NODE index is now 33840
+INFO 20140206 233149 mbt OBSERVED EVENT (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=19))
+DEBUG 20140206 233149 mbt Steps: 215 coverage 81%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'pubcomp', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 34015
+INFO 20140206 233149 mbt CALL pubcomp with {'pubrel': (<socket.socket object, fd=13, family=2, type=1, proto=0>, Pubrels(DUP=False, QoS=1, Retain=False, MsgId=19))}
+DEBUG 20140206 233149 mbt NODE index is now 33962
+DEBUG 20140206 233149 mbt Steps: 216 coverage 83%
+DEBUG 20140206 233149 mbt Enabled ['socket_close', 'publish', 'disconnect', 'connect', 'subscribe', 'unsubscribe']
+DEBUG 20140206 233149 mbt Total number of nodes now 34189
+INFO 20140206 233149 mbt CALL connect with {'sock': <socket.socket object, fd=13, family=2, type=1, proto=0>, 'cleansession': True, 'clientid': '23 characters4567890123'}
+DEBUG 20140206 233149 mbt NODE index is now 34142
+INFO 20140206 233150 mbt RESULT from connect is exception Traceback (most recent call last):
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 411, in step
+    rc = action(**kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 192, in __call__
+    return self.fn(*args, **kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 127, in connect
+    response = clientlist[sock].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
+KeyError: <socket.socket object, fd=13, family=2, type=1, proto=0>
+
+DEBUG 20140206 233150 mbt RESTART
