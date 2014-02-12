@@ -85,7 +85,7 @@ class Client:
 
 
   def connect(self, host="localhost", port=1883, cleansession=True, keepalive=0, newsocket=True, protocolName=None,
-              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False):
+              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None):
     if newsocket:
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self.sock.connect((host, port))
@@ -103,6 +103,15 @@ class Client:
       connect.WillMessage = willMessage
       connect.WillQoS = willQoS
       connect.WillRETAIN = willRetain
+
+    if username:
+      connect.usernameFlag = True
+      connect.username = username
+
+    if password:
+      connect.passwordFlag = True
+      connect.password = password
+
     logger.debug("out: %s", str(connect))
     self.sock.send(connect.pack())
 

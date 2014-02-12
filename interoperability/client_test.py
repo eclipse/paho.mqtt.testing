@@ -89,7 +89,7 @@ if __name__ == "__main__":
     port=1883
 
   cleanup()
-  """
+  
   try:
     callback = Callbacks()
 
@@ -223,7 +223,7 @@ if __name__ == "__main__":
   bclient.disconnect()
   assert len(callback2.messages) == 1, "length should be 1: %s" % callback2.messages # should have the will message
   print("messages", callback2.messages)
-  """
+  
   # 0 length clientid
   client0 = mqtt.client.Client("")
   fails = False
