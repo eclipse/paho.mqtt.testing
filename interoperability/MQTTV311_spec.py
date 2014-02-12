@@ -322,6 +322,18 @@ def observationCheckCallback(observation, results):
 	else:	
 		return observation if observation in results.keys()	else None
 
+hostname = None
+port = None
+
+def callCallback(action, kwargs):
+	if action.getName() == "socket_create" and (hostname or port):
+		for parm in kwargs.keys():
+			if parm == "hostname":
+				kwargs[parm] = hostname
+			elif parm == "port":
+				kwargs[parm] = port
+	return action, kwargs
+
 if __name__ == "__main__":
 	stepping = False
 	if len(sys.argv) > 1:

@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import mbt, sys, mqtt, glob, time, logging
+import mbt, sys, mqtt, glob, time, logging, getopt, os
 
 import MQTTV311_spec, client_test
 
@@ -34,12 +34,10 @@ def socket_check(a, b):
 def exception_check(a, b):
 	return True
 
-def cleanup():
+def cleanup(hostname="localhost", port=1883):
 	logging.info("Cleaning up")
 	# clean all client state
 	clientids = ("", "normal", "23 characters4567890123", "A clientid that is too long - should fail")
-	hostname = "localhost" #"9.20.87.54"
-	port = 1883 #18883
 
 	for clientid in clientids:
 		aclient = mqtt.client.Client("myclientid".encode("utf-8"))
@@ -66,16 +64,44 @@ def cleanup():
 
 
 if __name__ == "__main__":
-	if len(sys.argv) > 1:
-		testnames = [sys.argv[1]]
-	else:
-		testnames = glob.glob("tests/*")
+	try:
+		opts, args = getopt.gnu_getopt(sys.argv[1:], "t:d:h:p:", ["testname=", "testdir=", "testdirectory=", "hostname=", "port="])
+	except getopt.GetoptError as err:
+		print(err) # will print something like "option -a not recognized"
+		usage()
+		sys.exit(2)
+
+	testname = testdirectory = None
+	hostname = "localhost"
+	port = 1883
+	for o, a in opts:
+		if o in ("--help"):
+			usage()
+			sys.exit()
+		elif o in ("-t", "--testname"):
+			testname = a
+		elif o in ("-s", "--testdir", "--testdirectory"):
+			testdirectory = a
+		elif o in ("-h", "--hostname"):
+			hostname = MQTTV311_spec.hostname = a
+		elif o in ("-p", "--port"):
+			port = MQTTV311_spec.port = int(a)
+		else:
+			assert False, "unhandled option"
+
+	if testname:
+		testnames = [testname]
+
+	if testdirectory:
+		testnames = glob.glob(testdirectory+os.sep+"*")
+
 	testnames.sort(key=lambda x: int(x.split(".")[-1])) # filename index order
-	cleanup()
+	cleanup(hostname, port)
 	for testname in testnames:
 		checks = {"socket": socket_check, "exception": exception_check}
-		testname = testname if testname.startswith("tests") else "tests/"+testname
-		MQTTV311_spec.test = mbt.Tests(mbt.model, testname, checks, observationMatchCallback=MQTTV311_spec.observationCheckCallback)
+		MQTTV311_spec.test = mbt.Tests(mbt.model, testname, checks, 
+				observationMatchCallback = MQTTV311_spec.observationCheckCallback,
+				callCallback = MQTTV311_spec.callCallback)
 		MQTTV311_spec.test.run(stepping=False)
-		cleanup()
+		cleanup(hostname, port)
 

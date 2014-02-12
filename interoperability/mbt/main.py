@@ -458,7 +458,7 @@ test_logger.addHandler(fh)
 
 class Tests:
 
-	def __init__(self, model, logfilename, checks={}, observationMatchCallback=None):
+	def __init__(self, model, logfilename, checks={}, observationMatchCallback=None, callCallback=None):
 		self.model = model
 		self.logfilename = logfilename
 		self.checks = checks
@@ -466,6 +466,7 @@ class Tests:
 		self.passes = 0
 		self.failures = 0
 		self.observationMatchCallback = observationMatchCallback
+		self.callCallback = callCallback
 		self.logger = logging.getLogger("mbt-test")
 
 	def replaceResults(self, aString, strresult=False):
@@ -492,6 +493,8 @@ class Tests:
 			logger.info("strargs %s" % strargs)
 			logger.info("results %s" % self.results)
 			raise
+		if self.callCallback:
+			action, kwargs = self.callCallback(action, kwargs)
 		self.logger.debug("CALL %s with %s", action, kwargs)
 		if self.stepping and input("--->") == "q":
 			return
