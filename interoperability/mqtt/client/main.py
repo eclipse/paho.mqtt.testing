@@ -120,8 +120,12 @@ class Client:
       raise MQTTV3.MQTTException("connect failed - socket closed, no connack")
     assert response.fh.MessageType == MQTTV3.CONNACK
 
+    self.cleansession = cleansession
     assert response.returnCode == 0
-    self.__receiver = internal.Receivers(self.sock)
+    if self.cleansession or self.__receiver == None:
+      self.__receiver = internal.Receivers(self.sock)
+    else:
+      self.__receiver.socket = self.sock
     if self.callback:
       id = _thread.start_new_thread(self.__receiver, (self.callback,))
 
@@ -155,6 +159,8 @@ class Client:
       publish.messageIdentifier = 0
     else:
       publish.messageIdentifier = self.__nextMsgid()
+      if publish.fh.QoS == 2:
+        publish.pubrec_received = False
       self.__receiver.outMsgs[publish.messageIdentifier] = publish
     publish.topicName = topic
     publish.data = payload
@@ -166,19 +172,22 @@ class Client:
   def disconnect(self):
     if self.__receiver:
       self.__receiver.stopping = True
-      while len(self.__receiver.inMsgs) > 0 or len(self.__receiver.outMsgs) > 0:
+      while (len(self.__receiver.inMsgs) > 0 or len(self.__receiver.outMsgs) > 0) and self.__receiver.paused == False:
         logger.debug(self.__receiver.inMsgs, self.__receiver.outMsgs)
-        print(self.__receiver.inMsgs, self.__receiver.outMsgs)
+        print("disconnecting", self.__receiver.inMsgs, self.__receiver.outMsgs)
         time.sleep(.1)
-    if self.__receiver:
+    if self.__receiver and self.__receiver.paused == False:
       assert self.__receiver.inMsgs == {}
       assert self.__receiver.outMsgs == {}
     disconnect = MQTTV3.Disconnects()
     logger.debug("out: %s", str(disconnect))
     self.sock.send(disconnect.pack())
     time.sleep(0.1)
-    self.sock.close() # this will stop the receiver too
-    self.__receiver = None
+    if self.cleansession:
+      self.__receiver = None
+    else:
+      self.__receiver.socket = None
+    self.sock.close()
 
   def terminate(self):
     if self.__receiver:
@@ -189,6 +198,12 @@ class Client:
 
   def receive(self):
     return self.__receiver.receive()
+
+  def pause(self):
+    self.__receiver.paused = True
+
+  def resume(self):
+    self.__receiver.paused = False
 
 
 if __name__ == "__main__":

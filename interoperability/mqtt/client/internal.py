@@ -27,6 +27,7 @@ class Receivers:
     logging.debug("initializing receiver")
     self.socket = socket
     self.stopping = False
+    self.paused = False
 
     self.inMsgs = {}
     self.outMsgs = {}
@@ -52,7 +53,7 @@ class Receivers:
 
     if packet.fh.MessageType == MQTTV3.SUBACK:
       if hasattr(callback, "subscribed"):
-        callback.subscribed(packet.messageIdentifier)
+        callback.subscribed(packet.messageIdentifier, packet.data)
 
     elif packet.fh.MessageType == MQTTV3.UNSUBACK:
       if hasattr(callback, "unsubscribed"):
@@ -70,6 +71,7 @@ class Receivers:
 
     elif packet.fh.MessageType == MQTTV3.PUBREC:
       if packet.messageIdentifier in self.outMsgs.keys():
+        self.outMsgs[packet.messageIdentifier].pubrec_received == True
         self.pubrel.messageIdentifier = packet.messageIdentifier
         logging.debug("out: %s", str(self.pubrel))
         self.socket.send(self.pubrel.pack())
@@ -106,7 +108,8 @@ class Receivers:
                     str(packet.messageIdentifier))
 
     elif packet.fh.MessageType == MQTTV3.PUBLISH:
-      "finished with this message id"
+      if self.paused:
+        return
       if packet.fh.QoS == 0:
         if callback == None:
           return (packet.topicName, packet.data, 0,
@@ -132,6 +135,16 @@ class Receivers:
     else:
       raise Exception("Unexpected packet"+str(packet))
 
+  def resend(self):
+    for packetid in self.outMsgs.keys():
+      packet = self.outMsgs[packetid]
+      if packet.fh.QoS == 2 and hasattr(packet, "pubrec_received"):
+        self.pubrel.messageIdentifier = packet.messageIdentifier
+        packet = self.pubrel
+      else:
+        packet.fh.DUP = True
+      logging.debug("out: %s", str(packet))
+      rc = self.socket.send(packet.pack())
 
   def __call__(self, callback):
     try:

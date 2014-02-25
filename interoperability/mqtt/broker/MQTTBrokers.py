@@ -54,6 +54,7 @@ class MQTTClients:
     self.lastPacket = None
 
   def resend(self):
+    logger.debug("resending unfinished publications %s", str(self.outbound))
     for pub in self.outbound:
       logger.debug("resending", pub)
       pub.fh.DUP = 1
@@ -295,9 +296,14 @@ class MQTTBrokers:
   def subscribe(self, sock, packet):
     topics = []
     qoss = []
+    respqoss = []
     for p in packet.data:
-      topics.append(p[0])
-      qoss.append(p[1])
+      if p[0] == "nosubscribe":
+        respqoss.append(0x80)
+      else:
+        topics.append(p[0])
+        qoss.append(p[1])
+        respqoss.append(p[1])
     self.broker.subscribe(self.clients[sock].id, topics, qoss)
     resp = MQTTV3.Subacks()
     logger.info("[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe")
@@ -305,7 +311,7 @@ class MQTTBrokers:
     resp.messageIdentifier = packet.messageIdentifier
     logger.info("[MQTT-3.8.4-5] return code must be returned for each topic in subscribe")
     logger.info("[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe")
-    resp.data = qoss
+    resp.data = respqoss
     respond(sock, resp)
 
   def unsubscribe(self, sock, packet):

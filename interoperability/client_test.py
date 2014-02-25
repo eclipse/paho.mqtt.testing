@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import mqtt.client, time, logging, socket, sys
+import mqtt.client, time, logging, socket, sys, getopt
 
 class Callbacks(mqtt.client.Callback):
 
@@ -41,16 +41,15 @@ class Callbacks(mqtt.client.Callback):
     logging.info("published %d", msgid)
     self.publisheds.append(msgid)
 
-  def subscribed(self, msgid):
+  def subscribed(self, msgid, data):
     logging.info("subscribed %d", msgid)
-    self.subscribeds.append(msgid)
+    self.subscribeds.append((msgid, data))
 
   def unsubscribed(self, msgid):
     logging.info("unsubscribed %d", msgid)
     self.unsubscribeds.append(msgid)
 
 def cleanup():
-
 	# clean all client state
 	clientids = ("myclientid", "myclientid2")
 	hostname = "localhost" 
@@ -76,17 +75,54 @@ def cleanup():
 	aclient.disconnect()
 	time.sleep(.1)
 
+def usage():
+  print(
+"""
+ -h: --hostname= hostname or ip address of server to run tests against
+ -p: --port= port number of server to run tests against
+ -z: --zero_length_clientid run zero length clientid test
+ -d: --dollar_topics run $ topics test
+ -s: --subscribe_failure run subscribe failure test
+ -n: --nosubscribe_topic_filter= topic filter name for which subscriptions aren't allowed
+        
+""")
+  
+
+
 if __name__ == "__main__":
+  try:
+    opts, args = getopt.gnu_getopt(sys.argv[1:], "h:p:zdsn:", 
+      ["help", "hostname=", "port=", "zero_length_clientid", "dollar_topics", "subscribe_failure", "nosubscribe_topic_filter="])
+  except getopt.GetoptError as err:
+    print(err) # will print something like "option -a not recognized"
+    usage()
+    sys.exit(2)
+
+  dollar_topics_test = zero_length_clientid_test = subscribe_failure_test = False
+  nosubscribe_topic_filter = "nosubscribe"
+  host = "localhost"
+  port = 1883
+  for o, a in opts:
+    if o in ("--help"):
+      usage()
+      sys.exit()
+    elif o in ("-z", "--zero_length_clientid"):
+      zero_length_clientid_test = True
+    elif o in ("-d", "--dollar_topics"):
+      dollar_topics_test = True
+    elif o in ("-s", "--subscribe_failure"):
+      subscribe_failure_test = True
+    elif o in ("-n", "--nosubscribe_topic_filter"):
+      nosubscribe_topic_filter = a
+    elif o in ("-h", "--hostname"):
+      host = a
+    elif o in ("-p", "--port"):
+      port = int(a)
+    else:
+      assert False, "unhandled option"
 
   root = logging.getLogger()
   root.setLevel(logging.INFO)
-
-  if (len(sys.argv) > 1):
-    host, port = sys.argv[1].split(":")
-    port = int(port)
-  else:
-    host="localhost"
-    port=1883
 
   cleanup()
   
@@ -113,7 +149,24 @@ if __name__ == "__main__":
     aclient.connect(host=host, port=port, protocolName="hj")
   except Exception as exc:
     print("Exception", exc)
-    
+
+  
+  # 0 length clientid
+  if zero_length_clientid_test:
+    client0 = mqtt.client.Client("")
+    fails = False
+    try:
+      client0.connect(host=host, port=port, cleansession=False) # should be rejected
+    except:
+      fails = True
+    assert fails == True
+    fails = False
+    try:
+      client0.connect(host=host, port=port, cleansession=True) # should work
+    except:
+      fails = True
+    assert fails == False
+    client0.disconnect() 
 
   # message queueing for offline clients
   callback.clear()
@@ -178,26 +231,9 @@ if __name__ == "__main__":
   print("messages %s", callback2.messages)
   assert len(callback2.messages) == 1 # should have the will message
 
-  
-  # $ topics
-  callback2.clear()
-  aclient.connect(host=host, port=port) 
-  bclient.connect(host=host, port=port, cleansession=True, keepalive=0)
-  bclient.subscribe(["$SYS/fromb/#"], [2])
-  aclient.publish("fromb/qos 1", b"", 1, retained=True)
-  time.sleep(.2)
-  assert len(callback2.messages) == 0 
-  aclient.publish("$SYS/fromb/qos 1", b"", 1, retained=True)
-  time.sleep(.2)
-  assert len(callback2.messages) in [1, 0]
-  bclient.subscribe(["fromb/#"], [2])
-  aclient.publish("fromb/qos 1", b"", 1, retained=True)
-  time.sleep(.2)
-  print("messages", callback2.messages)
-  assert len(callback2.messages) in [2, 0]
-  bclient.disconnect()
-
-  # overlapping subscriptions
+  # overlapping subscriptions. When there is more than one matching subscription for the same client for a topic,
+  # the server may send back one message with the highest QoS of any matching subscription, or one message for
+  # each subscription with a matching QoS.
   callback.clear()
   callback2.clear()
   aclient.connect(host=host, port=port)
@@ -206,39 +242,84 @@ if __name__ == "__main__":
   time.sleep(1)
   print("messages", callback.messages)
   assert len(callback.messages) in [1, 2]
+  if len(callback.messages) == 1:
+    print("This server is publishing one message for all matching overlapping subscriptions, not one for each.")
+    assert callback.messages[0][2] == 2
+  else:
+    print("This server is publishing one message per each matching overlapping subscription.")
+    assert (callback.messages[0][2] == 2 and callback.messages[0][2] == 1) or \
+           (callback.messages[0][2] == 1 and callback.messages[0][2] == 2)
   aclient.disconnect()
 
-  # username & password (subscribe failure)
-
-
-  # redelivery on reconnect
-
-
-  # keepalive
+  # keepalive processing.  We should be kicked off by the server if we don't send or receive any data, and don't send
+  # any pings either.
   callback2.clear()
   aclient.connect(host=host, port=port, cleansession=True, keepalive=5, willFlag=True, willTopic="froma/willTopic", willMessage=b"keepalive expiry") 
-  bclient.connect(host=host, port=port, cleansession=False, keepalive=0)
+  bclient.connect(host=host, port=port, cleansession=True, keepalive=0)
   bclient.subscribe(["froma/willTopic"], [2])
   time.sleep(15)
   bclient.disconnect()
   assert len(callback2.messages) == 1, "length should be 1: %s" % callback2.messages # should have the will message
   print("messages", callback2.messages)
+
+  # redelivery on reconnect. When a QoS 1 or 2 exchange has not been completed, the server should retry the 
+  # appropriate MQTT packets
+  callback.clear()
+  callback2.clear()
+  bclient.connect(host=host, port=port, cleansession=False)
+  bclient.subscribe(["tob/#"], [2])
+  bclient.pause() # stops background processing 
+  bclient.publish("tob/qos 1", b"", 1, retained=False)
+  bclient.publish("tob/qos 2", b"", 2, retained=False)
+  time.sleep(1)
+  bclient.disconnect()
+  assert len(callback2.messages) == 0
+  bclient.connect(host=host, port=port, cleansession=False)
+  bclient.resume()
+  time.sleep(3)
+  assert len(callback2.messages) == 2, "length should be 2: %s" % callback2.messages
+  bclient.disconnect()
+
+  # Subscribe failure.  A new feature of MQTT 3.1.1 is the ability to send back negative reponses to subscribe
+  # requests.  One way of doing this is to subscribe to a topic which is not allowed to be subscribed to.
+  if subscribe_failure_test:
+    callback.clear()
+    aclient.connect(host=host, port=port)
+    aclient.subscribe([nosubscribe_topic_filter], [2])
+    time.sleep(.2)
+    # subscribeds is a list of (msgid, [qos])
+    assert callback.subscribeds[0][1][0] == 0x80, "return code should be 0x80 %s" % callback.subscribeds
+
   
-  # 0 length clientid
-  client0 = mqtt.client.Client("")
-  fails = False
-  try:
-    client0.connect(host=host, port=port, cleansession=False) # should be rejected
-  except:
-    fails = True
-  assert fails == True
-  fails = False
-  try:
-    client0.connect(host=host, port=port, cleansession=True) # should work
-  except:
-    fails = True
-  assert fails == False
-  client0.disconnect()
+  # $ topics. The specification only says that if you subscribe with a topic filter which does not begin with a
+  # $ then you should not receive messages on any topic which does begin with a $.  Publishing to a topic which
+  # starts with a $ may not be allowed on some servers (which is entirely valid), so this test may not work and
+  # should be omitted in that case.
+  if dollar_topics_test:
+    callback2.clear()
+    aclient.connect(host=host, port=port) 
+    bclient.connect(host=host, port=port, cleansession=True, keepalive=0)
+    bclient.subscribe(["$SYS/fromb/#"], [2])
+    aclient.publish("fromb/qos 1", b"", 1, retained=True)
+    time.sleep(.2)
+    assert len(callback2.messages) == 0 
+    aclient.publish("$SYS/fromb/qos 1", b"", 1, retained=True)
+    time.sleep(.2)
+    assert len(callback2.messages) in [1, 0]
+    bclient.subscribe(["fromb/#"], [2])
+    aclient.publish("fromb/qos 1", b"", 1, retained=True)
+    time.sleep(.2)
+    print("messages", callback2.messages)
+    assert len(callback2.messages) in [2, 0]
+    bclient.disconnect()
+
+
+
+
+
+
+
+
  
 
 
