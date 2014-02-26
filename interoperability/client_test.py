@@ -50,30 +50,31 @@ class Callbacks(mqtt.client.Callback):
     self.unsubscribeds.append(msgid)
 
 def cleanup():
-	# clean all client state
-	clientids = ("myclientid", "myclientid2")
-	hostname = "localhost" 
-	port = 1883 
+  # clean all client state
+  clientids = ("myclientid", "myclientid2")
+  hostname = "localhost" 
+  port = 1883 
 
-	for clientid in clientids:
-		aclient = mqtt.client.Client("myclientid".encode("utf-8"))
-		aclient.connect(host=hostname, port=port, cleansession=True)
-		time.sleep(.1)
-		aclient.disconnect()
-		time.sleep(.1)
+  for clientid in clientids:
+    aclient = mqtt.client.Client("myclientid".encode("utf-8"))
+    aclient.connect(host=hostname, port=port, cleansession=True)
+    time.sleep(.1)
+    aclient.disconnect()
+    time.sleep(.1)
 
-	# clean retained messages 
-	callback = Callbacks()
-	aclient = mqtt.client.Client("clean retained".encode("utf-8"))
-	aclient.registerCallback(callback)
-	aclient.connect(host=hostname, port=port, cleansession=True)
-	aclient.subscribe(["#"], [0])
-	time.sleep(2) # wait for all retained messages to arrive
-	for message in callback.messages:  
-		if message[3]: # retained flag
-		  aclient.publish(message[0], b"", 0, retained=True)
-	aclient.disconnect()
-	time.sleep(.1)
+  # clean retained messages 
+  callback = Callbacks()
+  aclient = mqtt.client.Client("clean retained".encode("utf-8"))
+  aclient.registerCallback(callback)
+  aclient.connect(host=hostname, port=port, cleansession=True)
+  aclient.subscribe(["#"], [0])
+  time.sleep(2) # wait for all retained messages to arrive
+  for message in callback.messages:  
+    if message[3]: # retained flag
+      print("deleting retained message for topic", message[0])
+      aclient.publish(message[0], b"", 0, retained=True)
+  aclient.disconnect()
+  time.sleep(.1)
 
 def usage():
   print(
@@ -293,26 +294,18 @@ if __name__ == "__main__":
     assert callback.subscribeds[0][1][0] == 0x80, "return code should be 0x80 %s" % callback.subscribeds
 
   
-  # $ topics. The specification only says that if you subscribe with a topic filter which does not begin with a
-  # $ then you should not receive messages on any topic which does begin with a $.  Publishing to a topic which
-  # starts with a $ may not be allowed on some servers (which is entirely valid), so this test may not work and
-  # should be omitted in that case.
+  # $ topics. The specification says that a topic filter which starts with a wildcard does not match topic names that
+  # begin with a $.  Publishing to a topic which starts with a $ may not be allowed on some servers (which is entirely valid),
+  # so this test will not work and should be omitted in that case.
   if dollar_topics_test:
     callback2.clear()
-    aclient.connect(host=host, port=port) 
     bclient.connect(host=host, port=port, cleansession=True, keepalive=0)
-    bclient.subscribe(["$SYS/fromb/#"], [2])
-    aclient.publish("fromb/qos 1", b"", 1, retained=True)
+    bclient.subscribe(["+/+"], [2])
+    time.sleep(1) # wait for all retained messages, hopefully
+    callback2.clear() 
+    bclient.publish("$fromb/qos 1", b"", 1, retained=False)
     time.sleep(.2)
-    assert len(callback2.messages) == 0 
-    aclient.publish("$SYS/fromb/qos 1", b"", 1, retained=True)
-    time.sleep(.2)
-    assert len(callback2.messages) in [1, 0]
-    bclient.subscribe(["fromb/#"], [2])
-    aclient.publish("fromb/qos 1", b"", 1, retained=True)
-    time.sleep(.2)
-    print("messages", callback2.messages)
-    assert len(callback2.messages) in [2, 0]
+    assert len(callback2.messages) == 0, callback2.messages
     bclient.disconnect()
 
 
