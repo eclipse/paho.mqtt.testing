@@ -124,6 +124,8 @@ if __name__ == "__main__":
   root = logging.getLogger()
   root.setLevel(logging.INFO)
 
+  print("hostname", host, "port", port)
+
   cleanup()
   
   try:
@@ -247,8 +249,8 @@ if __name__ == "__main__":
     assert callback.messages[0][2] == 2
   else:
     print("This server is publishing one message per each matching overlapping subscription.")
-    assert (callback.messages[0][2] == 2 and callback.messages[0][2] == 1) or \
-           (callback.messages[0][2] == 1 and callback.messages[0][2] == 2)
+    assert (callback.messages[0][2] == 2 and callback.messages[1][2] == 1) or \
+           (callback.messages[0][2] == 1 and callback.messages[1][2] == 2), callback.messages
   aclient.disconnect()
 
   # keepalive processing.  We should be kicked off by the server if we don't send or receive any data, and don't send
