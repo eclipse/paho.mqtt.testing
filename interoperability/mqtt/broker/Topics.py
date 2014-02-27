@@ -23,12 +23,18 @@ logger = logging.getLogger('MQTT broker')
 
  
 def isValidTopicName(aName):
-  rc = True
+  logger.info("[MQTT-4.7.3-1] all topic names and filters must be at least 1 char")
+  logger.info("[MQTT-4.7.3-3] all topic names and filters must be <= 65535 bytes long")
+  rc = (1 <= len(aName) <= 65535)
+  if not rc:
+    return rc
 
-  # '#' wildcard can be only at the beginning or the end of a topic
-  if aName[1:-1].find('#') != -1:
+  # '#' wildcard can be only at the end of a topic (used to be beginning as well)
+  logger.info("[MQTT-4.7.1-2] # must be last, and next to /")
+  if aName[0:-1].find('#') != -1:
     rc = False
 
+  logger.info("[MQTT-4.7.1-3] + can be used at any complete level")
   # '#' or '+' only next to a slash separator or end of name
   wilds = '#+'
   for c in wilds:
@@ -42,9 +48,9 @@ def isValidTopicName(aName):
         if aName[pos+1] != '/':
           rc = False
       pos = aName.find(c, pos+1)
-
   return rc
  
+
 def topicMatches(wild, nonwild, wildCheck=True):
 
   if wildCheck:

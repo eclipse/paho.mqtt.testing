@@ -55,18 +55,25 @@ class MQTTClients:
 
   def resend(self):
     logger.debug("resending unfinished publications %s", str(self.outbound))
+    if len(self.outbound) > 0:
+      logger.info("[MQTT-4.4.0-1] resending inflight QoS 1 and 2 messages")
     for pub in self.outbound:
       logger.debug("resending", pub)
-      pub.fh.DUP = 1
-      if pub.fh.QoS == 1:
+      logger.info("[MQTT-4.4.0-2] dup flag must be set on in re-publish")
+      if pub.fh.QoS == 0:
+        respond(self.socket, pub)
+      elif pub.fh.QoS == 1:
+        pub.fh.DUP = 1
         logger.info("[MQTT-2.1.2-3] Dup when resending QoS 1 publish id %d", pub.messageIdentifier)
         logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
+        logger.info("[MQTT-4.3.2-1] Resending QoS 1 with DUP flag")
         respond(self.socket, pub)
       elif pub.fh.QoS == 2:
         if pub.qos2state == "PUBREC":
           logger.info("[MQTT-2.1.2-3] Dup when resending QoS 2 publish id %d", pub.messageIdentifier)
           pub.fh.DUP = 1
           logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
+          logger.info("[MQTT-4.3.3-1] Resending QoS 2 with DUP flag")
           respond(self.socket, pub)
         else:
           resp = MQTTV3.Pubrels()
@@ -96,13 +103,14 @@ class MQTTClients:
         self.msgid += 1
       self.outbound.append(pub)
       self.outmsgs[pub.messageIdentifier] = pub
-    if qos == 0 and not self.broker.dropQoS0:
-      self.outbound.append(pub)
+    logger.info("[MQTT-4.6.0-6] publish packets must be sent in order of receipt from any given client")
     if self.connected:
       respond(self.socket, pub)
     else:
+      if qos == 0 and not self.broker.dropQoS0:
+        self.outbound.append(pub)
       if qos in [1, 2]:
-        logger.info("[MQTT-3.1.2-5] storing of QoS 1 and 2 messagesfor disconnected client %s", self.id)
+        logger.info("[MQTT-3.1.2-5] storing of QoS 1 and 2 messages for disconnected client %s", self.id)
 
   def puback(self, msgid):
     if msgid in self.outmsgs.keys():
@@ -188,7 +196,10 @@ class MQTTBrokers:
     self.lock.acquire()
     terminate = False
     try:
-      raw_packet = MQTTV3.getPacket(sock)
+      try:
+        raw_packet = MQTTV3.getPacket(sock)
+      except:
+        raise MQTTV3.MQTTException("[MQTT-4.8.0-1] 'transient error' reading packet, closing connection")
       if raw_packet == None:
         # will message
         self.disconnect(sock, None, terminate=True)
@@ -226,6 +237,7 @@ class MQTTBrokers:
       resp = MQTTV3.Connacks()
       resp.returnCode = 1
       respond(sock, resp)
+      logger.info("[MQTT-3.2.2-1] must close connection after non-zero connack")
       self.disconnect(sock, None)
       logger.info("[MQTT-3.1.4-3] When rejecting connect, no more data must be processed")
       return
@@ -240,6 +252,7 @@ class MQTTBrokers:
         resp = MQTTV3.Connacks()
         resp.returnCode = 2
         respond(sock, resp)
+        logger.info("[MQTT-3.2.2-1] must close connection after non-zero connack")
         self.disconnect(sock, None)
         logger.info("[MQTT-3.1.4-3] When rejecting connect, no more data must be processed")
         return
@@ -265,15 +278,18 @@ class MQTTBrokers:
       me.socket = sock # set existing client state to new socket
       me.cleansession = packet.CleanSession
       me.keepalive = packet.KeepAliveTimer
+    logger.info("[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts")
     self.clients[sock] = me
     me.will = (packet.WillTopic, packet.WillQoS, packet.WillMessage, packet.WillRETAIN) if packet.WillFlag else None
     self.broker.connect(me)
+    logger.info("[MQTT-3.2.0-1] the first response to a client must be a connack")
     resp = MQTTV3.Connacks()
     resp.returnCode = 0
     respond(sock, resp)
     me.resend()
 
   def disconnect(self, sock, packet, terminate=False):
+    logger.info("[MQTT-3.14.4-2] Client must not send any more packets after disconnect")
     if sock in self.clients.keys():
       if terminate:
         self.broker.terminate(self.clients[sock].id)
@@ -318,6 +334,10 @@ class MQTTBrokers:
     self.broker.unsubscribe(self.clients[sock].id, packet.data)
     resp = MQTTV3.Unsubacks()
     logger.info("[MQTT-2.3.1-7] Unsuback has same message id as unsubscribe")
+    logger.info("[MQTT-3.10.3-4] Unsuback must be sent - same message id as unsubscribe")
+    me = self.clients[sock]
+    if len(me.outbound) > 0:
+      logger.info("[MQTT-3.10.3-3] sending unsuback has no effect on outward inflight messages")
     resp.messageIdentifier = packet.messageIdentifier
     respond(sock, resp)
 
@@ -330,6 +350,8 @@ class MQTTBrokers:
     elif packet.fh.QoS == 1:
       if packet.fh.DUP:
         logger.info("[MQTT-2.1.2-5] Incoming publish DUP 1 ==> outgoing publish with DUP 0")
+        logger.info("[MQTT-4.3.2-3] Incoming publish with DUP 1 ==> same actions as with DUP 0")
+        logger.info("[MQTT-4.3.2-2] server must store message in accordance with QoS 1")
       self.broker.publish(self.clients[sock].id,
              packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
       resp = MQTTV3.Pubacks()
@@ -354,6 +376,7 @@ class MQTTBrokers:
             logger.info("[MQTT-2.1.2-2] DUP flag is 1 on redelivery")
         else:
           myclient.inbound.append(packet.messageIdentifier)
+          logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")
           self.broker.publish(myclient, packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
       resp = MQTTV3.Pubrecs()
       logger.info("[MQTT-2.3.1-6] pubrec messge id same as publish")
@@ -369,9 +392,8 @@ class MQTTBrokers:
         del myclient.inbound[packet.messageIdentifier]
       else:
         myclient.inbound.remove(packet.messageIdentifier)
-    # must respond with pubcomp regardless of whether a message was found
-    if not pub:
-      logger.info("[MQTT-3.6.4-1] must respond with a pubcomp packet")
+    else:
+      logger.info("[MQTT-3.6.4-1] must respond with a pubcomp packet, regardless of whether a message was found")
     resp = MQTTV3.Pubcomps()
     logger.info("[MQTT-2.3.1-6] pubcomp messge id same as publish")
     resp.messageIdentifier = packet.messageIdentifier

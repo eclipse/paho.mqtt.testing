@@ -82,6 +82,8 @@ class SubscriptionEngines:
      subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
      for s in subscriptions:
        if s.getClientid() == aClientid and s.getTopic() == aTopic:
+         logger.info("[MQTT-3.10.3-1] topic filters must be compared byte for byte")
+         logger.info("[MQTT-3.10.3-2] no more messages must be added after unsubscribe is complete")
          subscriptions.remove(s)
          matched = True
          break # once we've hit one, that's us done

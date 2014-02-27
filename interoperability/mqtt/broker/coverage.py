@@ -91,8 +91,9 @@ class Handlers(logging.Handler):
   def measure(self):
     for key in self.coverages.keys():
        self.results[key] = self.coverages[key].intersection(self.found)
-       logger.info("%s %d out of %d %d%%" % \
-          (key, len(self.results[key]), len(self.coverages[key]), (len(self.results[key]) * 100) / len(self.coverages[key])))
+       logger.info("%s %d out of %d = %d%%" % \
+          ("coverage statements" if key == "coverages" else key,
+               len(self.results[key]), len(self.coverages[key]), (len(self.results[key]) * 100) / len(self.coverages[key])))
     #print self.results
 
 handler = Handlers()
