@@ -248,7 +248,7 @@ class Connects(Packets):
       assert len(buffer) >= packlen
       curlen = fhlen # points to after header + remaining length
       assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-      assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
+      assert self.fh.QoS == 0, "[MQTT-2.1.2-1] QoS was not 0, was %d" % self.fh.QoS
       assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
 
       self.ProtocolName = readUTF(buffer[curlen:], packlen - curlen)
@@ -313,7 +313,7 @@ class Connects(Packets):
 
       assert curlen == packlen, "Packet is wrong length curlen %d != packlen %d"
     except:
-      logger.info("[MQTT-3.1.4-1] server must validate connect packet and close connection without connack if it does not conform")
+      logger.exception("[MQTT-3.1.4-1] server must validate connect packet and close connection without connack if it does not conform")
       raise
 
 
