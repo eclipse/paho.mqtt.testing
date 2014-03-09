@@ -174,7 +174,7 @@ class Client:
       self.__receiver.stopping = True
       while (len(self.__receiver.inMsgs) > 0 or len(self.__receiver.outMsgs) > 0) and self.__receiver.paused == False:
         logger.debug(self.__receiver.inMsgs, self.__receiver.outMsgs)
-        print("disconnecting", self.__receiver.inMsgs, self.__receiver.outMsgs)
+        #print("disconnecting", self.__receiver.inMsgs, self.__receiver.outMsgs)
         time.sleep(.1)
     if self.__receiver and self.__receiver.paused == False:
       assert self.__receiver.inMsgs == {}
