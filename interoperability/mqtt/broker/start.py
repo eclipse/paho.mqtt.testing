@@ -213,12 +213,13 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn,
   pass
 
 
-def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=1883):
+def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=1883, zero_length_clientids=True):
   global logger, broker, server
   logger = logging.getLogger('MQTT broker')
   logger.setLevel(logging.INFO)
   logger.addHandler(handler)
-  broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0)
+  broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0,
+            zero_length_clientids=zero_length_clientids)
   logger.info("Starting the MQTT server on port %d", port)
   try:
     server = ThreadingTCPServer(("", port), MyHandler, False)
@@ -251,12 +252,13 @@ def reinitialize():
 
 def main(argv):
   try:
-    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:", ["help", "publish_on_pubrel=", "overlapping_single=", "dropQoS0=", "port="])
+    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:", ["help", "publish_on_pubrel=", "overlapping_single=", 
+        "dropQoS0=", "port=", "zero_length_clientids="])
   except getopt.GetoptError as err:
     print(err) # will print something like "option -a not recognized"
     usage()
     sys.exit(2)
-  publish_on_pubrel = overlapping_single = dropQoS0 = True
+  publish_on_pubrel = overlapping_single = dropQoS0 = zero_length_clientids = True
   port = 1883
   for o, a in opts:
     if o in ("-h", "--help"):
@@ -268,12 +270,15 @@ def main(argv):
       overlapping_single = False if a in ["off", "false", "0"] else True
     elif o in ("-d", "--dropQoS0"):
       dropQoS0 = False if a in ["off", "false", "0"] else True
+    elif o in ("-z", "--zero_length_clientids"):
+      zero_length_clientids = False if a in ["off", "false", "0"] else True
     elif o in ("--port"):
       port = int(a)
     else:
       assert False, "unhandled option"
 
-  run(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0, port=port)
+  run(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0, port=port,
+     zero_length_clientids=zero_length_clientids)
 
 
 if __name__ == "__main__":

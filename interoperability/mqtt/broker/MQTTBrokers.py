@@ -170,11 +170,12 @@ class MQTTClients:
 
 class MQTTBrokers:
 
-  def __init__(self, publish_on_pubrel=True, overlapping_single=True, dropQoS0=True):
+  def __init__(self, publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, zero_length_clientids=True):
 
-    # optional behaviour
+    # optional behaviours
     self.publish_on_pubrel = publish_on_pubrel
     self.dropQoS0 = dropQoS0                    # don't queue QoS 0 messages for disconnected clients
+    self.zero_length_clientids = zero_length_clientids
 
     self.broker = Brokers(overlapping_single)
     self.clients = {}   # socket -> clients
@@ -184,6 +185,7 @@ class MQTTBrokers:
     logger.info("Optional behaviour, publish on pubrel: %s", self.publish_on_pubrel)
     logger.info("Optional behaviour, single publish on overlapping topics: %s", self.broker.overlapping_single)
     logger.info("Optional behaviour, drop QoS 0 publications to disconnected clients: %s", self.dropQoS0)
+    logger.info("Optional behaviour, support zero length clientids: %s", self.zero_length_clientids)
 
 
   def reinitialize(self):
@@ -246,8 +248,9 @@ class MQTTBrokers:
       logger.info("[MQTT-3.1.4-3] When rejecting connect, no more data must be processed")
       raise MQTTV3.MQTTException("[MQTT-3.1.0-2] Second connect packet")
     if len(packet.ClientIdentifier) == 0:
-      if packet.CleanSession == False:
-        logger.info("[MQTT-3.1.3-8] Reject 0-length clientid with cleansession false")
+      if self.zero_length_clientids == False or packet.CleanSession == False:
+        if self.zero_length_clientids:
+          logger.info("[MQTT-3.1.3-8] Reject 0-length clientid with cleansession false")
         logger.info("[MQTT-3.1.3-9] if clientid is rejected, must send connack 2 and close connection")
         resp = MQTTV3.Connacks()
         resp.returnCode = 2
