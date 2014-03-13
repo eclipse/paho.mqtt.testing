@@ -115,7 +115,7 @@ def connect(sock : "socket", clientid : "clientids", cleansession : "boolean", #
 ) -> "connackrc":
 	connect = MQTTV3.Connects()
 	connect.ClientIdentifier = clientid
-	connect.CleanStart = cleansession
+	connect.CleanSession = cleansession
 	connect.KeepAliveTimer = 60
 	#if username:
 	#	self.usernameFlag = True
@@ -235,7 +235,8 @@ mbt.choices("boolean", (True, False))
 
 mbt.choices("hostnames", ("localhost",))
 mbt.choices("ports", (1883,))
-mbt.choices("clientids", ("", "normal", "23 characters4567890123", "A clientid that is too long - should fail"))
+mbt.choices("clientids", ("", "normal", "23 characters4567890123", 
+               "A clientid that is longer than 23 chars - should work in 3.1.1"))
 
 topics =  ("TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA")
 wildTopics =  ("TopicA/+", "+/C", "#", "/#", "/+", "+/+")

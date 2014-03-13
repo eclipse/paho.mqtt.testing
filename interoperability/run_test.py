@@ -37,7 +37,8 @@ def exception_check(a, b):
 def cleanup(hostname="localhost", port=1883):
 	logging.info("Cleaning up")
 	# clean all client state
-	clientids = ("", "normal", "23 characters4567890123", "A clientid that is too long - should fail")
+	clientids = ("", "normal", "23 characters4567890123", "A clientid that is too long - should fail", 
+                 "A clientid that is longer than 23 chars - should work in 3.1.1")
 
 	for clientid in clientids:
 		aclient = mqtt.client.Client("myclientid".encode("utf-8"))
@@ -93,7 +94,7 @@ if __name__ == "__main__":
 		testnames = [testname]
 
 	if testdirectory:
-		testnames = glob.glob(testdirectory+os.sep+"*")
+		testnames = [name for name in glob.glob(testdirectory+os.sep+"*") if not name.endswith("~")]
 
 	testnames.sort(key=lambda x: int(x.split(".")[-1])) # filename index order
 	cleanup(hostname, port)

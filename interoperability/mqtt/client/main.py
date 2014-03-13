@@ -121,7 +121,7 @@ class Client:
     assert response.fh.MessageType == MQTTV3.CONNACK
 
     self.cleansession = cleansession
-    assert response.returnCode == 0
+    assert response.returnCode == 0, "connect was %s" % str(response)
     if self.cleansession or self.__receiver == None:
       self.__receiver = internal.Receivers(self.sock)
     else:
