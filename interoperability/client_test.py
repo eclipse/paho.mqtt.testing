@@ -52,12 +52,10 @@ class Callbacks(mqtt.client.Callback):
 def cleanup():
   # clean all client state
   clientids = ("myclientid", "myclientid2")
-  hostname = "localhost" 
-  port = 1883 
 
   for clientid in clientids:
     aclient = mqtt.client.Client("myclientid".encode("utf-8"))
-    aclient.connect(host=hostname, port=port, cleansession=True)
+    aclient.connect(host=host, port=port, cleansession=True)
     time.sleep(.1)
     aclient.disconnect()
     time.sleep(.1)
@@ -66,7 +64,7 @@ def cleanup():
   callback = Callbacks()
   aclient = mqtt.client.Client("clean retained".encode("utf-8"))
   aclient.registerCallback(callback)
-  aclient.connect(host=hostname, port=port, cleansession=True)
+  aclient.connect(host=host, port=port, cleansession=True)
   aclient.subscribe(["#"], [0])
   time.sleep(2) # wait for all retained messages to arrive
   for message in callback.messages:  
