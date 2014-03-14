@@ -553,6 +553,7 @@ class Tests:
 			self.logger.info("### line %d, observation not found %s", self.lineno, observation)
 			self.failures += 1
 		else:
+			self.logger.info("*** line %d, observation found %s", self.lineno, observation)
 			if observation != observation1:
 				self.logger.debug("*** observations equal %s %s" % (observation, observation1))
 			self.passes += 1
