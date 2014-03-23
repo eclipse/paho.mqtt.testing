@@ -1,16 +1,16 @@
 """
 *******************************************************************
   Copyright (c) 2013, 2014 IBM Corp.
- 
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
 *******************************************************************
@@ -61,14 +61,14 @@ def cleanup():
     curclient.disconnect()
     time.sleep(.1)
 
-  # clean retained messages 
+  # clean retained messages
   callback = Callbacks()
   curclient = mqtt.client.Client("clean retained".encode("utf-8"))
   curclient.registerCallback(callback)
   curclient.connect(host=host, port=port, cleansession=True)
   curclient.subscribe(["#"], [0])
   time.sleep(2) # wait for all retained messages to arrive
-  for message in callback.messages:  
+  for message in callback.messages:
     if message[3]: # retained flag
       print("deleting retained message for topic", message[0])
       curclient.publish(message[0], b"", 0, retained=True)
@@ -85,10 +85,10 @@ def usage():
  -d: --dollar_topics run $ topics test
  -s: --subscribe_failure run subscribe failure test
  -n: --nosubscribe_topic_filter= topic filter name for which subscriptions aren't allowed
-        
+
 """)
 
- 
+
 def basic_test():
   print("Basic test starting")
   global aclient
@@ -125,7 +125,7 @@ def basic_test():
   print("Basic test", "succeeded" if succeeded else "failed")
   return succeeded
 
-def retained_message_test(qos0topic="fromb/qos 0", qos1topic="fromb/qos 1", qos2topic="fromb/qos2", 
+def retained_message_test(qos0topic="fromb/qos 0", qos1topic="fromb/qos 1", qos2topic="fromb/qos2",
     wildcardtopic="fromb/+"):
   print("Retained message test starting")
   succeeded = False
@@ -167,8 +167,8 @@ def will_message_test():
   callback2.clear()
   assert len(callback2.messages) == 0, callback2.messages
   try:
-    aclient.connect(host=host, port=port, cleansession=True, willFlag=True, 
-      willTopic=topics[2], willMessage=b"client not disconnected", keepalive=2) 
+    aclient.connect(host=host, port=port, cleansession=True, willFlag=True,
+      willTopic=topics[2], willMessage=b"client not disconnected", keepalive=2)
     bclient.connect(host=host, port=port, cleansession=False)
     bclient.subscribe([topics[2]], [2])
     time.sleep(.1)
@@ -200,7 +200,7 @@ def zero_length_clientid_test():
     except:
       fails = True
     assert fails == False
-    client0.disconnect() 
+    client0.disconnect()
   except:
     traceback.print_exc()
     succeeded = False
@@ -265,7 +265,7 @@ def overlapping_subscriptions_test():
   print("Overlapping subscriptions test", "succeeded" if succeeded else "failed")
   return succeeded
 
- 
+
 def keepalive_test():
   # keepalive processing.  We should be kicked off by the server if we don't send or receive any data, and don't send
   # any pings either.
@@ -273,8 +273,8 @@ def keepalive_test():
   succeeded = True
   try:
     callback2.clear()
-    aclient.connect(host=host, port=port, cleansession=True, keepalive=5, willFlag=True, 
-          willTopic=topics[4], willMessage=b"keepalive expiry") 
+    aclient.connect(host=host, port=port, cleansession=True, keepalive=5, willFlag=True,
+          willTopic=topics[4], willMessage=b"keepalive expiry")
     bclient.connect(host=host, port=port, cleansession=True, keepalive=0)
     bclient.subscribe([topics[4]], [2])
     time.sleep(15)
@@ -288,7 +288,7 @@ def keepalive_test():
 
 
 def redelivery_on_reconnect_test():
-  # redelivery on reconnect. When a QoS 1 or 2 exchange has not been completed, the server should retry the 
+  # redelivery on reconnect. When a QoS 1 or 2 exchange has not been completed, the server should retry the
   # appropriate MQTT packets
   print("Redelivery on reconnect test starting")
   succeeded = True
@@ -344,7 +344,7 @@ def dollar_topics_test():
     bclient.connect(host=host, port=port, cleansession=True, keepalive=0)
     bclient.subscribe([wildtopics[5]], [2])
     time.sleep(1) # wait for all retained messages, hopefully
-    callback2.clear() 
+    callback2.clear()
     bclient.publish("$"+topics[1], b"", 1, retained=False)
     time.sleep(.2)
     assert len(callback2.messages) == 0, callback2.messages
@@ -358,8 +358,8 @@ def dollar_topics_test():
 
 if __name__ == "__main__":
   try:
-    opts, args = getopt.gnu_getopt(sys.argv[1:], "h:p:zdsn:", 
-      ["help", "hostname=", "port=", "zero_length_clientid", "dollar_topics", 
+    opts, args = getopt.gnu_getopt(sys.argv[1:], "h:p:zdsn:",
+      ["help", "hostname=", "port=", "zero_length_clientid", "dollar_topics",
        "subscribe_failure", "nosubscribe_topic_filter=", "iterations="])
   except getopt.GetoptError as err:
     print(err) # will print something like "option -a not recognized"
@@ -428,26 +428,3 @@ if __name__ == "__main__":
 
   for i in range(iterations):
     print("test suite", "succeeded" if False not in [test() for test in tests] else "failed")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
-
-
-
-
-
