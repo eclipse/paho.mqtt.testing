@@ -51,28 +51,30 @@ class Callbacks(mqtt.client.Callback):
 
 def cleanup():
   # clean all client state
+  print("clean up starting")
   clientids = ("myclientid", "myclientid2")
 
   for clientid in clientids:
-    aclient = mqtt.client.Client("myclientid".encode("utf-8"))
-    aclient.connect(host=host, port=port, cleansession=True)
+    curclient = mqtt.client.Client(clientid.encode("utf-8"))
+    curclient.connect(host=host, port=port, cleansession=True)
     time.sleep(.1)
-    aclient.disconnect()
+    curclient.disconnect()
     time.sleep(.1)
 
   # clean retained messages 
   callback = Callbacks()
-  aclient = mqtt.client.Client("clean retained".encode("utf-8"))
-  aclient.registerCallback(callback)
-  aclient.connect(host=host, port=port, cleansession=True)
-  aclient.subscribe(["#"], [0])
+  curclient = mqtt.client.Client("clean retained".encode("utf-8"))
+  curclient.registerCallback(callback)
+  curclient.connect(host=host, port=port, cleansession=True)
+  curclient.subscribe(["#"], [0])
   time.sleep(2) # wait for all retained messages to arrive
   for message in callback.messages:  
     if message[3]: # retained flag
       print("deleting retained message for topic", message[0])
-      aclient.publish(message[0], b"", 0, retained=True)
-  aclient.disconnect()
+      curclient.publish(message[0], b"", 0, retained=True)
+  curclient.disconnect()
   time.sleep(.1)
+  print("clean up finished")
 
 def usage():
   print(
@@ -88,13 +90,10 @@ def usage():
 
  
 def basic_test():
+  print("Basic test starting")
   global aclient
   succeeded = True
   try:
-    #aclient = mqtt.client.Client(b"\xEF\xBB\xBF" + "myclientid".encode("utf-8"))
-    aclient = mqtt.client.Client("myclientid".encode("utf-8"))
-    aclient.registerCallback(callback)
-
     aclient.connect(host=host, port=port)
     aclient.disconnect()
 
@@ -103,9 +102,11 @@ def basic_test():
     aclient.publish(topics[0], b"qos 0")
     aclient.publish(topics[0], b"qos 1", 1)
     aclient.publish(topics[0], b"qos 2", 2)
+    time.sleep(2)
     aclient.disconnect()
     assert len(callback.messages) == 3
   except:
+    traceback.print_exc()
     succeeded = False
 
   try:
@@ -126,6 +127,7 @@ def basic_test():
 
 def retained_message_test(qos0topic="fromb/qos 0", qos1topic="fromb/qos 1", qos2topic="fromb/qos2", 
     wildcardtopic="fromb/+"):
+  print("Retained message test starting")
   succeeded = False
   try:
     # retained messages
@@ -134,9 +136,9 @@ def retained_message_test(qos0topic="fromb/qos 0", qos1topic="fromb/qos 1", qos2
     aclient.publish(topics[1], b"qos 0", 0, retained=True)
     aclient.publish(topics[2], b"qos 1", 1, retained=True)
     aclient.publish(topics[3], b"qos 2", 2, retained=True)
-    time.sleep(.2)
+    time.sleep(1)
     aclient.subscribe([wildtopics[5]], [2])
-    time.sleep(.2)
+    time.sleep(1)
     aclient.disconnect()
 
     assert len(callback.messages) == 3
@@ -147,9 +149,9 @@ def retained_message_test(qos0topic="fromb/qos 0", qos1topic="fromb/qos 1", qos2
     aclient.publish(topics[1], b"", 0, retained=True)
     aclient.publish(topics[2], b"", 1, retained=True)
     aclient.publish(topics[3], b"", 2, retained=True)
-    time.sleep(.2) # wait for QoS 2 exchange to be completed
+    time.sleep(1) # wait for QoS 2 exchange to be completed
     aclient.subscribe([wildtopics[5]], [2])
-    time.sleep(.2)
+    time.sleep(1)
     aclient.disconnect()
 
     assert len(callback.messages) == 0, "callback messages is %s" % callback.messages
@@ -182,6 +184,7 @@ def will_message_test():
 
 # 0 length clientid
 def zero_length_clientid_test():
+  print("Zero length clientid test starting")
   succeeded = True
   try:
     client0 = mqtt.client.Client("")
@@ -214,20 +217,22 @@ def offline_message_queueing_test():
     aclient.subscribe([wildtopics[5]], [2])
     aclient.disconnect()
 
-    bclient.connect(host=host, port=port)
+    bclient.connect(host=host, port=port, cleansession=True)
     bclient.publish(topics[1], b"qos 0", 0)
     bclient.publish(topics[2], b"qos 1", 1)
     bclient.publish(topics[3], b"qos 2", 2)
+    time.sleep(2)
     bclient.disconnect()
 
     aclient.connect(host=host, port=port, cleansession=False)
-    time.sleep(.2)
+    time.sleep(2)
     aclient.disconnect()
 
     assert len(callback.messages) in [2, 3], callback.messages
     print("This server %s queueing QoS 0 messages for offline clients" % \
         ("is" if len(callback.messages) == 3 else "is not"))
   except:
+    traceback.print_exc()
     succeeded = False
   print("Offline message queueing test", "succeeded" if succeeded else "failed")
   return succeeded
@@ -236,6 +241,7 @@ def overlapping_subscriptions_test():
   # overlapping subscriptions. When there is more than one matching subscription for the same client for a topic,
   # the server may send back one message with the highest QoS of any matching subscription, or one message for
   # each subscription with a matching QoS.
+  print("Overlapping subscriptions test starting")
   succeeded = True
   try:
     callback.clear()
@@ -263,6 +269,7 @@ def overlapping_subscriptions_test():
 def keepalive_test():
   # keepalive processing.  We should be kicked off by the server if we don't send or receive any data, and don't send
   # any pings either.
+  print("Keepalive test starting")
   succeeded = True
   try:
     callback2.clear()
@@ -283,20 +290,21 @@ def keepalive_test():
 def redelivery_on_reconnect_test():
   # redelivery on reconnect. When a QoS 1 or 2 exchange has not been completed, the server should retry the 
   # appropriate MQTT packets
+  print("Redelivery on reconnect test starting")
   succeeded = True
   try:
     callback.clear()
     callback2.clear()
     bclient.connect(host=host, port=port, cleansession=False)
     bclient.subscribe([wildtopics[6]], [2])
-    bclient.pause() # stops background processing 
+    bclient.pause() # stops responding to incoming publishes
     bclient.publish(topics[1], b"", 1, retained=False)
     bclient.publish(topics[3], b"", 2, retained=False)
     time.sleep(1)
     bclient.disconnect()
-    assert len(callback2.messages) == 0
-    bclient.connect(host=host, port=port, cleansession=False)
+    assert len(callback2.messages) == 0, "length should be 0: %s" % callback2.messages
     bclient.resume()
+    bclient.connect(host=host, port=port, cleansession=False)
     time.sleep(3)
     assert len(callback2.messages) == 2, "length should be 2: %s" % callback2.messages
     bclient.disconnect()
@@ -309,6 +317,7 @@ def redelivery_on_reconnect_test():
 def subscribe_failure_test():
   # Subscribe failure.  A new feature of MQTT 3.1.1 is the ability to send back negative reponses to subscribe
   # requests.  One way of doing this is to subscribe to a topic which is not allowed to be subscribed to.
+  print("Subscribe failure test starting")
   succeeded = True
   try:
     callback.clear()
@@ -328,6 +337,7 @@ def dollar_topics_test():
   # $ topics. The specification says that a topic filter which starts with a wildcard does not match topic names that
   # begin with a $.  Publishing to a topic which starts with a $ may not be allowed on some servers (which is entirely valid),
   # so this test will not work and should be omitted in that case.
+  print("$ topics test starting")
   succeeded = True
   try:
     callback2.clear()
@@ -397,6 +407,10 @@ if __name__ == "__main__":
   callback = Callbacks()
   callback2 = Callbacks()
 
+  #aclient = mqtt.client.Client(b"\xEF\xBB\xBF" + "myclientid".encode("utf-8"))
+  aclient = mqtt.client.Client("myclientid".encode("utf-8"))
+  aclient.registerCallback(callback)
+
   bclient = mqtt.client.Client("myclientid2".encode("utf-8"))
   bclient.registerCallback(callback2)
 
@@ -409,7 +423,7 @@ if __name__ == "__main__":
   if run_subscribe_failure_test:
     tests.append(subscribe_failure_test)
 
-  if dollar_topics_test:
+  if run_dollar_topics_test:
     tests.append(dollar_topics_test)
 
   for i in range(iterations):

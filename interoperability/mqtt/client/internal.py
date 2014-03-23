@@ -36,6 +36,7 @@ class Receivers:
     self.pubrec = MQTTV3.Pubrecs()
     self.pubrel = MQTTV3.Pubrels()
     self.pubcomp = MQTTV3.Pubcomps()
+    self.running = False
 
   def receive(self, callback=None):
     packet = None
@@ -130,6 +131,7 @@ class Receivers:
       elif packet.fh.QoS == 2:
         self.inMsgs[packet.messageIdentifier] = packet
         self.pubrec.messageIdentifier = packet.messageIdentifier
+        logging.debug("out: %s", str(self.pubrec))
         self.socket.send(self.pubrec.pack())
 
     else:
@@ -147,10 +149,13 @@ class Receivers:
       rc = self.socket.send(packet.pack())
 
   def __call__(self, callback):
+    self.running = True
     try:
-      while True:
+      while not self.stopping:
         self.receive(callback)
     except:
       if not self.stopping and sys.exc_info()[0] != socket.error:
         logging.error("call: unexpected exception %s", str(sys.exc_info()))
         traceback.print_exc()
+    self.running = False
+

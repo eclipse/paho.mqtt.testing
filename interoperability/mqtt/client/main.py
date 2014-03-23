@@ -26,7 +26,7 @@ from ..formats import MQTTV311 as MQTTV3
 
 logger = logging.getLogger("mqtt-client")
 logger.setLevel(logging.ERROR)
-#logger.propagate = 0
+logger.propagate = 1
 
 formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
 ch = logging.StreamHandler()
@@ -34,6 +34,12 @@ ch.setFormatter(formatter)
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
+def sendtosocket(mysocket, data):
+  logger.debug("out: %s", str(data))
+  sent = 0
+  length = len(data)
+  while sent < length:
+    sent += mysocket.send(data)
 
 class Callback:
 
@@ -88,6 +94,7 @@ class Client:
               willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None):
     if newsocket:
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      self.sock.settimeout(.5)
       self.sock.connect((host, port))
 
     connect = MQTTV3.Connects()
@@ -112,8 +119,7 @@ class Client:
       connect.passwordFlag = True
       connect.password = password
 
-    logger.debug("out: %s", str(connect))
-    self.sock.send(connect.pack())
+    sendtosocket(self.sock, connect.pack())
 
     response = MQTTV3.unpackPacket(MQTTV3.getPacket(self.sock))
     if not response:
@@ -137,8 +143,7 @@ class Client:
     for t in topics:
       subscribe.data.append((t, qoss[count]))
       count += 1
-    logger.debug("out: %s", str(subscribe))
-    self.sock.send(subscribe.pack())
+    sendtosocket(self.sock, subscribe.pack())
     return subscribe.messageIdentifier
 
 
@@ -146,8 +151,7 @@ class Client:
     unsubscribe = MQTTV3.Unsubscribes()
     unsubscribe.messageIdentifier = self.__nextMsgid()
     unsubscribe.data = topics
-    logger.debug("out: %s", str(unsubscribe))
-    self.sock.send(unsubscribe.pack())
+    sendtosocket(self.sock, unsubscribe.pack())
     return unsubscribe.messageIdentifier
 
 
@@ -164,30 +168,35 @@ class Client:
       self.__receiver.outMsgs[publish.messageIdentifier] = publish
     publish.topicName = topic
     publish.data = payload
-    logger.debug("out: %s", str(publish))
-    self.sock.send(publish.pack())
+    sendtosocket(self.sock, publish.pack())
     return publish.messageIdentifier
 
 
   def disconnect(self):
     if self.__receiver:
       self.__receiver.stopping = True
+      count = 0
       while (len(self.__receiver.inMsgs) > 0 or len(self.__receiver.outMsgs) > 0) and self.__receiver.paused == False:
-        logger.debug(self.__receiver.inMsgs, self.__receiver.outMsgs)
-        #print("disconnecting", self.__receiver.inMsgs, self.__receiver.outMsgs)
-        time.sleep(.1)
-    if self.__receiver and self.__receiver.paused == False:
-      assert self.__receiver.inMsgs == {}
-      assert self.__receiver.outMsgs == {}
+        logger.debug("disconnecting %s %s", self.__receiver.inMsgs, self.__receiver.outMsgs)
+        time.sleep(.2)
+        count += 1
+        if count == 20:
+          break
+      if self.__receiver and self.__receiver.paused == False:
+        assert self.__receiver.inMsgs == {}, self.__receiver.inMsgs
+        assert self.__receiver.outMsgs == {}, self.__receiver.outMsgs
     disconnect = MQTTV3.Disconnects()
-    logger.debug("out: %s", str(disconnect))
-    self.sock.send(disconnect.pack())
+    sendtosocket(self.sock, disconnect.pack())
     time.sleep(0.1)
     if self.cleansession:
       self.__receiver = None
     else:
       self.__receiver.socket = None
     self.sock.close()
+    if self.__receiver:
+      while self.__receiver.running:
+        time.sleep(0.1)
+      self.__receiver.stopping = False
 
   def terminate(self):
     if self.__receiver:

@@ -62,11 +62,20 @@ def getPacket(aSocket):
   buf = aSocket.recv(1) # get the first byte fixed header
   if buf == b"":
     return None
+  if str(aSocket).find("[closed]") != -1:
+    closed = True
+  else:
+    closed = False
+  if closed:
+    return None
   # now get the remaining length
   multiplier = 1
   remlength = 0
   while 1:
-    buf += aSocket.recv(1)
+    next = aSocket.recv(1)
+    while len(next) == 0:
+      next = aSocket.recv(1)
+    buf += next
     digit = buf[-1]
     remlength += (digit & 127) * multiplier
     if digit & 128 == 0:
@@ -77,6 +86,7 @@ def getPacket(aSocket):
   if remlength > 0:
     while len(rest) < remlength:
       rest += aSocket.recv(remlength-len(rest))
+  assert len(rest) == remlength
   return buf + rest
 
 
