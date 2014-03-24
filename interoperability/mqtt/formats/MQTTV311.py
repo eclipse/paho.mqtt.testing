@@ -448,6 +448,7 @@ class Publishes(Packets):
     assert len(buffer) >= 2
     assert MessageType(buffer) == PUBLISH
     fhlen = self.fh.unpack(buffer)
+    assert self.fh.QoS in [0, 1, 2], "QoS in Publish must be 0, 1, or 2"
     packlen = fhlen + self.fh.remainingLength
     assert len(buffer) >= packlen
     curlen = fhlen
@@ -510,9 +511,9 @@ class Pubacks(Packets):
     assert self.fh.remainingLength == 2, "Puback packet is wrong length %d" % self.fh.remainingLength
     assert len(buffer) >= fhlen + self.fh.remainingLength
     self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
+    assert self.fh.DUP == False, "[MQTT-2.1.2-1] Puback reserved bits must be 0"
+    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] Puback reserved bits must be 0"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] Puback reserved bits must be 0"
     return fhlen + 2
 
   def __repr__(self):
@@ -547,9 +548,9 @@ class Pubrecs(Packets):
     assert self.fh.remainingLength == 2, "Pubrec packet is wrong length %d" % self.fh.remainingLength
     assert len(buffer) >= fhlen + self.fh.remainingLength
     self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
+    assert self.fh.DUP == False, "[MQTT-2.1.2-1] Pubrec reserved bits must be 0"
+    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] Pubrec reserved bits must be 0"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] Pubrec reserved bits must be 0"
     return fhlen + 2
 
   def __repr__(self):
@@ -675,9 +676,9 @@ class Subscribes(Packets):
       self.data.append((topic, qos))
     assert len(self.data) > 0, "[MQTT-3.8.3-1] at least one topic, qos pair must be in subscribe"
     assert leftlen == 0
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-    assert self.fh.QoS == 1, "[MQTT-2.1.2-1]"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
+    assert self.fh.DUP == False, "[MQTT-2.1.2-1] DUP must be false in subscribe"
+    assert self.fh.QoS == 1, "[MQTT-2.1.2-1] QoS must be 1 in subscribe"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] RETAIN must be false in subscribe"
     return fhlen + self.fh.remainingLength
 
   def __repr__(self):
