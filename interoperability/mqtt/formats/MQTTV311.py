@@ -369,12 +369,13 @@ class Connacks(Packets):
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.Retain = Retain
+    self.flags = 0
     self.returnCode = ReturnCode
     if buffer != None:
       self.unpack(buffer)
 
   def pack(self):
-    buffer = bytes([0, self.returnCode])
+    buffer = bytes([self.flags, self.returnCode])
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
@@ -383,14 +384,14 @@ class Connacks(Packets):
     assert MessageType(buffer) == CONNACK
     self.fh.unpack(buffer)
     assert self.fh.remainingLength == 2, "Connack packet is wrong length %d" % self.fh.remainingLength
-    assert buffer[2] == 0, "Reserved byte"
+    assert buffer[2] in  [0, 1], "Connect Acknowledge Flags"
     self.returnCode = buffer[3]
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
 
   def __repr__(self):
-    return repr(self.fh)+", ReturnCode="+repr(self.returnCode)+")"
+    return repr(self.fh)+", Session present="+str((self.flags & 0x01) == 1)+", ReturnCode="+repr(self.returnCode)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \

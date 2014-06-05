@@ -13,6 +13,7 @@
  
   Contributors:
      Ian Craggs - initial implementation and/or documentation
+     Ian Craggs - add sessionPresent connack flag
 *******************************************************************
 """
 
@@ -275,6 +276,8 @@ class MQTTBrokers:
       me = self.broker.getClient(packet.ClientIdentifier) # find existing state, if there is any
       if me:
         logger.info("[MQTT-3.1.3-2] clientid used to retrieve client state")
+    resp = MQTTV3.Connacks()
+    resp.flags = 0x01 if me else 0x00
     if me == None:
       me = MQTTClients(packet.ClientIdentifier, packet.CleanSession, packet.KeepAliveTimer, sock, self)
     else:
@@ -286,7 +289,6 @@ class MQTTBrokers:
     me.will = (packet.WillTopic, packet.WillQoS, packet.WillMessage, packet.WillRETAIN) if packet.WillFlag else None
     self.broker.connect(me)
     logger.info("[MQTT-3.2.0-1] the first response to a client must be a connack")
-    resp = MQTTV3.Connacks()
     resp.returnCode = 0
     respond(sock, resp)
     me.resend()
