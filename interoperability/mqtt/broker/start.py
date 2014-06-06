@@ -120,7 +120,7 @@ class MyHandler(socketserver.StreamRequestHandler):
     resp = b"HTTP/1.1 101 Switching Protocols\r\n" +\
            b"Upgrade: websocket\r\n" +\
            b"Connection: Upgrade\r\n" +\
-           b"Sec-WebSocket-Protocol: " + bytes(headers["Sec-WebSocket-Protocol"], "utf-8") + b"\r\n" +\
+           b"Sec-WebSocket-Protocol: mqtt\r\n" +\
            b"Sec-WebSocket-Accept: " + digest +b"\r\n\r\n"
     return client.send(resp) 
 
