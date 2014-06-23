@@ -319,13 +319,19 @@ class MQTTBrokers:
     qoss = []
     respqoss = []
     for p in packet.data:
-      if p[0] == "nosubscribe":
+      if p[0] == "test/nosubscribe":
         respqoss.append(0x80)
       else:
+        if p[0] == "test/QoS 1 only":
+          respqoss.append(1)
+        elif p[0] == "test/QoS 0 only":
+          respqoss.append(0)
+        else:
+          respqoss.append(p[1])
         topics.append(p[0])
-        qoss.append(p[1])
-        respqoss.append(p[1])
-    self.broker.subscribe(self.clients[sock].id, topics, qoss)
+        qoss.append(respqoss[-1])
+    if len(topics) > 0:
+      self.broker.subscribe(self.clients[sock].id, topics, qoss)
     resp = MQTTV3.Subacks()
     logger.info("[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe")
     logger.info("[MQTT-3.8.4-1] Must respond with suback")
