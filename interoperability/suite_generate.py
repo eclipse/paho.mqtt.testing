@@ -132,4 +132,8 @@ if __name__ == "__main__":
 	broker.stop()
 
 	logger.info("Generation complete")
-	sys.exit()
+
+	# Without the following, background threads cause the process not to stop
+	for t in threading.enumerate():
+		t._stop()
+

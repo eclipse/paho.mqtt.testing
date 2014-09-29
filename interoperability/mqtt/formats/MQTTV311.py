@@ -255,7 +255,7 @@ class Connects(Packets):
     try:
       fhlen = self.fh.unpack(buffer)
       packlen = fhlen + self.fh.remainingLength
-      assert len(buffer) >= packlen
+      assert len(buffer) >= packlen, "buffer length %d packet length %d" % (len(buffer), packlen)
       curlen = fhlen # points to after header + remaining length
       assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
       assert self.fh.QoS == 0, "[MQTT-2.1.2-1] QoS was not 0, was %d" % self.fh.QoS
