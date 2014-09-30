@@ -38,6 +38,7 @@ import random, traceback, time, sys, copy, shutil, logging
 
 logger = logging.getLogger("mbt")
 logger.setLevel(logging.DEBUG)
+logger.propagate = False
 
 formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
 fh = logging.FileHandler("tests/test.log.1", mode="w", delay=True)

@@ -67,15 +67,17 @@ ch.setFormatter(formatter)
 ch.setLevel(logging.ERROR)
 broker_logger = logging.getLogger('MQTT broker')
 broker_logger.addHandler(qh)
-broker_logger.addHandler(ch)
+broker_logger.propagate = False
+#broker_logger.addHandler(ch)
 
 logger = logging.getLogger('suite_generate')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 #formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
 ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
+logger.propagate = False
 
 
 def create():
