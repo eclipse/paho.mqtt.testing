@@ -37,14 +37,14 @@
 import random, traceback, time, sys, copy, shutil, logging
 
 logger = logging.getLogger("mbt")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.propagate = False
 
 formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
 fh = logging.FileHandler("tests/test.log.1", mode="w", delay=True)
 fh.setFormatter(formatter)
-fh.setLevel(logging.DEBUG)
-logger.addHandler(fh)
+fh.setLevel(logging.INFO)
+#logger.addHandler(fh)
 
 testindex = 1
 
@@ -442,7 +442,7 @@ class Executions:
 from mqtt.formats.MQTTV311 import Pubrecs, Publishes, Pubrels
 
 test_logger = logging.getLogger("mbt-test")
-test_logger.propagate = 0
+test_logger.propagate = False
 test_logger.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
@@ -519,7 +519,7 @@ class Tests:
 			self.logger.debug("correct result %s", rc)
 			self.passes += 1
 		else:
-			self.logger.info("### incorrect result %s", rc)
+			self.logger.warn("### incorrect result %s", rc)
 			self.failures += 1
 			return
 
@@ -551,7 +551,7 @@ class Tests:
 				time.sleep(wait_interval)
 				count += 1
 		if count == max_wait_count:
-			self.logger.info("### line %d, observation not found %s", self.lineno, observation)
+			self.logger.warn("### line %d, observation not found %s", self.lineno, observation)
 			self.failures += 1
 		else:
 			self.logger.info("*** line %d, observation found %s", self.lineno, observation)

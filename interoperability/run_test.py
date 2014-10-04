@@ -63,6 +63,14 @@ def cleanup(hostname="localhost", port=1883):
 	MQTTV311_spec.client.__init__()
 	logging.info("Cleaned up")
 
+def usage():
+	print(
+"""Options: testname, testdir|testdirectory, hostname, port
+
+		A testname or test directory must be specified.
+
+""")
+
 
 if __name__ == "__main__":
 	try:
@@ -92,17 +100,19 @@ if __name__ == "__main__":
 
 	if testname:
 		testnames = [testname]
-
-	if testdirectory:
+	elif testdirectory:
 		testnames = [name for name in glob.glob(testdirectory+os.sep+"*") if not name.endswith("~")]
+	else:
+		usage()
+		sys.exit()
 
 	testnames.sort(key=lambda x: int(x.split(".")[-1])) # filename index order
-	cleanup(hostname, port)
 	for testname in testnames:
+		cleanup(hostname, port)
 		checks = {"socket": socket_check, "exception": exception_check}
 		MQTTV311_spec.test = mbt.Tests(mbt.model, testname, checks, 
 				observationMatchCallback = MQTTV311_spec.observationCheckCallback,
 				callCallback = MQTTV311_spec.callCallback)
 		MQTTV311_spec.test.run(stepping=False)
-		cleanup(hostname, port)
+
 
