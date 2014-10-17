@@ -80,7 +80,6 @@ class Handlers(logging.Handler):
     logging.Handler.__init__(self)
     self.coverages = getCoverage()
     self.found = set([])
-    #self.results = {}
 
   def emit(self, record):
     line = record.message
@@ -89,22 +88,23 @@ class Handlers(logging.Handler):
       self.found.add(statement)
 
   def measure(self):
+    results = []
     for key in self.coverages.keys():
        found = self.coverages[key].intersection(self.found)
-       logger.info("%s %d out of %d = %d%%" % \
+       results.append("%s %d out of %d = %d%%" % \
           ("coverage statements" if key == "coverages" else key,
                len(found), len(self.coverages[key]), (len(found) * 100) / len(self.coverages[key])))
 
     for key in self.coverages.keys():
        found = self.coverages[key].intersection(self.found)
        notfound = self.coverages[key].difference(self.found)
-       logger.info("%s found %s" % ("coverage statements" if key == "coverages" else key, found))
-       logger.info("%s not found %s" % ("coverage statements" if key == "coverages" else key, notfound))
-    #print self.results
+       results.append("%s found %s" % ("coverage statements" if key == "coverages" else key, found))
+       results.append("%s not found %s" % ("coverage statements" if key == "coverages" else key, notfound))
+    return results
 
 handler = Handlers()
 
 def measure():
-  handler.measure()
+  return handler.measure()
 
 

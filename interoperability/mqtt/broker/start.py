@@ -240,7 +240,9 @@ def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=188
   server = None
   logger.info("Stopping the MQTT server on port %d", port)
   handler.measure()
-  
+
+def measure():
+  return handler.measure()
 
 def stop():
   global server

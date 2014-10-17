@@ -57,6 +57,9 @@ class Brokers(threading.Thread):
   def reinitialize(self):
     mqtt.broker.reinitialize()
 
+  def measure(self):
+    return mqtt.broker.measure()
+
 # Attach to the broker log, so we can get its messages
 broker_log = queue.Queue()
 qh = logging.handlers.QueueHandler(broker_log)
@@ -113,8 +116,11 @@ def create():
 		while data and data.find("Waiting for request") == -1 and data.find("Finishing communications") == -1:
 			if data.find("[MQTT") != -1:
 				logger.debug("Conformance statement %s", data)
-				conformances.add(data + "\n" if data[-1] != "\n" else data)
-				file_lines.append(data + "\n" if data[-1] != "\n" else data)
+				if data[-1] != "\n":
+					data += "\n"
+				if data not in conformances:
+					file_lines.append(data)
+					conformances.add(data)
 			data = broker_log.get().getMessage()
 			logger.debug("data %s", data)
 		#if input("--->") == "q":
@@ -134,7 +140,8 @@ if __name__ == "__main__":
 	broker = Brokers() 
 	broker.start()
 	
-	while test_no < 10:
+	coverage = 0
+	while test_no < 20:
 		test_no += 1
 		conformance_statements, file_lines = create()
 		logger.info("Test %d created", test_no)
@@ -151,11 +158,18 @@ if __name__ == "__main__":
 	
 		#shorten()
 		#store()
+		results = broker.measure()
+		last_coverage = coverage
+		coverage = int(results[0].split()[-1][:-1])
+		print("Test", test_no, results[0], results[1])
 		broker.reinitialize()
 
+	final_results = broker.measure()
 	broker.stop()
 
 	logger.info("Generation complete")
+	for curline in final_results:
+		logger.info(curline)
 
 	# Without the following, background threads cause the process not to stop
 	for t in threading.enumerate():

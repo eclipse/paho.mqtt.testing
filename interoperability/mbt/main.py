@@ -38,7 +38,7 @@ import random, traceback, time, sys, copy, shutil, logging
 
 logger = logging.getLogger("mbt")
 logger.setLevel(logging.INFO)
-logger.propagate = False
+#logger.propagate = True
 
 formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
 fh = logging.FileHandler("tests/test.log.1", mode="w", delay=True)
@@ -55,7 +55,7 @@ def logrestart():
 	testindex += 1
 	fh = logging.FileHandler("tests/test.log.%d" % testindex, mode="w")
 	fh.setFormatter(formatter)
-	fh.setLevel(logging.DEBUG)
+	#fh.setLevel(logging.DEBUG)
 	logger.addHandler(fh)
 
 class TraceNodes:
@@ -401,7 +401,7 @@ class Executions:
 					pdb.set_trace()
 				index += 1
 
-			logger.info("CALL %s with %s", action.getName(), kwargs)
+			logger.info("CALL %s with %s", action.getName(), kwargs)	
 			#logger.debug("EXEC_CALL %s with %s", action.getName(), exec_kwargs)
 			if interactive and input("--->") == "q":
 				return
@@ -491,8 +491,8 @@ class Tests:
 		try:
 			kwargs = eval(strargs)
 		except:
-			logger.info("strargs %s" % strargs)
-			logger.info("results %s" % self.results)
+			self.logger.info("strargs %s" % strargs)
+			self.logger.info("results %s" % self.results)
 			raise
 		if self.callCallback:
 			action, kwargs = self.callCallback(action, kwargs)
@@ -520,6 +520,8 @@ class Tests:
 			self.passes += 1
 		else:
 			self.logger.warn("### incorrect result %s", rc)
+			self.logger.warn("### expected %s", curline)
+			self.logger.warn("### for action %s", action)
 			self.failures += 1
 			return
 
@@ -581,19 +583,20 @@ class Tests:
 		while curline:
 			self.lineno += 1
 			curline = curline.strip()
-			if curline.startswith("INFO"):
-				words = curline.split(" ", 4)[4] # remove level, date, time, logname
-				curline = ''.join(words)
-				words = words.split(" ", 3)
-				self.logger.debug("%d %s", self.lineno, curline)
-				if words[0] == "CALL":
-					self.handleCall(words)
-				elif words[0] == "RESULT":
-					self.handleResult(curline, words)
-				elif words[0] == "OBSERVED":
-					self.handleObserved(curline)
-				elif words[0] == "RESTART":
-					self.handleRestart()
+			#if curline.startswith("INFO"):
+			#	words = curline.split(" ", 4)[4] # remove level, date, time, logname
+			#curline = ''.join(words)
+			#words = words.split(" ", 3)
+			words = curline.split(" ", 3)
+			self.logger.debug("%d %s", self.lineno, curline)
+			if words[0] == "CALL":
+				self.handleCall(words)
+			elif words[0] == "RESULT":
+				self.handleResult(curline, words)
+			elif words[0] == "OBSERVED":
+				self.handleObserved(curline)
+			elif words[0] == "RESTART":
+				self.handleRestart()
 			curline = logfile.readline()
 		logfile.close()
 		if self.failures == 0:
