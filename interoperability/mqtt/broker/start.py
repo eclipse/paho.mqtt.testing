@@ -125,12 +125,13 @@ class MyHandler(socketserver.StreamRequestHandler):
     return client.send(resp) 
 
   def handle(self):
+    global server
     first = True
     sock = BufferedSockets(self.request)
     sock_no = sock.fileno()
     terminate = keptalive = False
     logger.info("Starting communications for socket %d", sock_no)
-    while not terminate:
+    while not terminate and not server.terminate:
       try:
         if not keptalive:
           logger.info("Waiting for request")
@@ -223,6 +224,7 @@ def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=188
   logger.info("Starting the MQTT server on port %d", port)
   try:
     server = ThreadingTCPServer(("", port), MyHandler, False)
+    server.terminate = False
     server.allow_reuse_address = True
     server.server_bind()
     server.server_activate()
