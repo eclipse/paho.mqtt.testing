@@ -112,30 +112,42 @@ if __name__ == "__main__":
 
 	broker = Brokers() 
 	broker.start()
-	
-	while test_no < 10:
+	last_measures = None
+	stored_tests = 0
+	while stored_tests < 10 and test_no < 30:
 		test_no += 1
 		conformance_statements = create()
-		logger.info("Test %d created", test_no)
+		cur_measures = mqtt.broker.coverage.getmeasures()[:2]
 
 		# now tests/test.%d has the test
 		filename = "tests/test.log.%d" % (test_no,)
-		infile = open(filename)
-		lines = infile.readlines()
-		infile.close()
-		outfile = open(filename, "w")
-		outfile.writelines(list(conformance_statements) + lines)
-		outfile.close()
+		if cur_measures == last_measures:
+			os.system("rm "+filename)
+		else:
+			stored_tests += 1
+			logger.info("Test %d created", stored_tests)
+			infile = open(filename)
+			lines = infile.readlines()
+			infile.close()
+			outfile = open(filename, "w")
+			outfile.writelines(list(conformance_statements) + lines)
+			outfile.close()
+			print(cur_measures)
+			last_measures = cur_measures
 	
-		#shorten()
-		#store()
+			#shorten()
+			#store()
 		broker.reinitialize()
 
 	broker.stop()
-
+	print(mqtt.broker.coverage.getmeasures())
 	logger.info("Generation complete")
 
 	# Without the following, background threads cause the process not to stop
 	for t in threading.enumerate():
-		t._stop()
+		print(t.name)
+		try:
+			t._stop()
+		except:
+			pass
 

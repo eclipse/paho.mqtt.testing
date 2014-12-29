@@ -88,23 +88,31 @@ class Handlers(logging.Handler):
       statement = "[MQTT"+between(line, "[MQTT", "]")+"]"
       self.found.add(statement)
 
-  def measure(self):
+  def getmeasures(self):
+    lines = []	
     for key in self.coverages.keys():
        found = self.coverages[key].intersection(self.found)
-       logger.info("%s %d out of %d = %d%%" % \
+       lines.append("%s %d out of %d = %d%%" % \
           ("coverage statements" if key == "coverages" else key,
                len(found), len(self.coverages[key]), (len(found) * 100) / len(self.coverages[key])))
 
     for key in self.coverages.keys():
        found = self.coverages[key].intersection(self.found)
        notfound = self.coverages[key].difference(self.found)
-       logger.info("%s found %s" % ("coverage statements" if key == "coverages" else key, found))
-       logger.info("%s not found %s" % ("coverage statements" if key == "coverages" else key, notfound))
-    #print self.results
+       lines.append("%s found %s" % ("coverage statements" if key == "coverages" else key, found))
+       lines.append("%s not found %s" % ("coverage statements" if key == "coverages" else key, notfound))
+    return lines
+
+  def measure(self):
+    for curline in self.getmeasures():
+      logger.info(curline)
 
 handler = Handlers()
 
 def measure():
   handler.measure()
+
+def getmeasures():
+  return handler.getmeasures()
 
 
