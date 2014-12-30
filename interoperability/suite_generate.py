@@ -164,7 +164,6 @@ if __name__ == "__main__":
 		broker.reinitialize()
 
 	final_results = broker.measure()
-	print("final results", final_results)
 	broker.stop()
 	print(mqtt.broker.coverage.getmeasures())
 	logger.info("Generation complete")

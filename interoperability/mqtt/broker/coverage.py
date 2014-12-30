@@ -106,7 +106,6 @@ class Handlers(logging.Handler):
     for curline in self.getmeasures():
       logger.info(curline)
 
-
 handler = Handlers()
 
 def measure():
