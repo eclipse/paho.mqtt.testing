@@ -16,5 +16,5 @@
 *******************************************************************
 """
 
-from .start import run, main, stop, server, reinitialize
+from .start import run, main, stop, server, reinitialize, measure
 from . import coverage

@@ -80,7 +80,6 @@ class Handlers(logging.Handler):
     logging.Handler.__init__(self)
     self.coverages = getCoverage()
     self.found = set([])
-    #self.results = {}
 
   def emit(self, record):
     line = record.message
@@ -107,10 +106,11 @@ class Handlers(logging.Handler):
     for curline in self.getmeasures():
       logger.info(curline)
 
+
 handler = Handlers()
 
 def measure():
-  handler.measure()
+  return handler.measure()
 
 def getmeasures():
   return handler.getmeasures()

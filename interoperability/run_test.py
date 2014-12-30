@@ -35,14 +35,17 @@ def exception_check(a, b):
 	return True
 
 def cleanup(hostname="localhost", port=1883):
-	logging.info("Cleaning up")
+	print("Cleaning up broker state")
 	# clean all client state
 	clientids = ("", "normal", "23 characters4567890123", "A clientid that is too long - should fail", 
                  "A clientid that is longer than 23 chars - should work in 3.1.1")
 
 	for clientid in clientids:
-		aclient = mqtt.client.Client("myclientid".encode("utf-8"))
-		aclient.connect(host=hostname, port=port, cleansession=True)
+		aclient = mqtt.client.Client(clientid.encode("utf-8"))
+		try:
+			aclient.connect(host=hostname, port=port, cleansession=True)
+		except:
+			pass
 		time.sleep(.1)
 		aclient.disconnect()
 		time.sleep(.1)
@@ -61,7 +64,15 @@ def cleanup(hostname="localhost", port=1883):
 	time.sleep(.1)
 
 	MQTTV311_spec.client.__init__()
-	logging.info("Cleaned up")
+	print("Finished cleaning up")
+
+def usage():
+	print(
+"""Options: testname, testdir|testdirectory, hostname, port
+
+		A testname or test directory must be specified.
+
+""")
 
 
 if __name__ == "__main__":
@@ -92,17 +103,19 @@ if __name__ == "__main__":
 
 	if testname:
 		testnames = [testname]
-
-	if testdirectory:
+	elif testdirectory:
 		testnames = [name for name in glob.glob(testdirectory+os.sep+"*") if not name.endswith("~")]
+	else:
+		usage()
+		sys.exit()
 
 	testnames.sort(key=lambda x: int(x.split(".")[-1])) # filename index order
-	cleanup(hostname, port)
 	for testname in testnames:
+		cleanup(hostname, port)
 		checks = {"socket": socket_check, "exception": exception_check}
 		MQTTV311_spec.test = mbt.Tests(mbt.model, testname, checks, 
 				observationMatchCallback = MQTTV311_spec.observationCheckCallback,
 				callCallback = MQTTV311_spec.callCallback)
 		MQTTV311_spec.test.run(stepping=False)
-		cleanup(hostname, port)
+
 

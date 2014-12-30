@@ -68,6 +68,7 @@ class Client:
     self.msgid = 1
     self.callback = None
     self.__receiver = None
+    self.cleansession = True
 
 
   def __nextMsgid(self):

@@ -33,7 +33,7 @@ Do store tests that reach a conformance statement in a different way.
 
 """
 
-import os, shutil, threading, time, logging, logging.handlers, queue, sys
+import os, shutil, threading, time, logging, logging.handlers, queue, sys, traceback
 
 import mqtt, MQTTV311_spec
 
@@ -57,18 +57,34 @@ class Brokers(threading.Thread):
   def reinitialize(self):
     mqtt.broker.reinitialize()
 
-qlog = queue.Queue()
-qh = logging.handlers.QueueHandler(qlog)
+  def measure(self):
+    return mqtt.broker.measure()
+
+# Attach to the broker log, so we can get its messages
+broker_log = queue.Queue()
+qh = logging.handlers.QueueHandler(broker_log)
 formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
 qh.setFormatter(formatter)
 qh.setLevel(logging.INFO)
+
 ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 ch.setLevel(logging.ERROR)
+
 broker_logger = logging.getLogger('MQTT broker')
 broker_logger.addHandler(qh)
 broker_logger.propagate = False
-#broker_logger.addHandler(ch)
+#broker_logger.addHandler(ch)  # prints broker log messages to stdout, for debugging or interest
+
+# Attach to the mbt log, so we can get its messages
+mbt_log = queue.Queue()
+qh = logging.handlers.QueueHandler(mbt_log)
+formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
+qh.setFormatter(formatter)
+qh.setLevel(logging.INFO)
+mbt_logger = logging.getLogger('mbt')
+mbt_logger.addHandler(qh)
+mbt_logger.propagate = False
 
 logger = logging.getLogger('suite_generate')
 logger.setLevel(logging.INFO)
@@ -81,24 +97,35 @@ logger.propagate = False
 
 
 def create():
-	global logger, qlog
+	global logger, broker_log
 	conformances = set([])
 	restart = False
+	file_lines = []
 	while not restart:
 		logger.debug("stepping")
 		restart = MQTTV311_spec.mbt.step()
 		logger.debug("stepped")
-		data = qlog.get().getMessage()
+		try:
+			while (True):
+				data = mbt_log.get_nowait().getMessage() # throws exception when no message
+				file_lines.append(data + "\n" if data[-1] != "\n" else data) 
+		except:
+			pass	
+		data = broker_log.get().getMessage()
 		logger.debug("data %s", data)
 		while data and data.find("Waiting for request") == -1 and data.find("Finishing communications") == -1:
 			if data.find("[MQTT") != -1:
 				logger.debug("Conformance statement %s", data)
-				conformances.add(data + "\n" if data[-1] != "\n" else data)
-			data = qlog.get().getMessage()
+				if data[-1] != "\n":
+					data += "\n"
+				if data not in conformances:
+					file_lines.append(data)
+					conformances.add(data)
+			data = broker_log.get().getMessage()
 			logger.debug("data %s", data)
 		#if input("--->") == "q":
 		#		return
-	return conformances
+	return conformances, file_lines
 
 
 if __name__ == "__main__":
@@ -116,7 +143,7 @@ if __name__ == "__main__":
 	stored_tests = 0
 	while stored_tests < 10 and test_no < 30:
 		test_no += 1
-		conformance_statements = create()
+		conformance_statements, file_lines = create()
 		cur_measures = mqtt.broker.coverage.getmeasures()[:2]
 
 		# now tests/test.%d has the test
@@ -126,11 +153,8 @@ if __name__ == "__main__":
 		else:
 			stored_tests += 1
 			logger.info("Test %d created", stored_tests)
-			infile = open(filename)
-			lines = infile.readlines()
-			infile.close()
 			outfile = open(filename, "w")
-			outfile.writelines(list(conformance_statements) + lines)
+			outfile.writelines(list(conformance_statements) + file_lines)
 			outfile.close()
 			print(cur_measures)
 			last_measures = cur_measures
@@ -139,9 +163,13 @@ if __name__ == "__main__":
 			#store()
 		broker.reinitialize()
 
+	final_results = broker.measure()
+	print("final results", final_results)
 	broker.stop()
 	print(mqtt.broker.coverage.getmeasures())
 	logger.info("Generation complete")
+	for curline in final_results:
+		logger.info(curline)
 
 	# Without the following, background threads cause the process not to stop
 	for t in threading.enumerate():

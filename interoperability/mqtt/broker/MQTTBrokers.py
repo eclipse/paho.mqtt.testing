@@ -323,9 +323,9 @@ class MQTTBrokers:
         respqoss.append(0x80)
       else:
         if p[0] == "test/QoS 1 only":
-          respqoss.append(1)
+          respqoss.append(min(1), p[1])
         elif p[0] == "test/QoS 0 only":
-          respqoss.append(0)
+          respqoss.append(min(0), p[1])
         else:
           respqoss.append(p[1])
         topics.append(p[0])
