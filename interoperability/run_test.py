@@ -21,6 +21,7 @@ import mbt, sys, mqtt, glob, time, logging, getopt, os
 import MQTTV311_spec, client_test
 
 def socket_check(a, b):
+	print("socket_check", a, b)
 	# <socket.socket object, fd=3, family=2, type=1, proto=0>
 	awords = str(a).split()
 	del awords[2]
@@ -35,7 +36,7 @@ def exception_check(a, b):
 	return True
 
 def cleanup(hostname="localhost", port=1883):
-	print("Cleaning up broker state")
+	#print("Cleaning up broker state")
 	# clean all client state
 	clientids = ("", "normal", "23 characters4567890123", "A clientid that is too long - should fail", 
                  "A clientid that is longer than 23 chars - should work in 3.1.1")
@@ -64,7 +65,7 @@ def cleanup(hostname="localhost", port=1883):
 	time.sleep(.1)
 
 	MQTTV311_spec.client.__init__()
-	print("Finished cleaning up")
+	#print("Finished cleaning up")
 
 def usage():
 	print(
@@ -112,7 +113,8 @@ if __name__ == "__main__":
 	testnames.sort(key=lambda x: int(x.split(".")[-1])) # filename index order
 	for testname in testnames:
 		cleanup(hostname, port)
-		checks = {"socket": socket_check, "exception": exception_check}
+		#checks = {"socket": socket_check, "exception": exception_check}
+		checks = {"exception": exception_check}
 		MQTTV311_spec.test = mbt.Tests(mbt.model, testname, checks, 
 				observationMatchCallback = MQTTV311_spec.observationCheckCallback,
 				callCallback = MQTTV311_spec.callCallback)

@@ -38,25 +38,7 @@ import random, traceback, time, sys, copy, shutil, logging
 
 logger = logging.getLogger("mbt")
 logger.setLevel(logging.INFO)
-#logger.propagate = True
-
-formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
-fh = logging.FileHandler("tests/test.log.1", mode="w", delay=True)
-fh.setFormatter(formatter)
-fh.setLevel(logging.INFO)
-#logger.addHandler(fh)
-
-testindex = 0
-
-def logrestart():
-	global testindex, fh, formatter
-	fh.close()
-	logger.removeHandler(fh)
-	testindex += 1
-	fh = logging.FileHandler("tests/test.log.%d" % testindex, mode="w")
-	fh.setFormatter(formatter)
-	#fh.setLevel(logging.DEBUG)
-	logger.addHandler(fh)
+#formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(name)s %(message)s',  datefmt='%Y%m%d %H%M%S')
 
 class TraceNodes:
 
@@ -268,6 +250,12 @@ class Models:
 			self.finisheds[action].append(parm_name)
 
 
+"""
+Model execution class.
+
+Used in the generation of tests.
+
+"""
 class Executions:
 
 	def __init__(self, model):
@@ -349,7 +337,6 @@ class Executions:
 
 	def restart(self):
 		logger.info("RESTART")
-		logrestart()
 		self.trace.restart()
 		self.pools = copy.deepcopy(self.model.choices)
 		#for type_name in self.model.return_types:
@@ -371,67 +358,76 @@ class Executions:
 			self.step(interactive)
 
 	def step(self, interactive=False):
-			restart = False
-			self.steps += 1 
-			logger.debug("Steps: %d coverage %d%%", self.steps, self.coverage())
-			enableds = self.getEnabledActions()
-			logger.debug("Enabled %s", [e.getName() for e in enableds])
+		"""
+			Take one step in the model execution.
+
+			1. Select an action
+			2. Select parameter values
+			3. Execute the action with the parameters
+			4. Process the result
+
+		"""
+		restart = False
+		self.steps += 1 
+		logger.debug("Steps: %d coverage %d%%", self.steps, self.coverage())
+		enableds = self.getEnabledActions()
+		logger.debug("Enabled %s", [e.getName() for e in enableds])
 			
-			self.trace.addArcs([tuple([action] + choice) for action in enableds \
-						    for choice in action.enumerateChoices(self.pools)])
+		self.trace.addArcs([tuple([action] + choice) for action in enableds \
+					    for choice in action.enumerateChoices(self.pools)])
 			
-			next = self.trace.findNextPath(self.model.selectCallback)
-			if next == None:
-				logger.debug("No more options available")
-				return
-			action = next[0]; args = list(next[1:])
+		next = self.trace.findNextPath(self.model.selectCallback)
+		if next == None:
+			logger.debug("No more options available")
+			return
+		action = next[0]; args = list(next[1:])
 
-			kwargs = {}
-			exec_kwargs = {}
-			index = 0
-			for parm_name in action.getParmNames():
-				#print("kwargs" + str( self.choices[args[index][0]][args[index][1]]))
-				#print("kwargs "+parm_name+" "+str(self.choices[args[index][0]]))
-				try:
-					kwargs[parm_name] = self.pools[args[index][0]][args[index][1]].valueOf()
-					exec_kwargs[parm_name] = "self.pools['"+args[index][0]+"']["+str(args[index][1])+"]"
-				except:
-					logger.info("exception %s" % traceback.format_exc())
-					import pdb
-					pdb.set_trace()
-				index += 1
-
-			logger.info("CALL %s with %s", action.getName(), kwargs)	
-			#logger.debug("EXEC_CALL %s with %s", action.getName(), exec_kwargs)
-			if interactive and input("--->") == "q":
-				return
-			self.trace.selectAction(action, args)
-			rc = None
-
+		kwargs = {}
+		exec_kwargs = {}
+		index = 0
+		for parm_name in action.getParmNames():
+			#print("kwargs" + str( self.choices[args[index][0]][args[index][1]]))
+			#print("kwargs "+parm_name+" "+str(self.choices[args[index][0]]))
 			try:
-				rc = action(**kwargs)
+				kwargs[parm_name] = self.pools[args[index][0]][args[index][1]].valueOf()
+				exec_kwargs[parm_name] = "self.pools['"+args[index][0]+"']["+str(args[index][1])+"]"
 			except:
-				# if exception is not an expected result
-				logger.info("RESULT from %s is exception %s", action.getName(), traceback.format_exc())
-				self.restart()
-				restart = True
-			else:
-				if rc != None:
-					logger.info("RESULT from %s is %s", action.getName(), rc)
-					ret_type = action.getReturnType()
-					
-					if ret_type:
-						updated = False
-						for c in self.pools[ret_type]:
-							if c.equals(rc):
-								c.used += 1 
-								updated = True
-								break
-						if not updated and hasattr(self.pools[ret_type], "append"):
-							self.pools[ret_type].append(Choices(rc, returned=True))
+				logger.info("exception %s" % traceback.format_exc())
+				import pdb
+				pdb.set_trace()
+			index += 1
 
-				self.removeFinisheds(action, kwargs)
-			return restart		
+		logger.info("CALL %s with %s", action.getName(), kwargs)	
+		#logger.debug("EXEC_CALL %s with %s", action.getName(), exec_kwargs)
+		if interactive and input("--->") == "q":
+			return
+		self.trace.selectAction(action, args)
+		rc = None
+
+		try:
+			rc = action(**kwargs)
+		except:
+			# an exception indicates an unexpected result, and the end of the test
+			logger.info("RESULT from %s is exception %s", action.getName(), traceback.format_exc())
+			self.restart()
+			restart = True
+		else:
+			if rc != None:
+				logger.info("RESULT from %s is %s", action.getName(), rc)
+				ret_type = action.getReturnType()
+					
+				if ret_type:
+					updated = False
+					for c in self.pools[ret_type]:
+						if c.equals(rc):
+							c.used += 1 
+							updated = True
+							break
+					if not updated and hasattr(self.pools[ret_type], "append"):
+						self.pools[ret_type].append(Choices(rc, returned=True))
+
+			self.removeFinisheds(action, kwargs)
+		return restart		
 
 	def run(self, interactive=True):
 		try:
@@ -556,7 +552,7 @@ class Tests:
 			self.logger.warn("### line %d, observation not found %s", self.lineno, observation)
 			self.failures += 1
 		else:
-			self.logger.info("*** line %d, observation found %s", self.lineno, observation)
+			self.logger.debug("*** line %d, observation found %s", self.lineno, observation)
 			if observation != observation1:
 				self.logger.debug("*** observations equal %s %s" % (observation, observation1))
 			self.passes += 1
@@ -600,9 +596,9 @@ class Tests:
 			curline = logfile.readline()
 		logfile.close()
 		if self.failures == 0:
-			self.logger.info("Successful. Tests passed %d", self.passes)
+			self.logger.info("Test %s successful. Tests passed %d", self.logfilename, self.passes)
 		else:
-			self.logger.info("Unsuccessful.  Tests passed %d, failed %s", self.passes, self.failures)
+			self.logger.info("Test %s unsuccessful.  Tests passed %d, failed %s", self.logfilename, self.passes, self.failures)
 
 	def addResult(self, result):
 		self.logger.debug("adding result %s", result)

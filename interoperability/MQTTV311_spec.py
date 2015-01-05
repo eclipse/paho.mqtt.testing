@@ -21,6 +21,7 @@ import mbt, socket, time, _thread, sys, traceback, pdb, select, random, mqtt, lo
 import mqtt.formats.MQTTV311 as MQTTV3
 
 clientlist = {}
+sockets = []
 
 test = None
 
@@ -43,29 +44,29 @@ class Clients:
 		self.msgid = getWrappedMsgid()
 		return self.msgid
 
-	def __call__(self, sock):
+	def __call__(self, sockid):
 		logger.debug("*** running")
-		clientlist[sock] = self
+		clientlist[sockid] = self
 		self.running = True
 		packet = None
 		try:
 			while True:		
-				packet = MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
+				packet = MQTTV3.unpackPacket(MQTTV3.getPacket(sockets[sockid]))
 				if packet == None:
 					break
 				if test:
-					logger.debug("received result %s", (sock, packet))
-					test.addResult((sock, packet))
+					logger.debug("received result %s", (sockid, packet))
+					test.addResult((sockid, packet))
 					if packet.fh.MessageType == MQTTV3.CONNACK:
 						self.packets.append(packet)
 				else:
-					mbt.observe((sock, packet))
+					mbt.observe((sockid, packet))
 					if packet.fh.MessageType == MQTTV3.PUBREC:
-						mbt.execution.pools["pubrecs"].append(mbt.Choices((sock, packet)))
+						mbt.execution.pools["pubrecs"].append(mbt.Choices((sockid, packet)))
 					elif packet.fh.MessageType == MQTTV3.PUBLISH and packet.fh.QoS in [1, 2]:
-						mbt.execution.pools["publishes"].append(mbt.Choices((sock, packet)))
+						mbt.execution.pools["publishes"].append(mbt.Choices((sockid, packet)))
 					elif packet.fh.MessageType == MQTTV3.PUBREL:
-						mbt.execution.pools["pubrels"].append(mbt.Choices((sock, packet)))
+						mbt.execution.pools["pubrels"].append(mbt.Choices((sockid, packet)))
 					elif packet.fh.MessageType == MQTTV3.CONNACK:
 						self.packets.append(packet)
 		except:
@@ -73,18 +74,25 @@ class Clients:
 				logger.debug("unexpected exception %s", sys.exc_info())
 			#mbt.log(traceback.format_exc())
 		self.running = False
-		del clientlist[sock]
+		del clientlist[sockid]
 		logger.debug("*** stopping "+str(packet))
 
 client = Clients()
 
 
+"""
+	Sockets are created in sequence -- we should use their id(), or a sequence number of them stored in a list.
+	This will also avoid platform specific formats in the test logs. *****
+
+"""
 @mbt.action
 def socket_create(hostname : "hostnames", port : "ports") -> "socket":
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	sockets.append(sock)
+	sockid = len(sockets) - 1
 	sock.connect((hostname, port))
-	id = _thread.start_new_thread(client, (sock,))
-	return sock
+	id = _thread.start_new_thread(client, (sockid,))
+	return sockid
 
 
 """
@@ -92,11 +100,12 @@ def socket_create(hostname : "hostnames", port : "ports") -> "socket":
 	thrown away.
 """
 @mbt.action
-def socket_close(sock : "socket"):
+def socket_close(sockid : "socket"):
+	sock = sockets[sockid]
 	sock.shutdown(socket.SHUT_RDWR)
 	sock.close()
 
-mbt.finishedWith(socket_close, "sock")
+mbt.finishedWith(socket_close, "sockid")
 	
 
 """
@@ -110,9 +119,10 @@ mbt.finishedWith(socket_close, "sock")
 	password                 None
 """
 @mbt.action
-def connect(sock : "socket", clientid : "clientids", cleansession : "boolean", #willmsg : "willmsgs",
+def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean", #willmsg : "willmsgs",
 #	    username : "usernames", password : "passwords"
 ) -> "connackrc":
+	sock = sockets[sockid]
 	connect = MQTTV3.Connects()
 	connect.ClientIdentifier = clientid
 	connect.CleanSession = cleansession
@@ -125,29 +135,30 @@ def connect(sock : "socket", clientid : "clientids", cleansession : "boolean", #
 	#	self.password = password
 	sock.send(connect.pack())	
 	time.sleep(0.5)
-	response = clientlist[sock].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
+	response = clientlist[sockid].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
 	logger.debug("+++connect response", response)
 	if response == None or response.returnCode not in [0, 2]:
 		raise Exception("Return code "+str(response.returnCode)+" in connack")
 
-	#id = _thread.start_new_thread(client, (sock,))
 	return response.returnCode
 
-def checksocket(sock):
+def checksocket(sockid):
 	time.sleep(0.1)
-	if sock not in clientlist.keys():
+	if sockid not in clientlist.keys():
 		raise Exception("Must have been socket error")
 
 @mbt.action
-def disconnect(sock : "socket"):
+def disconnect(sockid : "socket"):
+	sock = sockets[sockid]
 	disconnect = MQTTV3.Disconnects()
 	sock.send(disconnect.pack())
-	checksocket(sock)
+	checksocket(sockid)
 	#time.sleep(0.2)
 
 
 @mbt.action
-def subscribe(sock : "socket", topics : "topicLists", qoss : "qosLists"):
+def subscribe(sockid : "socket", topics : "topicLists", qoss : "qosLists"):
+	sock = sockets[sockid]
 	subscribe = MQTTV3.Subscribes()
 	subscribe.messageIdentifier = client.getNextMsgid()
 	count = 0
@@ -155,22 +166,24 @@ def subscribe(sock : "socket", topics : "topicLists", qoss : "qosLists"):
 		subscribe.data.append((t, qoss[count]))
 		count += 1
 	sock.send(subscribe.pack())
-	checksocket(sock)
+	checksocket(sockid)
 	return subscribe.messageIdentifier
 
 
 @mbt.action
-def unsubscribe(sock : "socket", topics : "topicLists"):
+def unsubscribe(sockid : "socket", topics : "topicLists"):
+	sock = sockets[sockid]
 	unsubscribe = MQTTV3.Unsubscribes()
 	unsubscribe.messageIdentifier = client.getNextMsgid()
 	unsubscribe.data = topics
 	sock.send(unsubscribe.pack())
-	checksocket(sock)
+	checksocket(sockid)
 	return unsubscribe.messageIdentifier
 
 
 @mbt.action
-def publish(sock : "socket", topic : "topics", payload : "payloads", qos : "QoSs", retained : "boolean"):
+def publish(sockid : "socket", topic : "topics", payload : "payloads", qos : "QoSs", retained : "boolean"):
+	sock = sockets[sockid]
 	publish = MQTTV3.Publishes()
 	publish.fh.QoS = qos
 	publish.fh.RETAIN = retained
@@ -181,13 +194,14 @@ def publish(sock : "socket", topic : "topics", payload : "payloads", qos : "QoSs
 	publish.topicName = topic
 	publish.data = payload
 	sock.send(publish.pack())
-	checksocket(sock)
+	checksocket(sockid)
 	return publish.messageIdentifier
 
 
 @mbt.action
 def pubrel(pubrec : "pubrecs"): # pubrecs are observable events
-	sock, pubrec = pubrec
+	sockid, pubrec = pubrec
+	sock = sockets[sockid]
 	pubrel = MQTTV3.Pubrels()
 	pubrel.messageIdentifier = pubrec.messageIdentifier
 	sock.send(pubrel.pack())
@@ -196,7 +210,8 @@ mbt.finishedWith(pubrel, "pubrec")
 
 @mbt.action
 def puback(publish : "publishes"):
-	sock, publish = publish
+	sockid, publish = publish
+	sock = sockets[sockid]
 	if publish.fh.QoS == 1:
 		puback = MQTTV3.Pubacks()
 		puback.messageIdentifier = publish.messageIdentifier
@@ -210,7 +225,8 @@ mbt.finishedWith(puback, "publish")
 
 @mbt.action
 def pubcomp(pubrel : "pubrels"):
-	sock, pubrel = pubrel
+	sockid, pubrel = pubrel
+	sock = sockets[sockid]
 	pubcomp = MQTTV3.Pubcomps()
 	pubcomp.messageIdentifier = pubrel.messageIdentifier
 	sock.send(pubcomp.pack())
@@ -219,7 +235,7 @@ mbt.finishedWith(pubcomp, "pubrel")
 
 def pingreq():
 	pingreq = MQTTV3.Pingreqs()
-	sock.send(pingreq.pack())
+	sockets[0].send(pingreq.pack())
 
 
 """
@@ -285,7 +301,12 @@ def select(frees):
 mbt.model.selectCallback = select
 
 def restart():
-	client.msgid = 1
+	global client
+	client = Clients() # reinitialize client objects
+	for i in range(len(sockets)):
+		sockets[i].close() # just to make sure 
+	while len(sockets) > 0:
+		del sockets[0]
 
 mbt.model.restartCallback = restart	
 

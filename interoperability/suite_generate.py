@@ -95,7 +95,13 @@ ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 logger.propagate = False
 
+"""
 
+Create a test.
+
+Returns: conformance statements encountered and the lines that constitute the test.
+
+"""
 def create():
 	global logger, broker_log
 	conformances = set([])
@@ -119,7 +125,7 @@ def create():
 				if data[-1] != "\n":
 					data += "\n"
 				if data not in conformances:
-					file_lines.append(data)
+					#file_lines.append(data)
 					conformances.add(data)
 			data = broker_log.get().getMessage()
 			logger.debug("data %s", data)
@@ -146,11 +152,8 @@ if __name__ == "__main__":
 		conformance_statements, file_lines = create()
 		cur_measures = mqtt.broker.coverage.getmeasures()[:2]
 
-		# now tests/test.%d has the test
 		filename = "tests/test.log.%d" % (test_no,)
-		if cur_measures == last_measures:
-			os.system("rm "+filename)
-		else:
+		if cur_measures != last_measures:
 			stored_tests += 1
 			logger.info("Test %d created", stored_tests)
 			outfile = open(filename, "w")
@@ -169,10 +172,10 @@ if __name__ == "__main__":
 	logger.info("Generation complete")
 	for curline in final_results:
 		logger.info(curline)
-
+	
 	# Without the following, background threads cause the process not to stop
 	for t in threading.enumerate():
-		print(t.name)
+		#print(t.name)
 		try:
 			t._stop()
 		except:

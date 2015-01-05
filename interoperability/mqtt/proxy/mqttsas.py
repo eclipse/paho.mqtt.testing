@@ -64,6 +64,8 @@ class MyHandler(socketserver.StreamRequestHandler):
                 self.ids[id(clients)] = packet.ClientIdentifier
                 self.versions[id(clients)] = 3
               print(timestamp() , "C to S", self.ids[id(clients)], repr(packet))
+              print([hex(b) for b in inbuf])
+              print(inbuf)
             except:
               traceback.print_exc()
             brokers.send(inbuf)       # pass it on
