@@ -379,7 +379,7 @@ class Executions:
 		next = self.trace.findNextPath(self.model.selectCallback)
 		if next == None:
 			logger.debug("No more options available")
-			return
+			return True
 		action = next[0]; args = list(next[1:])
 
 		kwargs = {}
@@ -459,7 +459,7 @@ class Tests:
 		self.model = model
 		self.logfilename = logfilename
 		self.checks = checks
-		self.added_results = {}
+		self.added_results = []
 		self.passes = 0
 		self.failures = 0
 		self.observationMatchCallback = observationMatchCallback
@@ -538,14 +538,14 @@ class Tests:
 		if self.observationMatchCallback:
 			observation1 = self.observationMatchCallback(observation, self.added_results)
 			while observation1 == None and count < max_wait_count:
-				self.logger.debug("Waiting for observation '%s' in %s", observation, [x for x in self.added_results.keys()])
+				self.logger.debug("Waiting for observation '%s' in %s", observation, [x for x, y in self.added_results])
 				time.sleep(wait_interval)
 				observation1 = self.observationMatchCallback(observation, self.added_results)
 				count += 1
 		else:
 			observation1 = observation
-			while observation not in self.added_results.keys() and count < max_wait_count:
-				self.logger.debug("Waiting for observation '%s' in %s", observation, [x for x in self.added_results.keys()])
+			while observation not in [x for x, y in self.added_results] and count < max_wait_count:
+				self.logger.debug("Waiting for observation '%s' in %s", observation, [x for x, y in self.added_results.keys()])
 				time.sleep(wait_interval)
 				count += 1
 		if count == max_wait_count:
@@ -556,13 +556,14 @@ class Tests:
 			if observation != observation1:
 				self.logger.debug("*** observations equal %s %s" % (observation, observation1))
 			self.passes += 1
-			self.results[observation] = self.added_results[observation1]
-			del self.added_results[observation1]
+			matched_added_result = [(x, y) for x, y in self.added_results if observation1 == x][0]
+			self.results[observation] = matched_added_result[1]
+			self.added_results.remove(matched_added_result)
 
 	def handleRestart(self):
 		self.logger.debug("Restarting")
 		self.results = {}
-		self.added_results = {}
+		self.added_results = []
 		if self.model.restartCallback:
 			self.model.restartCallback()
 
@@ -602,7 +603,7 @@ class Tests:
 
 	def addResult(self, result):
 		self.logger.debug("adding result %s", result)
-		self.added_results[str(result)] = result
+		self.added_results.append((str(result), result))
 		
 
 			

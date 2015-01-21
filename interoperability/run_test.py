@@ -64,7 +64,7 @@ def cleanup(hostname="localhost", port=1883):
 	aclient.disconnect()
 	time.sleep(.1)
 
-	MQTTV311_spec.client.__init__()
+	MQTTV311_spec.restart()
 	#print("Finished cleaning up")
 
 def usage():

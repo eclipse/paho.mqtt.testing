@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2015 IBM Corp.
  
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -46,7 +46,6 @@ class Clients:
 
 	def __call__(self, sockid):
 		logger.debug("*** running")
-		clientlist[sockid] = self
 		self.running = True
 		packet = None
 		try:
@@ -74,10 +73,13 @@ class Clients:
 				logger.debug("unexpected exception %s", sys.exc_info())
 			#mbt.log(traceback.format_exc())
 		self.running = False
-		del clientlist[sockid]
 		logger.debug("*** stopping "+str(packet))
 
-client = Clients()
+mbt.model.maxobjects["socket"] = 2
+clients = []
+for i in range(mbt.model.maxobjects["socket"]):
+	clients.append(Clients())
+next_client = 0
 
 
 """
@@ -87,11 +89,14 @@ client = Clients()
 """
 @mbt.action
 def socket_create(hostname : "hostnames", port : "ports") -> "socket":
+	global next_client
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sockets.append(sock)
 	sockid = len(sockets) - 1
 	sock.connect((hostname, port))
-	id = _thread.start_new_thread(client, (sockid,))
+	id = _thread.start_new_thread(clients[next_client], (sockid,))
+	clientlist[sockid] = clients[next_client]
+	next_client = (next_client + 1) % mbt.model.maxobjects["socket"]
 	return sockid
 
 
@@ -135,6 +140,7 @@ def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean",
 	#	self.password = password
 	sock.send(connect.pack())	
 	time.sleep(0.5)
+	checksocket(sockid)
 	response = clientlist[sockid].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
 	logger.debug("+++connect response", response)
 	if response == None or response.returnCode not in [0, 2]:
@@ -143,9 +149,14 @@ def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean",
 	return response.returnCode
 
 def checksocket(sockid):
-	time.sleep(0.1)
-	if sockid not in clientlist.keys():
-		raise Exception("Must have been socket error")
+	"""
+	Check that the socket is still open - has not been closed
+	Throw an execption if the socket is not connected
+	"""
+	time.sleep(0.1) # allow the broker to close the connection if necessary
+	sockets[sockid].getpeername() # throws an exception if the socket is not connected
+	#if sockid not in clientlist.keys():
+	#	raise Exception("Must have been socket error")
 
 @mbt.action
 def disconnect(sockid : "socket"):
@@ -160,7 +171,7 @@ def disconnect(sockid : "socket"):
 def subscribe(sockid : "socket", topics : "topicLists", qoss : "qosLists"):
 	sock = sockets[sockid]
 	subscribe = MQTTV3.Subscribes()
-	subscribe.messageIdentifier = client.getNextMsgid()
+	subscribe.messageIdentifier = clientlist[sockid].getNextMsgid()
 	count = 0
 	for t in topics:
 		subscribe.data.append((t, qoss[count]))
@@ -174,7 +185,7 @@ def subscribe(sockid : "socket", topics : "topicLists", qoss : "qosLists"):
 def unsubscribe(sockid : "socket", topics : "topicLists"):
 	sock = sockets[sockid]
 	unsubscribe = MQTTV3.Unsubscribes()
-	unsubscribe.messageIdentifier = client.getNextMsgid()
+	unsubscribe.messageIdentifier = clientlist[sockid].getNextMsgid()
 	unsubscribe.data = topics
 	sock.send(unsubscribe.pack())
 	checksocket(sockid)
@@ -190,7 +201,7 @@ def publish(sockid : "socket", topic : "topics", payload : "payloads", qos : "Qo
 	if qos == 0:
 		publish.messageIdentifier = 0
 	else:
-		publish.messageIdentifier = client.getNextMsgid()
+		publish.messageIdentifier = clientlist[sockid].getNextMsgid()
 	publish.topicName = topic
 	publish.data = payload
 	sock.send(publish.pack())
@@ -272,8 +283,6 @@ mbt.model.addReturnType("pubrecs")
 mbt.model.addReturnType("pubrels")
 mbt.model.addReturnType("publishes")
 
-mbt.model.maxobjects["socket"] = 1
-
 last_free_names = set()
 after_socket_create = set()
 
@@ -301,8 +310,11 @@ def select(frees):
 mbt.model.selectCallback = select
 
 def restart():
-	global client
-	client = Clients() # reinitialize client objects
+	global clients, next_client, sockets
+	clients = []
+	for i in range(mbt.model.maxobjects["socket"]):
+		clients.append(Clients())
+	next_client = 0
 	for i in range(len(sockets)):
 		sockets[i].close() # just to make sure 
 	while len(sockets) > 0:
@@ -331,18 +343,19 @@ def replace(str, str1, str2, replace_str):
   
 
 def observationCheckCallback(observation, results):
+	# results is a list of tuples (str(observation), observation)
 	# observation will be string representation of (socket, packet)
 	if (observation.find("Publishes(") != -1 and observation.find("MsgId=") != -1) or observation.find("Pubrels(") != -1:
 		# look for matches in everything but MsgId
 		endchar = ")" if observation.find("Pubrels") != -1 else ","
 		changed_observation = replace(observation, "MsgId=", endchar, "000")
-		for k in results.keys():
+		for k in [x for x, y in results]:
 			if changed_observation == replace(k, "MsgId=", endchar, "000"):
 				logger.debug("observation found")
 				return k
 		return None
 	else:	
-		return observation if observation in results.keys()	else None
+		return observation if observation in [x for x, y in results] else None
 
 hostname = None
 port = None
