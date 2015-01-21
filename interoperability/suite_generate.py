@@ -41,16 +41,14 @@ class Brokers(threading.Thread):
 
   def __init__(self):
     threading.Thread.__init__(self)
+    self.name = "Brokers"
 
   def run(self):
     mqtt.broker.run()
-    while not mqtt.broker.server:
-      time.sleep(.1)
-    time.sleep(1)
 
   def stop(self):
     mqtt.broker.stop()
-    while mqtt.broker.server:
+    while mqtt.broker.server: # wait until broker has stopped
       time.sleep(.1) 
     time.sleep(1)
 
@@ -116,8 +114,11 @@ def create():
 				data = mbt_log.get_nowait().getMessage() # throws exception when no message
 				file_lines.append(data + "\n" if data[-1] != "\n" else data) 
 		except:
-			pass	
-		data = broker_log.get().getMessage()
+			pass
+		try:	
+			data = broker_log.get(True, 1).getMessage()
+		except:
+			data = None
 		logger.debug("data %s", data)
 		while data and data.find("Waiting for request") == -1 and data.find("Finishing communications") == -1:
 			if data.find("[MQTT") != -1:
@@ -127,7 +128,10 @@ def create():
 				if data not in conformances:
 					#file_lines.append(data)
 					conformances.add(data)
-			data = broker_log.get().getMessage()
+			try:
+				data = broker_log.get(True, 1).getMessage()
+			except:
+				data = None
 			logger.debug("data %s", data)
 		#if input("--->") == "q":
 		#		return
@@ -135,10 +139,10 @@ def create():
 
 
 if __name__ == "__main__":
-	#try:
-	os.system("rm -rf tests")
-	#except:
-	#	pass
+	try:
+		os.system("rm -rf tests")
+	except:
+		pass
 	os.mkdir("tests")
 	test_no = 0
 	logger.info("Generation starting")
@@ -173,11 +177,6 @@ if __name__ == "__main__":
 	for curline in final_results:
 		logger.info(curline)
 	
-	# Without the following, background threads cause the process not to stop
-	for t in threading.enumerate():
-		#print(t.name)
-		try:
-			t._stop()
-		except:
-			pass
+	logger.info("Finished")
+
 
