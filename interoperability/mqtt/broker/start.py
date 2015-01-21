@@ -131,7 +131,7 @@ class MyHandler(socketserver.StreamRequestHandler):
     sock_no = sock.fileno()
     terminate = keptalive = False
     logger.info("Starting communications for socket %d", sock_no)
-    while not terminate and not server.terminate:
+    while not terminate and server and not server.terminate:
       try:
         if not keptalive:
           logger.info("Waiting for request")
