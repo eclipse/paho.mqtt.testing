@@ -49,7 +49,7 @@ class Brokers:
     pass
 
   def reinitialize(self):
-    MQTTV311_spec.broker.reinitialize()
+    MQTTV311_spec.state.broker.reinitialize()
 
   def measure(self):
     return mqtt.broker.coverage.getmeasures()

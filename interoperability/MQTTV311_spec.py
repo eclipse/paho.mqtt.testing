@@ -20,8 +20,18 @@ import mbt, socket, time, _thread, sys, traceback, pdb, select, random, mqtt, lo
 
 import mqtt.formats.MQTTV311 as MQTTV3
 
-clientlist = {}
-sockets = []
+class States:
+
+	def __init__(self):
+		self.clientlist = {}
+		self.sockets = []
+		self.clients = []
+		self.next_client = 0
+		self.broker = None
+		self.last_free_names = set()         # used in selection callback
+		self.after_socket_create = set()     # used in selection callback
+
+state = States()
 
 test = None
 
@@ -50,7 +60,7 @@ class Clients:
 		packet = None
 		try:
 			while True:		
-				packet = MQTTV3.unpackPacket(MQTTV3.getPacket(sockets[sockid]))
+				packet = MQTTV3.unpackPacket(MQTTV3.getPacket(state.sockets[sockid]))
 				if packet == None:
 					break
 				if test:
@@ -76,13 +86,11 @@ class Clients:
 		logger.debug("*** stopping "+str(packet))
 
 mbt.model.maxobjects["socket"] = 2
-clients = []
+state.clients = []
 for i in range(mbt.model.maxobjects["socket"]):
-	clients.append(Clients())
-next_client = 0
+	state.clients.append(Clients())
+state.next_client = 0
 
-
-broker = None
 
 """
 	Wrap sockets so that in the case of test generation we do not use sockets but a hashable buffer, to allow back tracking.
@@ -120,7 +128,7 @@ class BrokerSockets:
 class ClientSockets:
 
 	def __init__(self, real=False):
-		global broker, test
+		global state, test
 		if test:
 			real = True
 		self.real = real
@@ -132,11 +140,11 @@ class ClientSockets:
 			self.failurePending = False
 			self.buffer = b""
 			self.brokerSocket = BrokerSockets(self)
-			if not broker:
-				self.logger = logging.getLogger('MQTT broker')
-				self.logger.setLevel(logging.INFO)
-				self.logger.addHandler(mqtt.broker.coverage.handler)
-				broker = mqtt.broker.MQTTBrokers() # add parameters later
+			if not state.broker:
+				broker_logger = logging.getLogger('MQTT broker')
+				broker_logger.setLevel(logging.INFO)
+				broker_logger.addHandler(mqtt.broker.coverage.handler)
+				state.broker = mqtt.broker.MQTTBrokers() # add parameters later
 		
 	def connect(self, destination):
 		if self.real:
@@ -165,7 +173,7 @@ class ClientSockets:
 				raise Exception("not connected")
 			self.brokerSocket.buffer += data
 			try:
-				broker.handleRequest(self.brokerSocket)	
+				state.broker.handleRequest(self.brokerSocket)	
 			except:
 				self.failurePending = True # only indicate connection failure next time around, like a real socket
 			return len(data)
@@ -179,7 +187,7 @@ class ClientSockets:
 			self.sock.close()
 		else:
 			try:
-				broker.handleRequest(self.brokerSocket)	# to cause the client to be disconnected
+				state.broker.handleRequest(self.brokerSocket)	# to cause the client to be disconnected
 			except:
 				traceback.print_exc()
 		self.buffer = b""
@@ -205,15 +213,15 @@ class ClientSockets:
 """
 @mbt.action
 def socket_create(hostname : "hostnames", port : "ports") -> "socket":
-	global next_client
+	global state
 	#sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sock = ClientSockets()
-	sockets.append(sock)
-	sockid = len(sockets) - 1
+	state.sockets.append(sock)
+	sockid = len(state.sockets) - 1
 	sock.connect((hostname, port))
-	id = _thread.start_new_thread(clients[next_client], (sockid,))
-	clientlist[sockid] = clients[next_client]
-	next_client = (next_client + 1) % mbt.model.maxobjects["socket"]
+	id = _thread.start_new_thread(state.clients[state.next_client], (sockid,))
+	state.clientlist[sockid] = state.clients[state.next_client]
+	state.next_client = (state.next_client + 1) % mbt.model.maxobjects["socket"]
 	return sockid
 
 
@@ -223,7 +231,7 @@ def socket_create(hostname : "hostnames", port : "ports") -> "socket":
 """
 @mbt.action
 def socket_close(sockid : "socket"):
-	sock = sockets[sockid]
+	sock = state.sockets[sockid]
 	sock.shutdown(socket.SHUT_RDWR)
 	sock.close()
 
@@ -244,7 +252,7 @@ mbt.finishedWith(socket_close, "sockid")
 def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean", #willmsg : "willmsgs",
 #	    username : "usernames", password : "passwords"
 ) -> "connackrc":
-	sock = sockets[sockid]
+	sock = state.sockets[sockid]
 	connect = MQTTV3.Connects()
 	connect.ClientIdentifier = clientid
 	connect.CleanSession = cleansession
@@ -264,7 +272,7 @@ def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean",
 	sock.send(connect.pack())	
 	time.sleep(0.5)
 	checksocket(sockid)
-	response = clientlist[sockid].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
+	response = state.clientlist[sockid].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
 	logger.debug("+++connect response", response)
 	if response == None or response.returnCode not in [0, 2]:
 		raise Exception("Return code "+str(response.returnCode)+" in connack")
@@ -277,13 +285,13 @@ def checksocket(sockid):
 	Throw an execption if the socket is not connected
 	"""
 	time.sleep(0.1) # allow the broker to close the connection if necessary
-	sockets[sockid].getpeername() # throws an exception if the socket is not connected
+	state.sockets[sockid].getpeername() # throws an exception if the socket is not connected
 	#if sockid not in clientlist.keys():
 	#	raise Exception("Must have been socket error")
 
 @mbt.action
 def disconnect(sockid : "socket"):
-	sock = sockets[sockid]
+	sock = state.sockets[sockid]
 	disconnect = MQTTV3.Disconnects()
 	sock.send(disconnect.pack())
 	checksocket(sockid)
@@ -292,7 +300,7 @@ def disconnect(sockid : "socket"):
 
 @mbt.action
 def subscribe(sockid : "socket", packetid : "packetids", topics : "topicLists", qoss : "qosLists"):
-	sock = sockets[sockid]
+	sock = state.sockets[sockid]
 	subscribe = MQTTV3.Subscribes()
 	subscribe.messageIdentifier = packetid
 	count = 0
@@ -306,7 +314,7 @@ def subscribe(sockid : "socket", packetid : "packetids", topics : "topicLists", 
 
 @mbt.action
 def unsubscribe(sockid : "socket", packetid : "packetids", topics : "topicLists"):
-	sock = sockets[sockid]
+	sock = state.sockets[sockid]
 	unsubscribe = MQTTV3.Unsubscribes()
 	unsubscribe.messageIdentifier = packetid
 	unsubscribe.data = topics
@@ -317,7 +325,7 @@ def unsubscribe(sockid : "socket", packetid : "packetids", topics : "topicLists"
 
 @mbt.action
 def publish(sockid : "socket", packetid : "packetids", topic : "topics", payload : "payloads", qos : "QoSs", retained : "boolean"):
-	sock = sockets[sockid]
+	sock = state.sockets[sockid]
 	publish = MQTTV3.Publishes()
 	publish.fh.QoS = qos
 	publish.fh.RETAIN = retained
@@ -332,7 +340,7 @@ def publish(sockid : "socket", packetid : "packetids", topic : "topics", payload
 @mbt.action
 def pubrel(pubrec : "pubrecs"): # pubrecs are observable events
 	sockid, pubrec = pubrec
-	sock = sockets[sockid]
+	sock = state.sockets[sockid]
 	pubrel = MQTTV3.Pubrels()
 	pubrel.messageIdentifier = pubrec.messageIdentifier
 	sock.send(pubrel.pack())
@@ -342,7 +350,7 @@ mbt.finishedWith(pubrel, "pubrec")
 @mbt.action
 def puback(publish : "publishes"):
 	sockid, publish = publish
-	sock = sockets[sockid]
+	sock = state.sockets[sockid]
 	if publish.fh.QoS == 1:
 		puback = MQTTV3.Pubacks()
 		puback.messageIdentifier = publish.messageIdentifier
@@ -357,16 +365,20 @@ mbt.finishedWith(puback, "publish")
 @mbt.action
 def pubcomp(pubrel : "pubrels"):
 	sockid, pubrel = pubrel
-	sock = sockets[sockid]
+	sock = state.sockets[sockid]
 	pubcomp = MQTTV3.Pubcomps()
 	pubcomp.messageIdentifier = pubrel.messageIdentifier
 	sock.send(pubcomp.pack())
 
 mbt.finishedWith(pubcomp, "pubrel")
 
+
+"""
+This is not active yet.  How to use ping?
+"""
 def pingreq():
 	pingreq = MQTTV3.Pingreqs()
-	sockets[0].send(pingreq.pack())
+	state.sockets[0].send(pingreq.pack())
 
 
 """
@@ -418,42 +430,40 @@ mbt.model.addReturnType("publishes")
 
 """
 
-last_free_names = set()
-after_socket_create = set()
-
 def select(frees):
-	global last_free_names, after_socket_create
+	global state 
+	current_state = copy.deepcopy(state)
 	free_names = set([f[0].getName() for f in frees])
-	logger.debug("*** after_socket_create %s %s", after_socket_create, last_free_names)
-	if last_free_names == set(['socket_create']):
-		diff = set(free_names).difference(after_socket_create)
+	logger.debug("*** after_socket_create %s %s", state.after_socket_create, state.last_free_names)
+	if state.last_free_names == set(['socket_create']):
+		diff = set(free_names).difference(state.after_socket_create)
 		logger.debug("*** diff %s", diff)
 		if diff == set():
 			frees = [f for f in frees if f[0].getName() == "connect"]
 		else:
 			curname = random.choice(list(diff))
 			frees = [f for f in frees if f[0].getName() == curname]
-			after_socket_create.add(curname)
+			state.after_socket_create.add(curname)
 	else:	
 		for f in frees:
 			if f[0].getName() in ["pubrel", "puback", "pubcomp"]:
 				frees = [f]
 				break
-	last_free_names = free_names
+	state.last_free_names = free_names
 	return frees
 
 mbt.model.selectCallback = select
 
 def restart():
-	global clients, next_client, sockets
-	clients = []
+	global state
+	state.clients = []
 	for i in range(mbt.model.maxobjects["socket"]):
-		clients.append(Clients())
-	next_client = 0
-	for i in range(len(sockets)):
-		sockets[i].close() # just to make sure 
-	while len(sockets) > 0:
-		del sockets[0]
+		state.clients.append(Clients())
+	state.next_client = 0
+	for i in range(len(state.sockets)):
+		state.sockets[i].close() # just to make sure 
+	while len(state.sockets) > 0:
+		del state.sockets[0]
 
 mbt.model.restartCallback = restart	
 
@@ -523,7 +533,7 @@ def generateCallCallback(action, kwargs):
 	# constrain the selection of packet ids to a valid sequence
 	if action.getName() in ["publish", "subscribe", "unsubscribe"]:
 		if action.getName() != "publish" or kwargs["qos"] > 0:
-			kwargs["packetid"] = clientlist[kwargs["sockid"]].getNextMsgid()
+			kwargs["packetid"] = state.clientlist[kwargs["sockid"]].getNextMsgid()
 	return action, kwargs
 
 mbt.model.callCallback = generateCallCallback
