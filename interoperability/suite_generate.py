@@ -37,26 +37,22 @@ import os, shutil, threading, time, logging, logging.handlers, queue, sys, trace
 
 import mqtt, MQTTV311_spec
 
-class Brokers(threading.Thread):
+class Brokers:
 
   def __init__(self):
-    threading.Thread.__init__(self)
     self.name = "Brokers"
 
   def run(self):
-    mqtt.broker.run()
+    pass
 
   def stop(self):
-    mqtt.broker.stop()
-    while mqtt.broker.server: # wait until broker has stopped
-      time.sleep(.1) 
-    time.sleep(1)
+    pass
 
   def reinitialize(self):
-    mqtt.broker.reinitialize()
+    MQTTV311_spec.broker.reinitialize()
 
   def measure(self):
-    return mqtt.broker.measure()
+    return mqtt.broker.coverage.getmeasures()
 
 # Attach to the broker log, so we can get its messages
 broker_log = queue.Queue()
@@ -116,7 +112,7 @@ def create():
 		except:
 			pass
 		try:	
-			data = broker_log.get(True, 1).getMessage()
+			data = broker_log.get(True, 0).getMessage()
 		except:
 			data = None
 		logger.debug("data %s", data)
@@ -129,7 +125,7 @@ def create():
 					#file_lines.append(data)
 					conformances.add(data)
 			try:
-				data = broker_log.get(True, 1).getMessage()
+				data = broker_log.get(True, 0).getMessage()
 			except:
 				data = None
 			logger.debug("data %s", data)
@@ -148,7 +144,7 @@ if __name__ == "__main__":
 	logger.info("Generation starting")
 
 	broker = Brokers() 
-	broker.start()
+	#broker.start()
 	last_measures = None
 	stored_tests = 0
 	while stored_tests < 10 and test_no < 30:
@@ -163,7 +159,6 @@ if __name__ == "__main__":
 			outfile = open(filename, "w")
 			outfile.writelines(list(conformance_statements) + file_lines)
 			outfile.close()
-			print(cur_measures)
 			last_measures = cur_measures
 	
 			#shorten()

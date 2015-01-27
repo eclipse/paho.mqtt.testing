@@ -1,0 +1,99 @@
+[MQTT-3.14.4-2] Client must not send any more packets after disconnect
+[MQTT-3.2.0-1] the first response to a client must be a connack
+[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe
+[MQTT-2.1.2-6] store retained message and QoS
+[MQTT-3.8.4-1] Must respond with suback
+[MQTT-3.3.5-1] Overlapping subscriptions max QoS
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-2.3.1-6] pubrec messge id same as publish
+[MQTT-3.1.2-6] broker must discard the session data for client a22cc71e-1a0f-4889-97cf-460d6bdac9f3
+[MQTT-3.3.5-1] overlapping subscriptions
+[MQTT-3.6.1-1] bits in fixed header for pubrel are ok
+[MQTT-2.3.1-1] packet indentifier must be in subscribe
+[MQTT-3.8.4-3] resubscription for client a22cc71e-1a0f-4889-97cf-460d6bdac9f3 on topic /+
+[MQTT-3.1.2-16] username must not be in payload if user name flag is 0
+[MQTT-3.1.3-4] Clientid must be Unicode, and between 0 and 65535 bytes long
+[MQTT-3.8.4-5] return code must be returned for each topic in subscribe
+[MQTT-4.7.1-3] + can be used at any complete level
+[MQTT-3.1.2-7] retained messages not cleaned up as part of session state for client a22cc71e-1a0f-4889-97cf-460d6bdac9f3
+[MQTT-2.3.1-6] pubcomp messge id same as publish
+[MQTT-1.1.0-1] resubscription for client a22cc71e-1a0f-4889-97cf-460d6bdac9f3 on topic /+
+[MQTT-3.1.4-3] When rejecting connect, no more data must be processed
+[MQTT-4.7.3-1] all topic names and filters must be at least 1 char
+[MQTT-4.6.0-6] publish packets must be sent in order of receipt from any given client
+[MQTT-2.1.1-11] Deleting retained message
+[MQTT-3.2.3-3] topic name must match the subscription's topic filter
+[MQTT-4.7.3-3] all topic names and filters must be <= 65535 bytes long
+[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe
+[MQTT-4.7.3-2] topic names and filters not include null
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-4.7.1-2] # must be last, and next to /
+[MQTT-3.1.3-6] 0-length clientid must be assigned a unique id a22cc71e-1a0f-4889-97cf-460d6bdac9f3
+[MQTT-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed
+[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts
+[MQTT-3.1.3-7] 0-length clientid must have cleansession true
+[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0
+[MQTT-2.1.2-10] outgoing publish does not have retained flag set
+[MQTT-3.1.3-3] Clientid must be present, and first field
+[MQTT-2.3.1-6] puback messge id same as publish
+CALL socket_create with {'port': 1883, 'hostname': 'localhost'}
+RESULT from socket_create is 0
+CALL connect with {'sockid': 0, 'cleansession': True, 'clientid': ''}
+OBSERVED EVENT (0, Connacks(DUP=False, QoS=0, Retain=False, Session present=False, ReturnCode=0))
+RESULT from connect is 0
+CALL publish with {'payload': b'1', 'topic': '/TopicA', 'sockid': 0, 'retained': False, 'packetid': 1, 'qos': 2}
+OBSERVED EVENT (0, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=1))
+RESULT from publish is 1
+CALL pubrel with {'pubrec': (0, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=1))}
+CALL subscribe with {'sockid': 0, 'packetid': 2, 'topics': ('/+',), 'qoss': (2,)}
+OBSERVED EVENT (0, Pubcomps(DUP=False, QoS=0, Retain=False, MsgId=1))
+OBSERVED EVENT (0, Subacks(DUP=False, QoS=0, Retain=False, MsgId=2, Data=[2]))
+RESULT from subscribe is 2
+CALL publish with {'payload': b'', 'topic': 'TopicA/B', 'sockid': 0, 'retained': False, 'packetid': 3, 'qos': 1}
+OBSERVED EVENT (0, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 3)
+RESULT from publish is 3
+CALL publish with {'payload': b'333', 'topic': 'TopicA', 'sockid': 0, 'retained': True, 'packetid': 0, 'qos': 0}
+RESULT from publish is 0
+CALL publish with {'payload': b'1', 'topic': 'TopicA/C', 'sockid': 0, 'retained': False, 'packetid': 0, 'qos': 0}
+RESULT from publish is 0
+CALL publish with {'payload': b'333', 'topic': 'TopicA/C', 'sockid': 0, 'retained': True, 'packetid': 4, 'qos': 2}
+OBSERVED EVENT (0, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=4))
+RESULT from publish is 4
+CALL pubrel with {'pubrec': (0, Pubrecs(DUP=False, QoS=0, Retain=False, MsgId=4))}
+CALL publish with {'payload': b'', 'topic': 'Topic/C', 'sockid': 0, 'retained': False, 'packetid': 0, 'qos': 0}
+OBSERVED EVENT (0, Pubcomps(DUP=False, QoS=0, Retain=False, MsgId=4))
+RESULT from publish is 0
+CALL subscribe with {'sockid': 0, 'packetid': 5, 'topics': ('Topic/C',), 'qoss': (1,)}
+OBSERVED EVENT (0, Subacks(DUP=False, QoS=0, Retain=False, MsgId=5, Data=[1]))
+RESULT from subscribe is 5
+CALL publish with {'payload': b'', 'topic': 'TopicA/C', 'sockid': 0, 'retained': True, 'packetid': 6, 'qos': 1}
+OBSERVED EVENT (0, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 6)
+RESULT from publish is 6
+CALL publish with {'payload': b'', 'topic': 'TopicA', 'sockid': 0, 'retained': False, 'packetid': 0, 'qos': 0}
+RESULT from publish is 0
+CALL subscribe with {'sockid': 0, 'packetid': 7, 'topics': ('/TopicA',), 'qoss': (1,)}
+OBSERVED EVENT (0, Subacks(DUP=False, QoS=0, Retain=False, MsgId=7, Data=[1]))
+RESULT from subscribe is 7
+CALL publish with {'payload': b'333', 'topic': '/TopicA', 'sockid': 0, 'retained': False, 'packetid': 8, 'qos': 1}
+OBSERVED EVENT (0, Publishes(DUP=False, QoS=1, Retain=False, MsgId=1, TopicName='/TopicA', Payload=b'333'))
+OBSERVED EVENT (0, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 8)
+RESULT from publish is 8
+CALL puback with {'publish': (0, Publishes(DUP=False, QoS=1, Retain=False, MsgId=1, TopicName='/TopicA', Payload=b'333'))}
+CALL subscribe with {'sockid': 0, 'packetid': 9, 'topics': ('/+',), 'qoss': (1,)}
+OBSERVED EVENT (0, Subacks(DUP=False, QoS=0, Retain=False, MsgId=9, Data=[1]))
+RESULT from subscribe is 9
+CALL publish with {'payload': b'1', 'topic': '/TopicA', 'sockid': 0, 'retained': True, 'packetid': 10, 'qos': 1}
+OBSERVED EVENT (0, Publishes(DUP=False, QoS=1, Retain=False, MsgId=2, TopicName='/TopicA', Payload=b'1'))
+OBSERVED EVENT (0, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 10)
+RESULT from publish is 10
+CALL puback with {'publish': (0, Publishes(DUP=False, QoS=1, Retain=False, MsgId=2, TopicName='/TopicA', Payload=b'1'))}
+CALL connect with {'sockid': 0, 'cleansession': False, 'clientid': 'A clientid that is longer than 23 chars - should work in 3.1.1'}
+RESULT from connect is exception Traceback (most recent call last):
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 411, in step
+    rc = action(**kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 175, in __call__
+    return self.fn(*args, **kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 266, in connect
+    response = clientlist[sockid].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
+IndexError: pop from empty list
+RESTART

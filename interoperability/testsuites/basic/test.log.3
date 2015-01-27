@@ -1,21 +1,31 @@
 [MQTT-4.7.3-2] topic names and filters not include null
-[MQTT-3-10.1-1] fixed header bits are 0,0,1,0
-[MQTT-3.1.0-1] Connect was not first packet on socket
 [MQTT-3.14.4-2] Client must not send any more packets after disconnect
-[MQTT-2.3.1-1] packet indentifier must be in unsubscribe
+[MQTT-3.1.2-6] broker must discard the session data for client 23 characters4567890123
+[MQTT-2.1.2-12] non-retained message - do not store
+[MQTT-3.1.4-3] When rejecting connect, no more data must be processed
+[MQTT-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed
+[MQTT-3.2.0-1] the first response to a client must be a connack
+[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2
+[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts
+[MQTT-3.1.2-16] username must not be in payload if user name flag is 0
+[MQTT-3.1.3-4] Clientid must be Unicode, and between 0 and 65535 bytes long
+[MQTT-3.1.3-3] Clientid must be present, and first field
+[MQTT-2.3.1-6] puback messge id same as publish
 CALL socket_create with {'port': 1883, 'hostname': 'localhost'}
 RESULT from socket_create is 0
-CALL unsubscribe with {'topics': ('+/+',), 'sockid': 0}
-RESULT from unsubscribe is 2
-CALL publish with {'payload': b'', 'retained': False, 'topic': '/TopicA', 'sockid': 0, 'qos': 1}
-RESULT from publish is exception Traceback (most recent call last):
-  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 408, in step
+CALL connect with {'sockid': 0, 'cleansession': True, 'clientid': '23 characters4567890123'}
+OBSERVED EVENT (0, Connacks(DUP=False, QoS=0, Retain=False, Session present=False, ReturnCode=0))
+RESULT from connect is 0
+CALL publish with {'payload': b'longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong', 'topic': 'TopicA', 'sockid': 0, 'retained': False, 'packetid': 1, 'qos': 1}
+OBSERVED EVENT (0, Pubacks(DUP=False, QoS=0, Retain=False, MsgId 1)
+RESULT from publish is 1
+CALL connect with {'sockid': 0, 'cleansession': False, 'clientid': 'A clientid that is longer than 23 chars - should work in 3.1.1'}
+RESULT from connect is exception Traceback (most recent call last):
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 411, in step
     rc = action(**kwargs)
   File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 175, in __call__
     return self.fn(*args, **kwargs)
-  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 208, in publish
-    checksocket(sockid)
-  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 157, in checksocket
-    sockets[sockid].getpeername() # throws an exception if the socket is not connected
-OSError: [Errno 107] Transport endpoint is not connected
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 266, in connect
+    response = clientlist[sockid].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
+IndexError: pop from empty list
 RESTART

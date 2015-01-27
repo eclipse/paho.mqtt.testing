@@ -215,6 +215,7 @@ class Models:
 		self.maxobjects = {}
 		self.selectCallback = None	
 		self.restartCallback = None
+		self.callCallback = None
 	
 	def getActionNames(self):
 		return [action.getName() for action in self.actions]
@@ -397,6 +398,8 @@ class Executions:
 				pdb.set_trace()
 			index += 1
 
+		if self.model.callCallback:
+			action, kwargs = self.model.callCallback(action, kwargs)
 		logger.info("CALL %s with %s", action.getName(), kwargs)	
 		#logger.debug("EXEC_CALL %s with %s", action.getName(), exec_kwargs)
 		if interactive and input("--->") == "q":

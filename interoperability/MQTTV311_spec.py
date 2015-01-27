@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import mbt, socket, time, _thread, sys, traceback, pdb, select, random, mqtt, logging
+import mbt, socket, time, _thread, sys, traceback, pdb, select, random, mqtt, logging, copy
 
 import mqtt.formats.MQTTV311 as MQTTV3
 
@@ -31,7 +31,7 @@ logger = logging.getLogger("MQTTV311_spec")
 class Clients:
 	
 	def __init__(self):
-		self.msgid = 1
+		self.msgid = 0
 		self.running = False
 		self.packets = []
 
@@ -82,6 +82,122 @@ for i in range(mbt.model.maxobjects["socket"]):
 next_client = 0
 
 
+broker = None
+
+"""
+	Wrap sockets so that in the case of test generation we do not use sockets but a hashable buffer, to allow back tracking.
+"""
+class BrokerSockets:
+
+	def __init__(self, aClientSocket):
+		self.buffer = b""
+		self.clientSocket = aClientSocket
+		self.sending = True
+
+	def recv(self, length):
+		#while len(self.buffer) < length:
+		#	print("broker waiting", length, self.buffer)
+		#	time.sleep(.1)
+		data = self.buffer[:length]
+		self.buffer = self.buffer[length:]
+		return data
+
+	def send(self, data):
+		if self.sending:
+			self.clientSocket.buffer += data
+
+	def shutdown(self, mode):
+		self.sending = False
+
+	def close(self):
+		pass # don't close the client socket - to match real socket behaviour
+
+	#def __getattr__(self, name):
+	#	print("requesting broker attribute", name)
+	#	raise AttributeError
+
+	
+class ClientSockets:
+
+	def __init__(self, real=False):
+		global broker, test
+		if test:
+			real = True
+		self.real = real
+		self.sock = None
+		if self.real:
+			self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		else:
+			self.connected = False
+			self.failurePending = False
+			self.buffer = b""
+			self.brokerSocket = BrokerSockets(self)
+			if not broker:
+				self.logger = logging.getLogger('MQTT broker')
+				self.logger.setLevel(logging.INFO)
+				self.logger.addHandler(mqtt.broker.coverage.handler)
+				broker = mqtt.broker.MQTTBrokers() # add parameters later
+		
+	def connect(self, destination):
+		if self.real:
+			self.sock.connect(destination)
+		else:
+			self.connected = True	 
+
+	def recv(self, length):
+		if self.real:
+			return self.sock.recv(length)
+		else:
+			while len(self.buffer) < length:
+				time.sleep(.1)
+			data = self.buffer[:length]
+			self.buffer = self.buffer[length:]
+			return data
+
+	def send(self, data):
+		if self.real:
+			return self.sock.send(data)
+		else:
+			if self.failurePending:
+				self.connected = False
+				self.failurePending = False
+			if not self.connected:
+				raise Exception("not connected")
+			self.brokerSocket.buffer += data
+			try:
+				broker.handleRequest(self.brokerSocket)	
+			except:
+				self.failurePending = True # only indicate connection failure next time around, like a real socket
+			return len(data)
+
+	def shutdown(self, mode):
+		if self.real:
+			self.sock.shutdown(mode)
+
+	def close(self):
+		if self.real:
+			self.sock.close()
+		else:
+			try:
+				broker.handleRequest(self.brokerSocket)	# to cause the client to be disconnected
+			except:
+				traceback.print_exc()
+		self.buffer = b""
+		self.connected = False
+
+	def getpeername(self):
+		if self.real:
+			return self.sock.getpeername()
+		else:
+			if self.connected:
+				return "peer"
+			else:
+				raise Exception("not connected")
+
+	#def __getattr__(self, name):
+	#	print("attribute", name)
+	#	raise AttributeError
+
 """
 	Sockets are created in sequence -- we should use their id(), or a sequence number of them stored in a list.
 	This will also avoid platform specific formats in the test logs. *****
@@ -90,7 +206,8 @@ next_client = 0
 @mbt.action
 def socket_create(hostname : "hostnames", port : "ports") -> "socket":
 	global next_client
-	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	#sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	sock = ClientSockets()
 	sockets.append(sock)
 	sockid = len(sockets) - 1
 	sock.connect((hostname, port))
@@ -133,11 +250,17 @@ def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean",
 	connect.CleanSession = cleansession
 	connect.KeepAliveTimer = 60
 	#if username:
-	#	self.usernameFlag = True
-	#	self.username = username
+	#	connect.usernameFlag = True
+	#	connect.username = username
 	#if password:
-	#	self.passwordFlag = True
-	#	self.password = password
+	#	connect.passwordFlag = True
+	#	connect.password = password
+	#if willmsg:
+	#	connect.willFlag = True
+	#   connect.WillQoS = 0
+    #	connect.WillRETAIN = 0
+	#   connect.WillTopic = None        # UTF-8
+    #	connect.WillMessage = None      # binary
 	sock.send(connect.pack())	
 	time.sleep(0.5)
 	checksocket(sockid)
@@ -168,10 +291,10 @@ def disconnect(sockid : "socket"):
 
 
 @mbt.action
-def subscribe(sockid : "socket", topics : "topicLists", qoss : "qosLists"):
+def subscribe(sockid : "socket", packetid : "packetids", topics : "topicLists", qoss : "qosLists"):
 	sock = sockets[sockid]
 	subscribe = MQTTV3.Subscribes()
-	subscribe.messageIdentifier = clientlist[sockid].getNextMsgid()
+	subscribe.messageIdentifier = packetid
 	count = 0
 	for t in topics:
 		subscribe.data.append((t, qoss[count]))
@@ -182,10 +305,10 @@ def subscribe(sockid : "socket", topics : "topicLists", qoss : "qosLists"):
 
 
 @mbt.action
-def unsubscribe(sockid : "socket", topics : "topicLists"):
+def unsubscribe(sockid : "socket", packetid : "packetids", topics : "topicLists"):
 	sock = sockets[sockid]
 	unsubscribe = MQTTV3.Unsubscribes()
-	unsubscribe.messageIdentifier = clientlist[sockid].getNextMsgid()
+	unsubscribe.messageIdentifier = packetid
 	unsubscribe.data = topics
 	sock.send(unsubscribe.pack())
 	checksocket(sockid)
@@ -193,15 +316,12 @@ def unsubscribe(sockid : "socket", topics : "topicLists"):
 
 
 @mbt.action
-def publish(sockid : "socket", topic : "topics", payload : "payloads", qos : "QoSs", retained : "boolean"):
+def publish(sockid : "socket", packetid : "packetids", topic : "topics", payload : "payloads", qos : "QoSs", retained : "boolean"):
 	sock = sockets[sockid]
 	publish = MQTTV3.Publishes()
 	publish.fh.QoS = qos
 	publish.fh.RETAIN = retained
-	if qos == 0:
-		publish.messageIdentifier = 0
-	else:
-		publish.messageIdentifier = clientlist[sockid].getNextMsgid()
+	publish.messageIdentifier = packetid
 	publish.topicName = topic
 	publish.data = payload
 	sock.send(publish.pack())
@@ -270,6 +390,7 @@ wildTopics =  ("TopicA/+", "+/C", "#", "/#", "/+", "+/+")
 
 mbt.choices("topics", topics)
 mbt.choices("QoSs", (0, 1, 2))
+mbt.choices("packetids", (0,)) # we use deterministic packet ids, to concentrate on good paths
 
 mbt.choices("topicLists", [(t,) for t in topics + wildTopics])
 mbt.choices("qosLists", [(0,), (1,), (2,)])
@@ -279,9 +400,23 @@ mbt.choices("payloads", (b"", b"1", b"333", b"long"*512), sequenced=True)
 
 mbt.choices("connackrc", (0, 2), output=True)
 
+mbt.choices("willmsgs", (None, (1, 0, "will topic", "will message"))) # simple choice to limit options
+
 mbt.model.addReturnType("pubrecs")
 mbt.model.addReturnType("pubrels")
 mbt.model.addReturnType("publishes")
+
+
+"""
+
+ Selection callback.  Pick the next step from a list of options.
+
+ This makes sure 
+
+	1) connect is called after socket_create
+	2) pubrel, puback, pubcomp are processed as quickly as possible
+
+"""
 
 last_free_names = set()
 after_socket_create = set()
@@ -357,10 +492,17 @@ def observationCheckCallback(observation, results):
 	else:	
 		return observation if observation in [x for x, y in results] else None
 
+
+"""
+
+callback to modify call, used during test running 
+
+"""
 hostname = None
 port = None
 
 def callCallback(action, kwargs):
+	# this is to allow redirection to another server on playback
 	if action.getName() == "socket_create" and (hostname or port):
 		for parm in kwargs.keys():
 			if parm == "hostname":
@@ -368,6 +510,23 @@ def callCallback(action, kwargs):
 			elif parm == "port":
 				kwargs[parm] = port
 	return action, kwargs
+
+
+"""
+
+callback to modify API call, used during test generation
+
+Chooses the packetid parameter, to 
+
+"""
+def generateCallCallback(action, kwargs):
+	# constrain the selection of packet ids to a valid sequence
+	if action.getName() in ["publish", "subscribe", "unsubscribe"]:
+		if action.getName() != "publish" or kwargs["qos"] > 0:
+			kwargs["packetid"] = clientlist[kwargs["sockid"]].getNextMsgid()
+	return action, kwargs
+
+mbt.model.callCallback = generateCallCallback
 
 if __name__ == "__main__":
 	stepping = False

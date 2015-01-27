@@ -1,0 +1,20 @@
+[MQTT-3-10.1-1] fixed header bits are 0,0,1,0
+[MQTT-2.3.1-1] packet indentifier must be in unsubscribe
+[MQTT-3.14.4-2] Client must not send any more packets after disconnect
+[MQTT-4.7.3-2] topic names and filters not include null
+CALL socket_create with {'port': 1883, 'hostname': 'localhost'}
+RESULT from socket_create is 0
+CALL unsubscribe with {'sockid': 0, 'packetid': 1, 'topics': ('/TopicA',)}
+RESULT from unsubscribe is 1
+CALL subscribe with {'sockid': 0, 'packetid': 2, 'topics': ('TopicA',), 'qoss': (0,)}
+RESULT from subscribe is exception Traceback (most recent call last):
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 411, in step
+    rc = action(**kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/mbt/main.py", line 175, in __call__
+    return self.fn(*args, **kwargs)
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 301, in subscribe
+    sock.send(subscribe.pack())
+  File "/home/icraggs/work/paho/org.eclipse.paho.mqtt.testing/interoperability/MQTTV311_spec.py", line 165, in send
+    raise Exception("not connected")
+Exception: not connected
+RESTART
