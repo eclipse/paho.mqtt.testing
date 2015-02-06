@@ -18,20 +18,26 @@
 
 
 import re, logging
+from ..formats import MQTTV311 as MQTTV3
 
 logger = logging.getLogger('MQTT broker')
 
  
 def isValidTopicName(aName):
   logger.info("[MQTT-4.7.3-1] all topic names and filters must be at least 1 char")
+  if len(aName) < 1:
+    raise MQTTV3.MQTTException("MQTT-4.7.3-1] all topic names and filters must be at least 1 char")
+    return False
   logger.info("[MQTT-4.7.3-3] all topic names and filters must be <= 65535 bytes long")
-  rc = (1 <= len(aName) <= 65535)
-  if not rc:
-    return rc
+  if len(aName) > 65535:
+    raise MQTTV3.MQTTException("[MQTT-4.7.3-3] all topic names and filters must be <= 65535 bytes long")
+    return False
+  rc = True
 
   # '#' wildcard can be only at the end of a topic (used to be beginning as well)
   logger.info("[MQTT-4.7.1-2] # must be last, and next to /")
   if aName[0:-1].find('#') != -1:
+    raise MQTTV3.MQTTException("[MQTT-4.7.1-2] # must be last, and next to /")
     rc = False
 
   logger.info("[MQTT-4.7.1-3] + can be used at any complete level")
@@ -43,9 +49,11 @@ def isValidTopicName(aName):
     while pos != -1:
       if pos > 0: # check previous char is '/'
         if aName[pos-1] != '/':
+          raise MQTTV3.MQTTException("[MQTT-4.7.1-3] + can be used at any complete level")
           rc = False
       if pos < len(aName)-1: # check that subsequent char is '/'
         if aName[pos+1] != '/':
+          raise MQTTV3.MQTTException("[MQTT-4.7.1-3] + can be used at any complete level")
           rc = False
       pos = aName.find(c, pos+1)
   return rc

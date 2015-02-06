@@ -179,9 +179,13 @@ def readUTF(buffer, maxlen):
   logger.info("[MQTT-4.7.3-2] topic names and filters not include null")
   zz = buf.find("\x00") # look for null in the UTF string
   if zz != -1:
-    raise MQTTException("[MQTT-1.4.0-2] Null found in UTF data "+buf)
+    raise MQTTException("[MQTT-1.5.3-2] Null found in UTF data "+buf)
+  for c in range (0xD800, 0xDFFF):
+    zz = buf.find(chr(c)) # look for D800-DFFF in the UTF string
+    if zz != -1:
+      raise MQTTException("[MQTT-1.5.3-1] D800-DFFF found in UTF data "+buf)
   if buf.find("\uFEFF") != -1:
-    logging.info("[MQTT-1.2.0-3] U+FEFF in UTF string") 
+    logger.info("[MQTT-1.5.3-3] U+FEFF in UTF string") 
   return buf
 
 def writeBytes(buffer):
@@ -266,7 +270,6 @@ class Connects(Packets):
       assert self.ProtocolName == "MQTT", "Wrong protocol name %s" % self.ProtocolName
 
       self.ProtocolVersion = buffer[curlen]
-      assert self.ProtocolVersion in [4], "Wrong protocol version %d" % self.ProtocolVersion
       curlen += 1
 
       connectFlags = buffer[curlen]
@@ -275,8 +278,8 @@ class Connects(Packets):
       self.WillFlag = ((connectFlags >> 2) & 0x01) == 1
       self.WillQoS = (connectFlags >> 3) & 0x03
       self.WillRETAIN = (connectFlags >> 5) & 0x01
-      self.usernameFlag = ((connectFlags >> 6) & 0x01) == 1
-      self.passwordFlag = ((connectFlags >> 7) & 0x01) == 1
+      self.passwordFlag = ((connectFlags >> 6) & 0x01) == 1
+      self.usernameFlag = ((connectFlags >> 7) & 0x01) == 1
       curlen +=1
 
       if self.WillFlag:
@@ -305,18 +308,18 @@ class Connects(Packets):
         assert len(buffer) > curlen+2, "Buffer too short to read username length"
         self.username = readUTF(buffer[curlen:], packlen - curlen)
         curlen += len(self.username) + 2
-        logger.info("[MQTT-3.1.2-17] username must be in payload if user name flag is 1")
+        logger.info("[MQTT-3.1.2-19] username must be in payload if user name flag is 1")
       else:
-        logger.info("[MQTT-3.1.2-16] username must not be in payload if user name flag is 0")
-        assert self.passwordFlag == False, "[MQTT-3.1.2-20] password flag must be 0 if username flag is 0"
+        logger.info("[MQTT-3.1.2-18] username must not be in payload if user name flag is 0")
+        assert self.passwordFlag == False, "[MQTT-3.1.2-22] password flag must be 0 if username flag is 0"
 
       if self.passwordFlag:
         assert len(buffer) > curlen+2, "Buffer too short to read password length"
         self.password = readBytes(buffer[curlen:])
         curlen += len(self.password) + 2
-        logger.info("[MQTT-3.1.2-19] password must be in payload if password flag is 0")
+        logger.info("[MQTT-3.1.2-21] password must be in payload if password flag is 0")
       else:
-        logger.info("[MQTT-3.1.2-16] username must not be in payload if user name flag is 0")
+        logger.info("[MQTT-3.1.2-20] password must not be in payload if password flag is 0")
 
       if self.WillFlag and self.usernameFlag and self.passwordFlag:
         logger.info("[MQTT-3.1.3-1] clientid, will topic, will message, username and password all present")
@@ -413,7 +416,7 @@ class Disconnects(Packets):
     assert MessageType(buffer) == DISCONNECT
     self.fh.unpack(buffer)
     assert self.fh.remainingLength == 0, "Disconnect packet is wrong length %d" % self.fh.remainingLength
-    logging.info("[MQTT-3.14.1-1] disconnect reserved bits must be 0")
+    logger.info("[MQTT-3.14.1-1] disconnect reserved bits must be 0")
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"

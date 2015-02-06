@@ -57,9 +57,9 @@ class Brokers:
         logger.info("[MQTT-3.1.2-8] sending will message for client %s", aClientid)
         willtopic, willQoS, willmsg, willRetain = self.__clients[aClientid].will
         if willRetain:
-          logger.info("[MQTT-3.1.2-15] sending will message retained for client %s", aClientid)
+          logger.info("[MQTT-3.1.2-17] sending will message retained for client %s", aClientid)
         else:
-          logger.info("[MQTT-3.1.2-14] sending will message non-retained for client %s", aClientid)
+          logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
         self.publish(aClientid, willtopic, willmsg, willQoS, willRetain)
       self.disconnect(aClientid)
 
@@ -114,7 +114,7 @@ class Brokers:
     i = 0
     for t in topic: # t is a wildcard subscription topic
       topicsUsed = []
-      for s in self.se.getRetainedTopics(topic): # s is a non-wildcard retained topic
+      for s in self.se.getRetainedTopics(t): # s is a non-wildcard retained topic
         if s not in topicsUsed and Topics.topicMatches(t, s):
           # topic has retained publication
           topicsUsed.append(s)

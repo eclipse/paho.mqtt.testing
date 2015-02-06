@@ -240,13 +240,13 @@ class MQTTBrokers:
       resp = MQTTV3.Connacks()
       resp.returnCode = 1
       respond(sock, resp)
-      logger.info("[MQTT-3.2.2-1] must close connection after non-zero connack")
+      logger.info("[MQTT-3.2.2-5] must close connection after non-zero connack")
       self.disconnect(sock, None)
-      logger.info("[MQTT-3.1.4-3] When rejecting connect, no more data must be processed")
+      logger.info("[MQTT-3.1.4-5] When rejecting connect, no more data must be processed")
       return
     if sock in self.clients.keys():    # is socket is already connected?
       self.disconnect(sock, None)
-      logger.info("[MQTT-3.1.4-3] When rejecting connect, no more data must be processed")
+      logger.info("[MQTT-3.1.4-5] When rejecting connect, no more data must be processed")
       raise MQTTV3.MQTTException("[MQTT-3.1.0-2] Second connect packet")
     if len(packet.ClientIdentifier) == 0:
       if self.zero_length_clientids == False or packet.CleanSession == False:
@@ -256,9 +256,9 @@ class MQTTBrokers:
         resp = MQTTV3.Connacks()
         resp.returnCode = 2
         respond(sock, resp)
-        logger.info("[MQTT-3.2.2-1] must close connection after non-zero connack")
+        logger.info("[MQTT-3.2.2-5] must close connection after non-zero connack")
         self.disconnect(sock, None)
-        logger.info("[MQTT-3.1.4-3] When rejecting connect, no more data must be processed")
+        logger.info("[MQTT-3.1.4-5] When rejecting connect, no more data must be processed")
         return
       else:
         logger.info("[MQTT-3.1.3-7] 0-length clientid must have cleansession true")
@@ -267,7 +267,7 @@ class MQTTBrokers:
     logger.info("[MQTT-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed")
     if packet.ClientIdentifier in [client.id for client in self.clients.values()]: # is this client already connected on a different socket?
       for s in self.clients.keys():
-        if self.clients[s] == packet.ClientIdentifier:
+        if self.clients[s].id == packet.ClientIdentifier:
           logger.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
           self.disconnect(s, None)
           break
@@ -345,23 +345,22 @@ class MQTTBrokers:
     self.broker.unsubscribe(self.clients[sock].id, packet.data)
     resp = MQTTV3.Unsubacks()
     logger.info("[MQTT-2.3.1-7] Unsuback has same message id as unsubscribe")
-    logger.info("[MQTT-3.10.3-4] Unsuback must be sent - same message id as unsubscribe")
+    logger.info("[MQTT-3.10.4-4] Unsuback must be sent - same message id as unsubscribe")
     me = self.clients[sock]
     if len(me.outbound) > 0:
-      logger.info("[MQTT-3.10.3-3] sending unsuback has no effect on outward inflight messages")
+      logger.info("[MQTT-3.10.4-3] sending unsuback has no effect on outward inflight messages")
     resp.messageIdentifier = packet.messageIdentifier
     respond(sock, resp)
 
   def publish(self, sock, packet):
     if packet.topicName.find("+") != -1 or packet.topicName.find("#") != -1:
-      raise MqttException("[MQTT-3.3.2-2][MQTT-4.7.1-1] wildcards not allowed in topic name")
+      raise MQTTV3.MQTTException("[MQTT-3.3.2-2][MQTT-4.7.1-1] wildcards not allowed in topic name")
     if packet.fh.QoS == 0:
       self.broker.publish(self.clients[sock].id,
              packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
     elif packet.fh.QoS == 1:
       if packet.fh.DUP:
-        logger.info("[MQTT-2.1.2-5] Incoming publish DUP 1 ==> outgoing publish with DUP 0")
-        logger.info("[MQTT-4.3.2-3] Incoming publish with DUP 1 ==> same actions as with DUP 0")
+        logger.info("[MQTT-3.3.1-3] Incoming publish DUP 1 ==> outgoing publish with DUP 0")
         logger.info("[MQTT-4.3.2-2] server must store message in accordance with QoS 1")
       self.broker.publish(self.clients[sock].id,
              packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
@@ -374,17 +373,17 @@ class MQTTBrokers:
       if self.publish_on_pubrel:
         if packet.messageIdentifier in myclient.inbound.keys():
           if packet.fh.DUP == 0:
-            logger.error("[MQTT-2.1.2-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
+            logger.error("[MQTT-3.3.1-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
           else:
-            logger.info("[MQTT-2.1.2-2] DUP flag is 1 on redelivery")
+            logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
         else:
           myclient.inbound[packet.messageIdentifier] = packet
       else:
         if packet.messageIdentifier in myclient.inbound:
           if packet.fh.DUP == 0:
-            logger.error("[MQTT-2.1.2-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
+            logger.error("[MQTT-3.3.1-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
           else:
-            logger.info("[MQTT-2.1.2-2] DUP flag is 1 on redelivery")
+            logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
         else:
           myclient.inbound.append(packet.messageIdentifier)
           logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")
@@ -403,8 +402,6 @@ class MQTTBrokers:
         del myclient.inbound[packet.messageIdentifier]
       else:
         myclient.inbound.remove(packet.messageIdentifier)
-    else:
-      logger.info("[MQTT-3.6.4-1] must respond with a pubcomp packet, regardless of whether a message was found")
     resp = MQTTV3.Pubcomps()
     logger.info("[MQTT-2.3.1-6] pubcomp messge id same as publish")
     resp.messageIdentifier = packet.messageIdentifier

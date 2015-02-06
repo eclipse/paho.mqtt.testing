@@ -164,7 +164,7 @@ class MyHandler(socketserver.StreamRequestHandler):
         if (len(exc.args) > 0):
           logger.error(exc.args[0])
         else:
-          logger.error()
+          logger.error("")
         break
       except:
         logger.exception("MyHandler")
@@ -202,7 +202,7 @@ class TCPHandler(socketserver.StreamRequestHandler):
         if (len(exc.args) > 0):
           logger.error(exc.args[0])
         else:
-          logger.error()
+          logger.error("")
         break
       except:
         logger.exception("MyHandler")
@@ -284,6 +284,17 @@ def main(argv):
   run(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0, port=port,
      zero_length_clientids=zero_length_clientids)
 
+def usage():
+  print(
+"""
+ -h --help: print this message
+ -p: --publish_on_pubrel=0/1 unset/set publish on pubrel, publish on publish otherwise
+ -o: --overlapping_single=0/1
+ -d: --dropQoS0=0/1
+ -z: --zero_length_clientid=0/1 disallow/allow zero length clientid test
+ --port= port number to listen to
+
+""")
 
 if __name__ == "__main__":
   main(sys.argv)

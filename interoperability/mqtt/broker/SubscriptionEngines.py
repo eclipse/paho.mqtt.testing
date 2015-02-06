@@ -52,41 +52,42 @@ class SubscriptionEngines:
    def __subscribe(self, aClientid, aTopic, aQos):
      "subscribe to one topic"
      rc = None
-     assert Topics.isValidTopicName(aTopic)
-     subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
-     resubscribed = False
-     for s in subscriptions:
-       if s.getClientid() == aClientid and s.getTopic() == aTopic:
-         s.resubscribe(aQos)
-         return s
-     rc = Subscriptions(aClientid, aTopic, aQos)
-     subscriptions.append(rc)
+     if Topics.isValidTopicName(aTopic):
+       subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
+       resubscribed = False
+       for s in subscriptions:
+         if s.getClientid() == aClientid and s.getTopic() == aTopic:
+           s.resubscribe(aQos)
+           return s
+       rc = Subscriptions(aClientid, aTopic, aQos)
+       subscriptions.append(rc)
      return rc
 
    def unsubscribe(self, aClientid, aTopic):
      matched = False
      if type(aTopic) == type([]):
        if len(aTopic) > 1:
-         logger.info("[MQTT-3.10.3-6] each topic must be processed in sequence")
+         logger.info("[MQTT-3.10.4-6] each topic must be processed in sequence")
        for t in aTopic:
          if not matched:
            matched = self.__unsubscribe(aClientid, t)
      else:
        matched = self.__unsubscribe(aClientid, aTopic)
      if not matched:
-       logger.info("[MQTT-3.10.3-5] Unsuback must be sent even if no topics are matched")
+       logger.info("[MQTT-3.10.4-5] Unsuback must be sent even if no topics are matched")
 
    def __unsubscribe(self, aClientid, aTopic):
      "unsubscribe to one topic"
      matched = False
-     subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
-     for s in subscriptions:
-       if s.getClientid() == aClientid and s.getTopic() == aTopic:
-         logger.info("[MQTT-3.10.3-1] topic filters must be compared byte for byte")
-         logger.info("[MQTT-3.10.3-2] no more messages must be added after unsubscribe is complete")
-         subscriptions.remove(s)
-         matched = True
-         break # once we've hit one, that's us done
+     if Topics.isValidTopicName(aTopic):
+       subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
+       for s in subscriptions:
+         if s.getClientid() == aClientid and s.getTopic() == aTopic:
+           logger.info("[MQTT-3.10.4-1] topic filters must be compared byte for byte")
+           logger.info("[MQTT-3.10.4-2] no more messages must be added after unsubscribe is complete")
+           subscriptions.remove(s)
+           matched = True
+           break # once we've hit one, that's us done
      return matched
 
    def clearSubscriptions(self, aClientid):
@@ -97,11 +98,13 @@ class SubscriptionEngines:
 
    def getSubscriptions(self, aTopic, aClientid=None):
      "return a list of subscriptions for this client"
-     subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
-     if aClientid == None:
-       rc = [sub for sub in subscriptions if Topics.topicMatches(sub.getTopic(), aTopic)]
-     else:
-       rc = [sub for sub in subscriptions if sub.getClientid() == aClientid and Topics.topicMatches(sub.getTopic(), aTopic)]
+     rc = None
+     if Topics.isValidTopicName(aTopic):
+       subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
+       if aClientid == None:
+         rc = [sub for sub in subscriptions if Topics.topicMatches(sub.getTopic(), aTopic)]
+       else:
+         rc = [sub for sub in subscriptions if sub.getClientid() == aClientid and Topics.topicMatches(sub.getTopic(), aTopic)]
      return rc
 
    def qosOf(self, clientid, topic):
@@ -121,37 +124,42 @@ class SubscriptionEngines:
 
    def subscribers(self, aTopic):
      "list all clients subscribed to this (non-wildcard) topic"
-     subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
      result = []
-     for s in subscriptions:
-       if Topics.topicMatches(s.getTopic(), aTopic):
-         if s.getClientid() not in result: # don't add a client id twice
-             result.append(s.getClientid())
+     if Topics.isValidTopicName(aTopic):
+       subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
+       for s in subscriptions:
+         if Topics.topicMatches(s.getTopic(), aTopic):
+           if s.getClientid() not in result: # don't add a client id twice
+               result.append(s.getClientid())
      return result
 
    def setRetained(self, aTopic, aMessage, aQoS):
      "set a retained message on a non-wildcard topic"
-     retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
-     if len(aMessage) == 0:
-       if aTopic in retained.keys():
-         logger.info("[MQTT-2.1.1-11] Deleting retained message")
-         del retained[aTopic]
-     else:
-       retained[aTopic] = (aMessage, aQoS)
+     if Topics.isValidTopicName(aTopic):
+       retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
+       if len(aMessage) == 0:
+         if aTopic in retained.keys():
+           logger.info("[MQTT-3.3.1-11] Deleting zero byte retained message")
+           del retained[aTopic]
+       else:
+         retained[aTopic] = (aMessage, aQoS)
 
    def getRetained(self, aTopic):
      "returns (msg, QoS) for a topic"
-     retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
-     if aTopic in retained.keys():
-       result = retained[aTopic]
-     else:
-       result = None
+     result = None
+     if Topics.isValidTopicName(aTopic):
+       retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
+       if aTopic in retained.keys():
+         result = retained[aTopic]
      return result
 
    def getRetainedTopics(self, aTopic):
      "returns a list of topics for which retained publications exist"
-     retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
-     return retained.keys()
+     if Topics.isValidTopicName(aTopic):
+       retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
+       return retained.keys()
+     else:
+       return None
 
 
 def unit_tests():
