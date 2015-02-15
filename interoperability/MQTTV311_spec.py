@@ -20,19 +20,6 @@ import mbt, socket, time, _thread, sys, traceback, pdb, select, random, mqtt, lo
 
 import mqtt.formats.MQTTV311 as MQTTV3
 
-class States:
-
-	def __init__(self):
-		self.clientlist = {}
-		self.sockets = []
-		self.clients = []
-		self.next_client = 0
-		self.broker = None
-		self.last_free_names = set()         # used in selection callback
-		self.after_socket_create = set()     # used in selection callback
-
-state = States()
-
 test = None
 
 logger = logging.getLogger("MQTTV311_spec")
@@ -44,6 +31,15 @@ class Clients:
 		self.msgid = 0
 		self.running = False
 		self.packets = []
+		
+	def __eq__(self, aclient):
+		try:
+			assert self.msgid == aclient.msgid
+			assert self.running == aclient.running
+			assert self.packets == aclient.packets
+			return True
+		except:
+			return False
 
 	def getNextMsgid(self):
 		def getWrappedMsgid():
@@ -53,47 +49,135 @@ class Clients:
 			return id
 		self.msgid = getWrappedMsgid()
 		return self.msgid
+	
+	def getPacket(self, sockid):
+		packet = MQTTV3.unpackPacket(MQTTV3.getPacket(state.sockets[sockid]))
+		if packet == None:
+			return
+		if test:
+			logger.debug("received result %s", (sockid, packet))
+			test.addResult((sockid, packet))
+			if packet.fh.MessageType == MQTTV3.CONNACK:
+				self.packets.append(packet)
+		else:
+			mbt.observe((sockid, packet))
+			if packet.fh.MessageType == MQTTV3.PUBREC:
+				mbt.execution.pools["pubrecs"].append(mbt.Choices((sockid, packet)))
+			elif packet.fh.MessageType == MQTTV3.PUBLISH and packet.fh.QoS in [1, 2]:
+				mbt.execution.pools["publishes"].append(mbt.Choices((sockid, packet)))
+			elif packet.fh.MessageType == MQTTV3.PUBREL:
+				mbt.execution.pools["pubrels"].append(mbt.Choices((sockid, packet)))
+			elif packet.fh.MessageType == MQTTV3.CONNACK:
+				self.packets.append(packet)
+		return packet
+	
+	def getResponses(self, sockid):
+		# used in generation mode to get responses from broker
+		while len(state.sockets[sockid].buffer) > 0:
+			self.getPacket(sockid) 
 
 	def __call__(self, sockid):
 		logger.debug("*** running")
+		print("**** running", id(self))
 		self.running = True
 		packet = None
 		try:
 			while True:		
-				packet = MQTTV3.unpackPacket(MQTTV3.getPacket(state.sockets[sockid]))
-				if packet == None:
-					break
-				if test:
-					logger.debug("received result %s", (sockid, packet))
-					test.addResult((sockid, packet))
-					if packet.fh.MessageType == MQTTV3.CONNACK:
-						self.packets.append(packet)
-				else:
-					mbt.observe((sockid, packet))
-					if packet.fh.MessageType == MQTTV3.PUBREC:
-						mbt.execution.pools["pubrecs"].append(mbt.Choices((sockid, packet)))
-					elif packet.fh.MessageType == MQTTV3.PUBLISH and packet.fh.QoS in [1, 2]:
-						mbt.execution.pools["publishes"].append(mbt.Choices((sockid, packet)))
-					elif packet.fh.MessageType == MQTTV3.PUBREL:
-						mbt.execution.pools["pubrels"].append(mbt.Choices((sockid, packet)))
-					elif packet.fh.MessageType == MQTTV3.CONNACK:
-						self.packets.append(packet)
+				packet = self.getPacket(sockid)
 		except:
 			if sys.exc_info()[0] != socket.error:
 				logger.debug("unexpected exception %s", sys.exc_info())
-			#mbt.log(traceback.format_exc())
 		self.running = False
 		logger.debug("*** stopping "+str(packet))
+		print("*** stopping "+str(packet))
 
 mbt.model.maxobjects["socket"] = 2
-state.clients = []
-for i in range(mbt.model.maxobjects["socket"]):
-	state.clients.append(Clients())
-state.next_client = 0
 
+class States:
+
+	def __init__(self):
+		self.set()
+		self.broker = None
+		if not test:
+			broker_logger = logging.getLogger('MQTT broker')
+			broker_logger.setLevel(logging.INFO)
+			broker_logger.addHandler(mqtt.broker.coverage.handler)
+			self.broker = mqtt.broker.MQTTBrokers() # add parameters later
+		self.clientlist = {} # map of sockid to Clients objects
+		
+	def set(self):
+		self.sockets = [] # list of ClientSockets objects
+		self.clients = [] # list of Clients objects
+		for i in range(mbt.model.maxobjects["socket"]):
+			self.clients.append(Clients())
+		self.next_client = 0
+		self.last_free_names = set()         # used in selection callback
+		self.after_socket_create = set()     # used in selection callback
+		
+	def reset(self):
+		for i in range(len(self.sockets)):
+			self.sockets[i].close() # just to make sure 
+		self.set()
+		if self.broker:
+			self.broker.reinitialize()
+			
+
+	def setState(self, aState):
+		"""
+			When we set the state, we have to make sure the references between the objects are correct.	
+			
+		"""
+		"""
+		self.broker.setState(aState.broker)
+		
+		for c in self.clients:
+			c.setState(aState.clients)
+		
+		self.clientlist = copy.copy(aState.clientlist)
+		
+		self.sockets = copy.copy(aState.sockets)
+		
+		self.next_client = aState.next_client
+		self.last_free_names = copy.copy(aState.last_free_names)
+		self.after_socket_create = copy.copy(aState.after_socket_create)
+		assert self == aState
+		"""
+		pass
+		
+	def __eq__(self, aState):
+		try:
+			assert self.next_client == aState.next_client
+			assert self.last_free_names == aState.last_free_names
+			assert self.after_socket_create == aState.after_socket_create 
+			assert self.sockets == aState.sockets
+			assert self.clients == aState.clients
+			assert self.clientlist == aState.clientlist
+			assert self.broker == aState.broker
+		except:
+			raise
+		return True
+				
+state = States()
+
+def getState():
+	global state
+	return copy.deepcopy(state) 
+
+def setState(aState):
+	global state
+	state = copy.deepcopy(aState)
+
+def restart():
+	global state
+	state.reset()
+
+
+mbt.model.getState = getState
+mbt.model.setState = setState	
+mbt.model.restartCallback = restart	
 
 """
-	Wrap sockets so that in the case of test generation we do not use sockets but a hashable buffer, to allow back tracking.
+	Wrap sockets so that in the case of test generation we do not use sockets but a buffer, to allow back tracking.
 """
 class BrokerSockets:
 
@@ -101,6 +185,21 @@ class BrokerSockets:
 		self.buffer = b""
 		self.clientSocket = aClientSocket
 		self.sending = True
+		
+	def __hash__(self):
+		return id(self)
+		
+	def __eq__(self, a):
+		try:
+			assert self.buffer == a.buffer
+			#assert self.clientSocket == a.clientSocket
+			assert id(self.clientSocket.brokerSocket) == id(self)
+			assert self.sending == a.sending
+			return True
+		except:
+			traceback.print_exc()
+			raise
+			return False
 
 	def recv(self, length):
 		#while len(self.buffer) < length:
@@ -140,11 +239,19 @@ class ClientSockets:
 			self.failurePending = False
 			self.buffer = b""
 			self.brokerSocket = BrokerSockets(self)
-			if not state.broker:
-				broker_logger = logging.getLogger('MQTT broker')
-				broker_logger.setLevel(logging.INFO)
-				broker_logger.addHandler(mqtt.broker.coverage.handler)
-				state.broker = mqtt.broker.MQTTBrokers() # add parameters later
+			
+	def __eq__(self, a):
+		try:
+			assert self.real == a.real
+			assert self.connected == a.connected
+			assert self.failurePending == a.failurePending
+			assert self.buffer == a.buffer
+			assert self.brokerSocket == a.brokerSocket
+			assert id(self.brokerSocket.clientSocket) == id(self)
+			return True
+		except:
+			raise
+			return False
 		
 	def connect(self, destination):
 		if self.real:
@@ -173,7 +280,9 @@ class ClientSockets:
 				raise Exception("not connected")
 			self.brokerSocket.buffer += data
 			try:
-				state.broker.handleRequest(self.brokerSocket)	
+				global state
+				state.broker.handleRequest(self.brokerSocket)
+				response = self.client.getResponses(self.id)
 			except:
 				self.failurePending = True # only indicate connection failure next time around, like a real socket
 			return len(data)
@@ -187,7 +296,9 @@ class ClientSockets:
 			self.sock.close()
 		else:
 			try:
-				state.broker.handleRequest(self.brokerSocket)	# to cause the client to be disconnected
+				global state
+				if state.broker:
+					state.broker.handleRequest(self.brokerSocket)	# to cause the client to be disconnected
 			except:
 				traceback.print_exc()
 		self.buffer = b""
@@ -207,19 +318,24 @@ class ClientSockets:
 	#	raise AttributeError
 
 """
-	Sockets are created in sequence -- we should use their id(), or a sequence number of them stored in a list.
+	Sockets are created in sequence -- we use a sequence number of them stored in a list.
 	This will also avoid platform specific formats in the test logs. *****
 
 """
 @mbt.action
-def socket_create(hostname : "hostnames", port : "ports") -> "socket":
+def socket_create(hostname : "hostnames", port : "ports", **kwargs) -> "socket":
 	global state
 	#sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sock = ClientSockets()
 	state.sockets.append(sock)
-	sockid = len(state.sockets) - 1
+	sockid = len(state.sockets) - 1 # starts with 0
 	sock.connect((hostname, port))
-	id = _thread.start_new_thread(state.clients[state.next_client], (sockid,))
+	if test:
+		print("starting client thread")
+		thread_id = _thread.start_new_thread(state.clients[state.next_client], (sockid,))
+	else:
+		sock.client = state.clients[state.next_client]
+		sock.id = sockid
 	state.clientlist[sockid] = state.clients[state.next_client]
 	state.next_client = (state.next_client + 1) % mbt.model.maxobjects["socket"]
 	return sockid
@@ -230,7 +346,8 @@ def socket_create(hostname : "hostnames", port : "ports") -> "socket":
 	thrown away.
 """
 @mbt.action
-def socket_close(sockid : "socket"):
+def socket_close(sockid : "socket", **kwargs):
+	global state
 	sock = state.sockets[sockid]
 	sock.shutdown(socket.SHUT_RDWR)
 	sock.close()
@@ -251,7 +368,8 @@ mbt.finishedWith(socket_close, "sockid")
 @mbt.action
 def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean", #willmsg : "willmsgs",
 #	    username : "usernames", password : "passwords"
-) -> "connackrc":
+**kwargs) -> "connackrc":
+	global state
 	sock = state.sockets[sockid]
 	connect = MQTTV3.Connects()
 	connect.ClientIdentifier = clientid
@@ -268,13 +386,21 @@ def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean",
 	#   connect.WillQoS = 0
     #	connect.WillRETAIN = 0
 	#   connect.WillTopic = None        # UTF-8
-    #	connect.WillMessage = None      # binary
-	sock.send(connect.pack())	
-	time.sleep(0.5)
+	#	connect.WillMessage = None      # binary
+	sock.send(connect.pack())
+	if test:
+		time.sleep(0.5)
 	checksocket(sockid)
-	response = state.clientlist[sockid].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
+	if test:
+		response = state.clientlist[sockid].packets.pop(0)
+	else:
+		response = None
+		if len(sock.client.packets) > 0:
+			response = sock.client.packets.pop(0)
 	logger.debug("+++connect response", response)
-	if response == None or response.returnCode not in [0, 2]:
+	if response == None:
+		raise Exception("No connack received") # can happen if second connect sent, for instance 
+	if response.returnCode not in [0, 2]:
 		raise Exception("Return code "+str(response.returnCode)+" in connack")
 
 	return response.returnCode
@@ -284,13 +410,16 @@ def checksocket(sockid):
 	Check that the socket is still open - has not been closed
 	Throw an execption if the socket is not connected
 	"""
-	time.sleep(0.1) # allow the broker to close the connection if necessary
+	global state, test
+	if test:
+		time.sleep(0.1) # allow the broker to close the connection if necessary
 	state.sockets[sockid].getpeername() # throws an exception if the socket is not connected
 	#if sockid not in clientlist.keys():
 	#	raise Exception("Must have been socket error")
 
 @mbt.action
-def disconnect(sockid : "socket"):
+def disconnect(sockid : "socket", **kwargs):
+	global state
 	sock = state.sockets[sockid]
 	disconnect = MQTTV3.Disconnects()
 	sock.send(disconnect.pack())
@@ -299,7 +428,8 @@ def disconnect(sockid : "socket"):
 
 
 @mbt.action
-def subscribe(sockid : "socket", packetid : "packetids", topics : "topicLists", qoss : "qosLists"):
+def subscribe(sockid : "socket", packetid : "packetids", topics : "topicLists", qoss : "qosLists", **kwargs):
+	global state
 	sock = state.sockets[sockid]
 	subscribe = MQTTV3.Subscribes()
 	subscribe.messageIdentifier = packetid
@@ -313,7 +443,8 @@ def subscribe(sockid : "socket", packetid : "packetids", topics : "topicLists", 
 
 
 @mbt.action
-def unsubscribe(sockid : "socket", packetid : "packetids", topics : "topicLists"):
+def unsubscribe(sockid : "socket", packetid : "packetids", topics : "topicLists", **kwargs):
+	global state
 	sock = state.sockets[sockid]
 	unsubscribe = MQTTV3.Unsubscribes()
 	unsubscribe.messageIdentifier = packetid
@@ -324,7 +455,8 @@ def unsubscribe(sockid : "socket", packetid : "packetids", topics : "topicLists"
 
 
 @mbt.action
-def publish(sockid : "socket", packetid : "packetids", topic : "topics", payload : "payloads", qos : "QoSs", retained : "boolean"):
+def publish(sockid : "socket", packetid : "packetids", topic : "topics", payload : "payloads", qos : "QoSs", retained : "boolean", **kwargs):
+	global state
 	sock = state.sockets[sockid]
 	publish = MQTTV3.Publishes()
 	publish.fh.QoS = qos
@@ -338,7 +470,8 @@ def publish(sockid : "socket", packetid : "packetids", topic : "topics", payload
 
 
 @mbt.action
-def pubrel(pubrec : "pubrecs"): # pubrecs are observable events
+def pubrel(pubrec : "pubrecs", **kwargs): # pubrecs are observable events
+	global state
 	sockid, pubrec = pubrec
 	sock = state.sockets[sockid]
 	pubrel = MQTTV3.Pubrels()
@@ -348,7 +481,8 @@ def pubrel(pubrec : "pubrecs"): # pubrecs are observable events
 mbt.finishedWith(pubrel, "pubrec")
 
 @mbt.action
-def puback(publish : "publishes"):
+def puback(publish : "publishes", **kwargs):
+	global state
 	sockid, publish = publish
 	sock = state.sockets[sockid]
 	if publish.fh.QoS == 1:
@@ -363,7 +497,8 @@ def puback(publish : "publishes"):
 mbt.finishedWith(puback, "publish")		
 
 @mbt.action
-def pubcomp(pubrel : "pubrels"):
+def pubcomp(pubrel : "pubrels", **kwargs):
+	global state
 	sockid, pubrel = pubrel
 	sock = state.sockets[sockid]
 	pubcomp = MQTTV3.Pubcomps()
@@ -377,6 +512,7 @@ mbt.finishedWith(pubcomp, "pubrel")
 This is not active yet.  How to use ping?
 """
 def pingreq():
+	global state
 	pingreq = MQTTV3.Pingreqs()
 	state.sockets[0].send(pingreq.pack())
 
@@ -430,9 +566,8 @@ mbt.model.addReturnType("publishes")
 
 """
 
-def select(frees):
+def selectCallback(frees):
 	global state 
-	current_state = copy.deepcopy(state)
 	free_names = set([f[0].getName() for f in frees])
 	logger.debug("*** after_socket_create %s %s", state.after_socket_create, state.last_free_names)
 	if state.last_free_names == set(['socket_create']):
@@ -452,20 +587,7 @@ def select(frees):
 	state.last_free_names = free_names
 	return frees
 
-mbt.model.selectCallback = select
-
-def restart():
-	global state
-	state.clients = []
-	for i in range(mbt.model.maxobjects["socket"]):
-		state.clients.append(Clients())
-	state.next_client = 0
-	for i in range(len(state.sockets)):
-		state.sockets[i].close() # just to make sure 
-	while len(state.sockets) > 0:
-		del state.sockets[0]
-
-mbt.model.restartCallback = restart	
+mbt.model.selectCallback = selectCallback
 
 
 def between(str, str1, str2):
@@ -537,6 +659,44 @@ def generateCallCallback(action, kwargs):
 	return action, kwargs
 
 mbt.model.callCallback = generateCallCallback
+
+max_progress = None
+last_broker_state = None
+
+def evaluateCallback():
+	global max_progress, last_broker_state, state
+	
+	rc = 0
+	"""
+	if last_broker_state == None:
+		last_broker_state = copy.copy(state.broker)
+	else:
+		#print("state.clients", len(state.broker.clients), len(last_broker_state.clients))
+		rc += abs(len(last_broker_state.clients) - len(state.broker.clients))
+		rc += abs(len(last_broker_state.broker.se.getSubscriptionList()) - len(state.broker.broker.se.getSubscriptionList()))
+		last_broker_state = copy.copy(state.broker)
+	"""
+	
+	current_coverage = mqtt.broker.coverage.getCovered()
+	exceptions_found, exceptions_not_found, statements_found, statements_not_found = current_coverage 
+	
+	if max_progress == None:
+		max_progress = current_coverage
+		new_exception_count = len(exceptions_found - max_progress[0])
+		new_statement_count = len(statements_found - max_progress[2])
+	else:
+		new_exception_count = len(exceptions_found - max_progress[0])
+		if new_exception_count > 0:
+			max_progress[0] = max_progress[0].union(exceptions_found)
+		new_statement_count = len(statements_found - max_progress[2])
+		if new_statement_count > 0:
+			max_progress[2] = max_progress[2].union(statements_found)
+			
+	#print("evaluate", new_exception_count, new_statement_count)
+	return rc + len(max_progress[0]) + len(max_progress[2])
+	
+
+mbt.model.evaluateCallback = evaluateCallback	
 
 if __name__ == "__main__":
 	stepping = False

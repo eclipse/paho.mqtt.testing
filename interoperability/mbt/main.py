@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2015 IBM Corp.
  
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -87,6 +87,7 @@ class Traces:
 		self.root.used = True
 		self.curnode = self.root
 		logger.debug("NODE index is now %d", self.curnode.index)
+		self.usedcount = 0
 
 	def restart(self):
 		"""
@@ -98,7 +99,7 @@ class Traces:
 
 	def addArcs(self, arcs):
 		""" 
-		In a particular state, enumerate all the paths available to leave that state.  
+		For the current state, add exit paths supplied.  
 		"""
 		if not self.curnode.arcsAdded:
 			for arc in arcs:
@@ -107,23 +108,30 @@ class Traces:
 			self.curnode.arcsAdded = True
 			logger.debug("Total number of nodes now %d", self.nodeCount)
 
-	def selectAction(self, action, args):
+	def selectAction(self, action, args, evaluating=False):
 		"""
 		In the current state, goto the next state via (action, args)
 		"""
 		key = tuple([action] + args)
 		self.curnode = self.curnode.arcs[key]
-		self.curnode.used = True
+		if not evaluating:
+			self.curnode.used = True
+			self.usedcount += 1
+			#print("setting curnode to true", self.usedcount)
 		logger.debug("NODE index is now %d", self.curnode.index)
+		
+	def getUnusedPaths(self):
+		frees = []
+		for arc in self.curnode.arcs.keys():
+			if self.curnode.arcs[arc].isFree(): # only add arcs we haven't followed already
+				frees.append(arc) 
+		return frees
 
 	def findNextPath(self, callback):
 		"return one next path that isn't fully exercised"
 		found = None
-		frees = []
-		for arc in self.curnode.arcs.keys():
-			if self.curnode.arcs[arc].isFree():
-				frees.append(arc)
-
+		
+		frees = self.getUnusedPaths() 
 		if len(frees) > 0:
 			if callback:
 				frees = callback(frees) # allow the test model to restrict choice
@@ -216,6 +224,7 @@ class Models:
 		self.selectCallback = None	
 		self.restartCallback = None
 		self.callCallback = None
+		self.evaluateCallback = None 
 	
 	def getActionNames(self):
 		return [action.getName() for action in self.actions]
@@ -265,15 +274,26 @@ class Executions:
 		self.finished = False
 		self.steps = 0
 		self.observations = []
+		self.evaluating = False
 
 		self.pools = copy.deepcopy(self.model.choices)
+        
+	def getState(self):
+		return (self.trace.curnode, self.finished, copy.deepcopy(self.observations), copy.deepcopy(self.pools), self.model.getState())
+	
+	def setState(self, state):
+		self.trace.curnode, self.finished = state[:2]
+		self.observations = copy.deepcopy(state[2])
+		self.pools = copy.deepcopy(state[3])
+		self.model.setState(state[4])
 
 	def addObservation(self, observation):
 		""" 
 		Used during model exploration to add an observation.
 		"""
 		self.observations.append(observation)
-		logger.info("OBSERVED EVENT %s", observation)
+		if not self.evaluating:			# don't add observation if we are just exploring possible actions
+			logger.info("OBSERVED EVENT %s", observation)
 
 	def removeFinisheds(self, action, kwargs):
 		"""
@@ -305,6 +325,10 @@ class Executions:
 		return int((used / total) * 100)
 
 	def getEnabledActions(self):
+		"""
+            For the current state of the data pools, return a list of the actions for which all parameters are available,
+			and for those actions which return a result, that we have a result pool which is not already full.
+		"""
 		enableds = set()
 		for action in self.model.actions:
 			all_parms_available = True
@@ -337,7 +361,6 @@ class Executions:
 			self.restart()
 
 	def restart(self):
-		logger.info("RESTART")
 		self.trace.restart()
 		self.pools = copy.deepcopy(self.model.choices)
 		#for type_name in self.model.return_types:
@@ -357,69 +380,55 @@ class Executions:
 	def __run__(self, interactive=True):
 		while not self.finished:
 			self.step(interactive)
-
-	def step(self, interactive=False):
-		"""
-			Take one step in the model execution.
-
-			1. Select an action
-			2. Select parameter values
-			3. Execute the action with the parameters
-			4. Process the result
-
-		"""
+    
+	def execute(self, action, args, interactive=False, logMessages=True):
+		# Having chosen the next action and arguments, replace those arguments from the correct pool values.
 		restart = False
-		self.steps += 1 
-		logger.debug("Steps: %d coverage %d%%", self.steps, self.coverage())
-		enableds = self.getEnabledActions()
-		logger.debug("Enabled %s", [e.getName() for e in enableds])
-			
-		self.trace.addArcs([tuple([action] + choice) for action in enableds \
-					    for choice in action.enumerateChoices(self.pools)])
-			
-		next = self.trace.findNextPath(self.model.selectCallback)
-		if next == None:
-			logger.debug("No more options available")
-			return True
-		action = next[0]; args = list(next[1:])
-
 		kwargs = {}
 		exec_kwargs = {}
 		index = 0
 		for parm_name in action.getParmNames():
-			#print("kwargs" + str( self.choices[args[index][0]][args[index][1]]))
-			#print("kwargs "+parm_name+" "+str(self.choices[args[index][0]]))
+			# print("kwargs" + str( self.choices[args[index][0]][args[index][1]]))
+			# print("kwargs "+parm_name+" "+str(self.choices[args[index][0]]))
 			try:
 				kwargs[parm_name] = self.pools[args[index][0]][args[index][1]].valueOf()
-				exec_kwargs[parm_name] = "self.pools['"+args[index][0]+"']["+str(args[index][1])+"]"
+				exec_kwargs[parm_name] = "self.pools['" + args[index][0] + "'][" + str(args[index][1]) + "]"
 			except:
-				logger.info("exception %s" % traceback.format_exc())
+				if logMessages:
+					logger.info("exception %s" % traceback.format_exc())
 				import pdb
 				pdb.set_trace()
 			index += 1
 
+		kwargs["mbt:test"] = self.evaluating
 		if self.model.callCallback:
 			action, kwargs = self.model.callCallback(action, kwargs)
-		logger.info("CALL %s with %s", action.getName(), kwargs)	
-		#logger.debug("EXEC_CALL %s with %s", action.getName(), exec_kwargs)
+		if logMessages:
+			logger.info("CALL %s with %s", action.getName(), kwargs)
+		#else:
+		#	print("CALL %s with %s" % (action.getName(), kwargs))
+		# logger.debug("EXEC_CALL %s with %s", action.getName(), exec_kwargs)
 		if interactive and input("--->") == "q":
 			return
-		self.trace.selectAction(action, args)
+		self.trace.selectAction(action, args, self.evaluating)
+		
 		rc = None
-
 		try:
 			rc = action(**kwargs)
 		except:
 			# an exception indicates an unexpected result, and the end of the test
-			logger.info("RESULT from %s is exception %s", action.getName(), traceback.format_exc())
+			if logMessages:
+				logger.info("RESULT from %s is exception %s", action.getName(), traceback.format_exc())
 			self.restart()
 			restart = True
 		else:
 			if rc != None:
-				logger.info("RESULT from %s is %s", action.getName(), rc)
+				if logMessages:
+					logger.info("RESULT from %s is %s", action.getName(), rc)
 				ret_type = action.getReturnType()
 					
 				if ret_type:
+					# add any result to the appropriate pool, for use later
 					updated = False
 					for c in self.pools[ret_type]:
 						if c.equals(rc):
@@ -432,6 +441,94 @@ class Executions:
 			self.removeFinisheds(action, kwargs)
 		return restart		
 
+
+	def step(self, interactive=False, optimized=True):
+		"""
+			Take one step in the model execution.
+
+			1. Select an action
+			2. Select parameter values
+			3. Execute the action with the parameters
+
+		"""
+		self.steps += 1
+		if optimized:
+			return self.optimizedStep(interactive)
+		 
+		logger.debug("Steps: %d coverage %d%%", self.steps, self.coverage())
+		enableds = self.getEnabledActions()
+		logger.debug("Enabled %s", [e.getName() for e in enableds])
+			
+        # from the current state, add all immediate possible choices, action + parameter values
+		if not self.trace.curnode.arcsAdded:
+			self.trace.addArcs([tuple([action] + choice) for action in enableds \
+					    for choice in action.enumerateChoices(self.pools)])
+		
+        # choose one of the options from those available	
+		next = self.trace.findNextPath(self.model.selectCallback)
+		if next == None:
+			logger.debug("No more options available")
+			return True
+		action = next[0]; args = list(next[1:])
+        
+		return self.execute(action, args, interactive)
+	
+	
+	def evaluate(self, path):
+		self.evaluating = True
+		self.execute(path[0], list(path[1:]), logMessages=False)
+		self.evaluating = False
+		# how do we evaluate this state? 
+		# by coverage internally and externally
+		if self.model.evaluateCallback:
+			rc = self.model.evaluateCallback()
+		else:
+			rc = self.coverage()
+		return rc
+		
+	
+	def optimizedStep(self, interactive=False):
+		"""
+			Take one step along the optimal path.
+			We have to work out what is optimal.
+			
+		"""
+		enableds = self.getEnabledActions() # relies on the current contents of the data pools
+		
+		# enumerate all choices from this state if not already done so
+		if not self.trace.curnode.arcsAdded:
+			#print("before addArcs", self.pools["socket"])
+			self.trace.addArcs([tuple([action] + choice) for action in enableds \
+					    for choice in action.enumerateChoices(self.pools)])
+		
+		frees = self.trace.getUnusedPaths() # get the unexplored paths
+		if len(frees) == 0:
+			logger.debug("No more options available")
+			print("No more options available")
+			return True
+		
+		chosen = (0, None)
+		count = 0
+		saved_state = self.getState()
+		for f in frees:
+			rc = self.evaluate(f)
+			self.setState(saved_state) # go back so we can try the next
+			count += 1
+			if rc > chosen[0]:
+				chosen = (rc, f)
+		print("choosing result from evaluate", chosen[1], count)
+		if chosen[1] == None:
+			next = random.choice(frees)
+		else:
+			next = chosen[1]
+		action = next[0]; args = list(next[1:])
+				
+		rc = self.execute(action, args, interactive)
+		print("coverage after execution of choice", action, self.coverage())
+		
+		return rc
+	
+		
 	def run(self, interactive=True):
 		try:
 			self.__run__(interactive)

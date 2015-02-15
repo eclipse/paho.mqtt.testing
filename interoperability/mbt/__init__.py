@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2015 IBM Corp.
  
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -24,17 +24,17 @@ model = Models()
 execution = None
 
 def action(fn):
-    model.addAction(fn)
-    return fn
+	model.addAction(fn)
+	return fn
 
 def choices(varname, values, sequenced=False, output=False):
-    model.addChoice(varname, values, output)
+	model.addChoice(varname, values, output)
 
 def finishedWith(fn, parm_name):
-    model.finishedWith(fn, parm_name)
+	model.finishedWith(fn, parm_name)
 
 def observe(event):
-    execution.addObservation(event)
+	execution.addObservation(event)
 
 def run(stepping=True):
 	global execution

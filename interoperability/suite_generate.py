@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2015 IBM Corp.
  
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -68,7 +68,7 @@ ch.setLevel(logging.ERROR)
 broker_logger = logging.getLogger('MQTT broker')
 broker_logger.addHandler(qh)
 broker_logger.propagate = False
-#broker_logger.addHandler(ch)  # prints broker log messages to stdout, for debugging or interest
+broker_logger.addHandler(ch)  # prints broker log messages to stdout, for debugging or interest
 
 # Attach to the mbt log, so we can get its messages
 mbt_log = queue.Queue()
@@ -103,7 +103,7 @@ def create():
 	file_lines = []
 	while not restart:
 		logger.debug("stepping")
-		restart = MQTTV311_spec.mbt.step()
+		restart = MQTTV311_spec.mbt.step(interactive = False)
 		logger.debug("stepped")
 		try:
 			while (True):
@@ -147,7 +147,7 @@ if __name__ == "__main__":
 	#broker.start()
 	last_measures = None
 	stored_tests = 0
-	while stored_tests < 10 and test_no < 30:
+	while stored_tests < 10 and test_no < 50:
 		test_no += 1
 		conformance_statements, file_lines = create()
 		cur_measures = mqtt.broker.coverage.getmeasures()[:2]
@@ -160,7 +160,8 @@ if __name__ == "__main__":
 			outfile.writelines(list(conformance_statements) + file_lines)
 			outfile.close()
 			last_measures = cur_measures
-	
+		else:
+			logger.info("Test ignored")
 			#shorten()
 			#store()
 		broker.reinitialize()
