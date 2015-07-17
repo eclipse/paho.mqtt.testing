@@ -279,7 +279,8 @@ class Executions:
 		self.pools = copy.deepcopy(self.model.choices)
         
 	def getState(self):
-		return (self.trace.curnode, self.finished, copy.deepcopy(self.observations), copy.deepcopy(self.pools), self.model.getState())
+		return (self.trace.curnode, self.finished, copy.deepcopy(self.observations), 
+				copy.deepcopy(self.pools), self.model.getState())
 	
 	def setState(self, state):
 		self.trace.curnode, self.finished = state[:2]
@@ -297,7 +298,8 @@ class Executions:
 
 	def removeFinisheds(self, action, kwargs):
 		"""
-		used during execution to remove choices which 
+			used during execution to remove choices which have been used in an
+			action which has been indicated as "finishing" in the model
 		"""
 		removed = False
 		for parm_name in action.getParmNames():
@@ -383,7 +385,7 @@ class Executions:
     
 	def execute(self, action, args, interactive=False, logMessages=True):
 		# Having chosen the next action and arguments, replace those arguments from the correct pool values.
-		restart = False
+		restarted = False
 		kwargs = {}
 		exec_kwargs = {}
 		index = 0
@@ -419,8 +421,9 @@ class Executions:
 			# an exception indicates an unexpected result, and the end of the test
 			if logMessages:
 				logger.info("RESULT from %s is exception %s", action.getName(), traceback.format_exc())
+			self.coverage_before_restart = self.coverage()
 			self.restart()
-			restart = True
+			restarted = True
 		else:
 			if rc != None:
 				if logMessages:
@@ -439,10 +442,10 @@ class Executions:
 						self.pools[ret_type].append(Choices(rc, returned=True))
 
 			self.removeFinisheds(action, kwargs)
-		return restart		
+		return restarted
 
 
-	def step(self, interactive=False, optimized=True):
+	def step(self, interactive=False, optimized=False):
 		"""
 			Take one step in the model execution.
 
@@ -507,24 +510,26 @@ class Executions:
 			print("No more options available")
 			return True
 		
-		chosen = (0, None)
+		chosen = (0, []) # evaluation value, list of selections
 		count = 0
 		saved_state = self.getState()
 		for f in frees:
 			rc = self.evaluate(f)
 			self.setState(saved_state) # go back so we can try the next
 			count += 1
-			if rc > chosen[0]:
-				chosen = (rc, f)
-		print("choosing result from evaluate", chosen[1], count)
-		if chosen[1] == None:
+			if rc == chosen[0]:
+				chosen[1].append(f)
+			elif rc > chosen[0]:
+				chosen = (rc, [f])
+		#print("choosing result from evaluate", chosen[1], count)
+		if len(chosen[1]) == 0:
 			next = random.choice(frees)
 		else:
-			next = chosen[1]
+			next = random.choice(chosen[1])
 		action = next[0]; args = list(next[1:])
 				
 		rc = self.execute(action, args, interactive)
-		print("coverage after execution of choice", action, self.coverage())
+		print("coverage after execution of choice", action, self.coverage() if rc == False else self.coverage_before_restart)
 		
 		return rc
 	

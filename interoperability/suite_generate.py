@@ -147,7 +147,7 @@ if __name__ == "__main__":
 	#broker.start()
 	last_measures = None
 	stored_tests = 0
-	while stored_tests < 10 and test_no < 50:
+	while stored_tests < 10 and test_no < 500:
 		test_no += 1
 		conformance_statements, file_lines = create()
 		cur_measures = mqtt.broker.coverage.getmeasures()[:2]
@@ -161,7 +161,7 @@ if __name__ == "__main__":
 			outfile.close()
 			last_measures = cur_measures
 		else:
-			logger.info("Test ignored")
+			logger.info("Test %d ignored", test_no)
 			#shorten()
 			#store()
 		broker.reinitialize()
