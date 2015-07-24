@@ -103,7 +103,7 @@ def create():
 	file_lines = []
 	while not restart:
 		logger.debug("stepping")
-		restart = MQTTV311_spec.mbt.step(interactive = False)
+		restart = MQTTV311_spec.mbt.step(interactive = False, optimized = True)
 		logger.debug("stepped")
 		try:
 			while (True):
@@ -147,28 +147,35 @@ if __name__ == "__main__":
 	#broker.start()
 	last_measures = None
 	stored_tests = 0
-	while stored_tests < 10 and test_no < 500:
-		test_no += 1
-		conformance_statements, file_lines = create()
-		cur_measures = mqtt.broker.coverage.getmeasures()[:2]
+	while stored_tests < 50 and test_no < 500:
+		try:
+			test_no += 1
+			conformance_statements, file_lines = create()
+			cur_measures = mqtt.broker.coverage.getmeasures()[:2]
 
-		filename = "tests/test.log.%d" % (test_no,)
-		if cur_measures != last_measures:
-			stored_tests += 1
-			logger.info("Test %d created", stored_tests)
-			outfile = open(filename, "w")
-			outfile.writelines(list(conformance_statements) + file_lines)
-			outfile.close()
-			last_measures = cur_measures
-		else:
-			logger.info("Test %d ignored", test_no)
-			#shorten()
-			#store()
-		broker.reinitialize()
+			filename = "tests/test.log.%d" % (test_no,)
+			if cur_measures != last_measures:
+				stored_tests += 1
+				logger.info("Test %d created", stored_tests)
+				outfile = open(filename, "w")
+				outfile.writelines(list(conformance_statements) + file_lines)
+				outfile.close()
+				last_measures = cur_measures
+				results = broker.measure()
+				logger.info(results[0])
+				logger.info(results[1])
+			else:
+				logger.info("Test %d ignored", test_no)
+				#shorten()
+				#store()
+			broker.reinitialize()
+		except:
+			traceback.print_exc()
+			break
 
 	final_results = broker.measure()
 	broker.stop()
-	print(mqtt.broker.coverage.getmeasures())
+	#print(mqtt.broker.coverage.getmeasures())
 	logger.info("Generation complete")
 	for curline in final_results:
 		logger.info(curline)

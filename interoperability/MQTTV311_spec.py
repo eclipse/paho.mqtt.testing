@@ -120,30 +120,7 @@ class States:
 		self.set()
 		if self.broker:
 			self.broker.reinitialize()
-			
-
-	def setState(self, aState):
-		"""
-			When we set the state, we have to make sure the references between the objects are correct.	
-			
-		"""
-		"""
-		self.broker.setState(aState.broker)
-		
-		for c in self.clients:
-			c.setState(aState.clients)
-		
-		self.clientlist = copy.copy(aState.clientlist)
-		
-		self.sockets = copy.copy(aState.sockets)
-		
-		self.next_client = aState.next_client
-		self.last_free_names = copy.copy(aState.last_free_names)
-		self.after_socket_create = copy.copy(aState.after_socket_create)
-		assert self == aState
-		"""
-		pass
-		
+				
 	def __eq__(self, aState):
 		try:
 			assert self.next_client == aState.next_client
@@ -366,7 +343,7 @@ mbt.finishedWith(socket_close, "sockid")
 	password                 None
 """
 @mbt.action
-def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean", #willmsg : "willmsgs",
+def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean", willmsg : "willmsgs",
 #	    username : "usernames", password : "passwords"
 **kwargs) -> "connackrc":
 	global state
@@ -381,12 +358,15 @@ def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean",
 	#if password:
 	#	connect.passwordFlag = True
 	#	connect.password = password
-	#if willmsg:
-	#	connect.willFlag = True
-	#   connect.WillQoS = 0
-    #	connect.WillRETAIN = 0
-	#   connect.WillTopic = None        # UTF-8
-	#	connect.WillMessage = None      # binary
+	willmsg = None
+	if willmsg:
+		# (1, 0, "will topic", "will message")
+		connect.WillFlag = True
+		connect.WillQoS = willmsg[0]
+		connect.WillRETAIN = willmsg[1]
+		connect.WillTopic = willmsg[2]   # UTF-8
+		connect.WillMessage = willmsg[3] # binary
+	#print("will", connect.WillFlag, connect.WillQoS, connect.WillRETAIN, connect.WillTopic, connect.WillMessage)
 	sock.send(connect.pack())
 	if test:
 		time.sleep(0.5)
@@ -540,15 +520,24 @@ mbt.choices("topics", topics)
 mbt.choices("QoSs", (0, 1, 2))
 mbt.choices("packetids", (0,)) # we use deterministic packet ids, to concentrate on good paths
 
-mbt.choices("topicLists", [(t,) for t in topics + wildTopics])
-mbt.choices("qosLists", [(0,), (1,), (2,)])
+
+single_topics = True
+if single_topics:
+	mbt.choices("topicLists", [(t,) for t in topics + wildTopics])
+	mbt.choices("qosLists", [(0,), (1,), (2,)])
+else:
+	mbt.choices("topicLists", [(t,u) for t in topics for u in wildTopics] )
+	print("number of topic lists", len([(t,u) for t in topics for u in wildTopics]))
+	mbt.choices("qosLists", [(0,), (0,0), (0,1), (0,2), (1,0), (1,1), (1,2), (2,0), (2,1), (2,2)])
 
 
 mbt.choices("payloads", (b"", b"1", b"333", b"long"*512), sequenced=True)
 
 mbt.choices("connackrc", (0, 2), output=True)
 
-mbt.choices("willmsgs", (None, (1, 0, "will topic", "will message"))) # simple choice to limit options
+mbt.choices("willmsgs", (None,
+						(1, 0, topics[0], "will message"),
+						(2, 1, topics[0], "will message"))) # simple choices to limit options
 
 mbt.model.addReturnType("pubrecs")
 mbt.model.addReturnType("pubrels")
@@ -584,6 +573,16 @@ def selectCallback(frees):
 			if f[0].getName() in ["pubrel", "puback", "pubcomp"]:
 				frees = [f]
 				break
+		if len(frees) > 1:
+			# weight selection of methods - connect (1) subscribe (4), unsubscribe (2), publish (10) disconnect (1)
+			weights = {"subscribe": 4, "unsubscribe": 2, "publish" : 10, "disconnect" : 4}
+			extras = []
+			for f in frees:
+				#print(f[0])
+				#print(f[0].getName(), f[0].getName() in weights.keys())
+				weight = weights[f[0].getName()] if f[0].getName() in weights.keys() else 1
+				extras.extend([f] * (weight - 1))
+			frees.extend(extras)
 	state.last_free_names = free_names
 	return frees
 

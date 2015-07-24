@@ -479,7 +479,7 @@ class Executions:
 	
 	def evaluate(self, path):
 		self.evaluating = True
-		self.execute(path[0], list(path[1:]), logMessages=False)
+		restarted = self.execute(path[0], list(path[1:]), logMessages=False)
 		self.evaluating = False
 		# how do we evaluate this state? 
 		# by coverage internally and externally
@@ -487,6 +487,8 @@ class Executions:
 			rc = self.model.evaluateCallback()
 		else:
 			rc = self.coverage()
+			if restarted:
+				rc -= 15
 		return rc
 		
 	
@@ -505,6 +507,9 @@ class Executions:
 					    for choice in action.enumerateChoices(self.pools)])
 		
 		frees = self.trace.getUnusedPaths() # get the unexplored paths
+		if len(frees) > 0:
+			if self.model.selectCallback:
+				frees = self.model.selectCallback(frees) # allow the test model to restrict choice
 		if len(frees) == 0:
 			logger.debug("No more options available")
 			print("No more options available")

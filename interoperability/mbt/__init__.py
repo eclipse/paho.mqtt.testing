@@ -41,11 +41,11 @@ def run(stepping=True):
 	execution = Executions(model)
 	execution.run(stepping)
 
-def step(interactive=False):
+def step(interactive=False, optimized=False):
 	global execution
 	if not execution:
 		execution = Executions(model)
-	return execution.step(interactive)
+	return execution.step(interactive, optimized)
 		
 
 

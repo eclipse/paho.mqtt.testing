@@ -404,6 +404,10 @@ class MQTTBrokers:
 						 packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
 			resp = MQTTV3.Pubacks()
 			logger.info("[MQTT-2.3.1-6] puback messge id same as publish")
+			if packet.fh.DUP == 0:
+				logger.info("[MQTT-3.3.1-2] DUP must be 0 for all QoS 0 messages")
+			else:
+				logger.error("[MQTT-3.3.1-2] DUP must be 0 for all QoS 0 messages")
 			resp.messageIdentifier = packet.messageIdentifier
 			respond(sock, resp)
 		elif packet.fh.QoS == 2:
@@ -411,17 +415,17 @@ class MQTTBrokers:
 			if self.publish_on_pubrel:
 				if packet.messageIdentifier in myclient.inbound.keys():
 					if packet.fh.DUP == 0:
-						logger.error("[MQTT-3.3.1-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
+						logger.error("[MQTT-3.3.1-1] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
 					else:
-						logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
+						logger.info("[MQTT-3.3.1-1] DUP flag is 1 on redelivery")
 				else:
 					myclient.inbound[packet.messageIdentifier] = packet
 			else:
 				if packet.messageIdentifier in myclient.inbound:
 					if packet.fh.DUP == 0:
-						logger.error("[MQTT-3.3.1-2] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
+						logger.error("[MQTT-3.3.1-1] duplicate QoS 2 message id %d found with DUP 0", packet.messageIdentifier)
 					else:
-						logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
+						logger.info("[MQTT-3.3.1-1] DUP flag is 1 on redelivery")
 				else:
 					myclient.inbound.append(packet.messageIdentifier)
 					logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")

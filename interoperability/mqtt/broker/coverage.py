@@ -34,9 +34,12 @@ modules = [m for m in locals().values() if inspect.ismodule(m) and m.__name__.st
 """
 
 
-def between(str, str1, str2):
+def between(str, str1, str2=-1):
 	start = str.find(str1) + len(str1)
-	end = str.find(str2, start)
+	if str2 == -1:
+		end = -1
+	else:
+		end = str.find(str2, start)
 	if end == -1:
 		rc = str[start:]
 	else:
@@ -62,6 +65,8 @@ def getCoverage():
 	exceptions = set([])
 	coverages = set([])
 
+	descriptions = {}
+
 	for module in modules:
 		lines = getSources(module)
 		for line in lines:
@@ -72,7 +77,9 @@ def getCoverage():
 					exceptions.add(statement)
 				else:
 					coverages.add(statement)
-	return ({"exceptions" : exceptions, "coverages" : coverages})
+				descriptions[statement] = between(line, statement).strip(" )\"")
+
+	return ({"exceptions" : exceptions, "coverages" : coverages, "descriptions" : descriptions})
 
 class Handlers(logging.Handler):
 
@@ -89,24 +96,30 @@ class Handlers(logging.Handler):
 		
 	def getCovered(self):
 		results = []
-		for key in self.coverages.keys():
+		for key in ["coverages", "exceptions"]:
 			results.append(self.coverages[key].intersection(self.found))
 			results.append(self.coverages[key].difference(self.found))
 		return results
 
 	def getmeasures(self):
 		lines = []	
-		for key in self.coverages.keys():
+		for key in ["coverages", "exceptions"]:
 			found = self.coverages[key].intersection(self.found)
 			lines.append("%s %d out of %d = %d%%" % \
 						("coverage statements" if key == "coverages" else key,
 						len(found), len(self.coverages[key]), (len(found) * 100) / len(self.coverages[key])))
 
-		for key in self.coverages.keys():
-			found = self.coverages[key].intersection(self.found)
-			notfound = self.coverages[key].difference(self.found)
-			lines.append("%s found %s" % ("coverage statements" if key == "coverages" else key, found))
-			lines.append("%s not found %s" % ("coverage statements" if key == "coverages" else key, notfound))
+		for key in ["coverages", "exceptions"]:
+			found = list(self.coverages[key].intersection(self.found)) # set of coverage statements
+			found.sort()
+			notfound = list(self.coverages[key].difference(self.found))
+			notfound.sort()
+
+			lines.append("%s found: %s" % ("coverage statements" if key == "coverages" else key, str.join(", ", found)))
+
+			lines.append("%s not found" % ("coverage statements" if key == "coverages" else key))
+			for statement in notfound:
+				lines.append("    "+statement+"  "+self.coverages["descriptions"][statement])
 		return lines
 
 	def measure(self):
