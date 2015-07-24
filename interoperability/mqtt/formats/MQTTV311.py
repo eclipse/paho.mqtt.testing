@@ -283,10 +283,10 @@ class Connects(Packets):
       curlen +=1
 
       if self.WillFlag:
-        assert self.WillQoS in [0, 1, 2], "[MQTT-3.1.2-12] will qos must not be 3"
+        assert self.WillQoS in [0, 1, 2], "[MQTT-3.1.2-14] will qos must not be 3"
       else:
-        assert self.WillQoS == 0, "[MQTT-3.1.2-11] will qos must be 0, if will flag is false"
-        assert self.WillRETAIN == False, "[MQTT-3.1.2-13] will retain must be false, if will flag is false"
+        assert self.WillQoS == 0, "[MQTT-3.1.2-13] will qos must be 0, if will flag is false"
+        assert self.WillRETAIN == False, "[MQTT-3.1.2-14] will retain must be false, if will flag is false"
 
       self.KeepAliveTimer = readInt16(buffer[curlen:])
       curlen += 2
