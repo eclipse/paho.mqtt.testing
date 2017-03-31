@@ -48,13 +48,42 @@ classNames = [ "reserved", \
 "Pubcomps", "Subscribes", "Subacks", "Unsubscribes", "Unsubacks", \
 "Pingreqs", "Pingresps", "Disconnects", "Auths"]
 
-
 def MessageType(byte):
+  """
+    Retrieve the message type from the first byte of the fixed header.
+  """
   if byte != None:
     rc = byte[0] >> 4
   else:
     rc = None
   return rc
+
+class returnCodes:
+  """
+    The return code used in MQTT V5.0
+    
+    Use this class like this:
+      returnCodes.SUCCESS
+      returnCodes.names[24] (==  "Continue authentication")  
+  """
+  SUCCESS = GRANTED_QOS_0 = 0
+  GRANTED_QOS_1 = 1
+  GRANTED_QOS_2 = 2
+  DISCONNECT_WITH_WILL_MESSAGE = 4
+  
+  names = {
+    SUCCESS : "Success",
+    GRANTED_QOS_1 : "Granted QoS 1",
+    GRANTED_QOS_2 : "Granted QoS 2",
+    DISCONNECT_WITH_WILL_MESSAGE : "Disconnect with will message",
+    17 : "No subscription existed",
+    24 : "Continue authentication",
+    25 : "Re-authenticate",
+    128 : "Unspecified error",
+    129 : "Malformed packet",
+    120 : "Protocol error",
+    162 : "Wildcard subscription not supported"
+  }
 
 
 class MBIs:
@@ -231,6 +260,47 @@ def writeBytes(buffer):
 def readBytes(buffer):
   length = readInt16(buffer)
   return buffer[2:2+length]
+  
+  
+class Properties(object):
+
+  def __init__(self):
+    self.types = ["Byte", "TwoByteInteger", "FourByteInteger", "VariableByteInteger", "Binary", "UTF8EncodedString", "UTF8StringPair"]
+    
+    self.names = {
+      "PayloadFormatIndicator" : 1,
+      "PublicationExpiryInterval" : 2,
+      "ContentType" : 3,
+      "ResponseTopic" : 8,
+      "CorrelationData" : 9,
+      "SubscriptionIdentifier" : 11,
+      "SessionExpiryInterval" : 17,
+      "AssignedClientIdentifier" : 18,
+      "ServerKeepAlive" : 19
+    }
+    
+    self.properties = {
+    # id:  type, packets
+      1 : (BYTE, [PUBLISH]) # payload format indicator
+    }
+      
+  def __setattr__(self, name, value):
+    if name not in self.names:
+      raise MQTTException("Attribute name must be one of "+str(names))
+    object.__setattr__(self, name, value)
+
+  def pack(self):
+    # serialize properties into buffer for sending over network
+    buffer = b""
+    for name in self.names.keys():
+      if hasattr(self, name):
+        attr_type = self.types(name)
+        buffer += self.writeProperty(getattr(self, name), attr_type)
+    return buffer
+    
+  def unpack(self, buffer):
+    # deserialize properties into attributes from buffer received from network
+    pass
 
 
 class Packets:
@@ -253,7 +323,7 @@ class Connects(Packets):
 
     # variable header
     self.ProtocolName = "MQTT"
-    self.ProtocolVersion = 4
+    self.ProtocolVersion = 5
     self.CleanSession = True
     self.WillFlag = False
     self.WillQoS = 0
@@ -268,9 +338,19 @@ class Connects(Packets):
     self.WillMessage = None      # binary
     self.username = None         # UTF-8
     self.password = None         # binary
-
+                       
+    #self.properties = Properties()                   
     if buffer != None:
       self.unpack(buffer)
+      
+  def __setattr__(self, name, value):
+    names = ["fh", "ProtocolName", "ProtocolVersion", 
+                  "ClientIdentifier", "CleanSession", "KeepAliveTimer", 
+                  "WillFlag", "WillQoS", "WillRETAIN", "WillTopic", "WillMessage", 
+                  "usernameFlag", "passwordFlag", "username", "password"]
+    if name not in names:
+      raise MQTTException(name + " Attribute name must be one of "+str(names))
+    Packets.__setattr__(self, name, value)
 
   def pack(self):    
     connectFlags = bytes([(self.CleanSession << 1) | (self.WillFlag << 2) | \
@@ -464,7 +544,7 @@ class Disconnects(Packets):
 
 class Publishes(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0, TopicName="", Payload=b""):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=1, TopicName="", Payload=b""):
     self.fh = FixedHeaders(PUBLISH)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -530,7 +610,7 @@ class Publishes(Packets):
 
 class Pubacks(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=1):
     self.fh = FixedHeaders(PUBACK)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -567,7 +647,7 @@ class Pubacks(Packets):
 
 class Pubrecs(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=1):
     self.fh = FixedHeaders(PUBREC)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -604,7 +684,7 @@ class Pubrecs(Packets):
 
 class Pubrels(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=0):
+  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=1):
     self.fh = FixedHeaders(PUBREL)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -642,7 +722,7 @@ class Pubrels(Packets):
 
 class Pubcomps(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=1):
     self.fh = FixedHeaders(PUBCOMP)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -679,7 +759,7 @@ class Pubcomps(Packets):
 
 class Subscribes(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=0, Data=[]):
+  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=1, Data=[]):
     self.fh = FixedHeaders(SUBSCRIBE)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -734,7 +814,7 @@ class Subscribes(Packets):
 
 class Subacks(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0, Data=[]):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=1, Data=[]):
     self.fh = FixedHeaders(SUBACK)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -784,7 +864,7 @@ class Subacks(Packets):
 
 class Unsubscribes(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=0, Data=[]):
+  def __init__(self, buffer=None, DUP=False, QoS=1, Retain=False, MsgId=1, Data=[]):
     self.fh = FixedHeaders(UNSUBSCRIBE)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -836,7 +916,7 @@ class Unsubscribes(Packets):
 
 class Unsubacks(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=0):
+  def __init__(self, buffer=None, DUP=False, QoS=0, Retain=False, MsgId=1):
     self.fh = FixedHeaders(UNSUBACK)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -949,6 +1029,7 @@ if __name__ == "__main__":
   for packet in classes[1:]:
     before = str(packet())   
     after = str(unpackPacket(packet().pack()))
+    print("before:", before, "\nafter:", after)
     try:
       assert before == after
     except:
