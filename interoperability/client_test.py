@@ -355,6 +355,34 @@ def dollar_topics_test():
   print("$ topics test", "succeeded" if succeeded else "failed")
   return succeeded
 
+def unsubscribe_test():
+  print("Unsubscribe test")
+  succeeded = True
+  try:
+    callback2.clear()
+    bclient.connect(host=host, port=port, cleansession=True)
+    bclient.subscribe([topics[0]], [2])
+    bclient.subscribe([topics[1]], [2])
+    bclient.subscribe([topics[2]], [2])
+    time.sleep(1) # wait for all retained messages, hopefully
+    # Unsubscribed from one topic
+    bclient.unsubscribe([topics[0]])
+
+    aclient.connect(host=host, port=port, cleansession=True)
+    aclient.publish(topics[0], b"", 1, retained=False)
+    aclient.publish(topics[1], b"", 1, retained=False)
+    aclient.publish(topics[2], b"", 1, retained=False)
+    time.sleep(2)
+
+    bclient.disconnect()
+    aclient.disconnect()
+    assert len(callback2.messages) == 2, callback2.messages
+  except:
+    traceback.print_exc()
+    succeeded = False
+  print("unsubscribe tests", "succeeded" if succeeded else "failed")
+  return succeeded
+
 
 if __name__ == "__main__":
   try:
@@ -415,7 +443,7 @@ if __name__ == "__main__":
   bclient.registerCallback(callback2)
 
   tests = [basic_test, retained_message_test, offline_message_queueing_test, will_message_test,
-           overlapping_subscriptions_test, keepalive_test, redelivery_on_reconnect_test]
+           overlapping_subscriptions_test, keepalive_test, redelivery_on_reconnect_test, unsubscribe_test]
 
   if run_zero_length_clientid_test:
     tests.append(zero_length_clientid_test)
