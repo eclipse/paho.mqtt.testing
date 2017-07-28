@@ -42,5 +42,21 @@ class Test(unittest.TestCase):
           after = str(MQTTV5.unpackPacket(packet().pack()))
         self.assertEqual(before, after)
 
+    def testReasonCodes(self):
+      r = MQTTV5.reasonCodes()
+      self.assertEqual(r.getName(0, MQTTV5.PacketTypes.DISCONNECT),
+        "Normal disconnection")
+      self.assertEqual(r.getId("Normal disconnection"), 0)
+      self.assertEqual(r.getName(0, MQTTV5.PacketTypes.PUBREL),
+              "Success")
+      self.assertEqual(r.getId("Success"), 0)
+      self.assertEqual(r.getName(162, MQTTV5.PacketTypes.DISCONNECT),
+        "Wildcard subscription not supported")
+      self.assertEqual(r.getId("Packet too large"), 149)
+      with self.assertRaises(AssertionError):
+          r.getName(201, MQTTV5.PacketTypes.PUBREL)
+          r,getName(146, MQTTV5.PacketTypes.CONNACK)
+          r.getId("rubbish")
+
 if __name__ == "__main__":
     unittest.main()

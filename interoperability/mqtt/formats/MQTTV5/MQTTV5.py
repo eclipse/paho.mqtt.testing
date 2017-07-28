@@ -79,28 +79,108 @@ class reasonCodes:
   """
     The reason code used in MQTT V5.0
 
-    Use this class like this:
-      reasonCodes.SUCCESS
-      reasonCodes.names[24] (==  "Continue authentication")
   """
-  SUCCESS = GRANTED_QOS_0 = 0
-  GRANTED_QOS_1 = 1
-  GRANTED_QOS_2 = 2
-  DISCONNECT_WITH_WILL_MESSAGE = 4
 
-  names = {
-    SUCCESS : "Success",
-    GRANTED_QOS_1 : "Granted QoS 1",
-    GRANTED_QOS_2 : "Granted QoS 2",
-    DISCONNECT_WITH_WILL_MESSAGE : "Disconnect with will message",
-    17 : "No subscription existed",
-    24 : "Continue authentication",
-    25 : "Re-authenticate",
-    128 : "Unspecified error",
-    129 : "Malformed packet",
-    120 : "Protocol error",
-    162 : "Wildcard subscription not supported"
-  }
+  def getName(self, identifier, packetType):
+    """
+    used when displaying the reason code
+    """
+    assert identifier in self.names.keys()
+    names = self.names[identifier]
+    namelist = [name for name in names.keys() if packetType in names[name]]
+    assert len(namelist) == 1
+    return namelist[0]
+
+  def getId(self, name):
+    """
+    used when setting the reason code for a packetType
+    check that only valid codes for the packet are set
+    """
+    identifier = None
+    for code in self.names.keys():
+      if name in self.names[code]:
+        identifier = code
+        break
+    assert identifier != None
+    return identifier
+
+  def __init__(self):
+    self.names = {
+    0 : { "Success" : [PacketTypes.CONNECT, PacketTypes.PUBACK,
+        PacketTypes.PUBREC, PacketTypes.PUBREL, PacketTypes.PUBCOMP,
+        PacketTypes.UNSUBACK, PacketTypes.AUTH],
+          "Normal disconnection" : [PacketTypes.DISCONNECT],
+          "Granted QoS 0" : [PacketTypes.SUBACK] },
+    1 : { "Granted QoS 1" : [PacketTypes.SUBACK] },
+    2 : { "Granted QoS 2" : [PacketTypes.SUBACK] },
+    4 : { "Disconnect with will message" : [PacketTypes.DISCONNECT] },
+    16 : { "No matching subscribers" :
+      [PacketTypes.PUBACK, PacketTypes.PUBREC] },
+    17 : { "No subscription existed" : [PacketTypes.UNSUBACK] },
+    24 : { "Continue authentication" : [PacketTypes.AUTH] },
+    25 : { "Re-authenticate" : [PacketTypes.AUTH] },
+    128 : { "Unspecified error" : [PacketTypes.CONNACK, PacketTypes.PUBACK,
+      PacketTypes.PUBREC, PacketTypes.SUBACK, PacketTypes.UNSUBACK,
+      PacketTypes.DISCONNECT], },
+    129 : { "Malformed packet" :
+          [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    130 : { "Protocol error" :
+          [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    131 : { "Implementation specific error": [PacketTypes.CONNACK,
+          PacketTypes.PUBACK, PacketTypes.PUBREC, PacketTypes.SUBACK,
+          PacketTypes.UNSUBACK, PacketTypes.DISCONNECT], },
+    132 : { "Unsupported protocol version" : [PacketTypes.CONNACK] },
+    133 : { "Client identifier not valid" : [PacketTypes.CONNACK] },
+    134 : { "Bad user name or password" : [PacketTypes.CONNACK] },
+    135 : { "Not authorized" : [PacketTypes.CONNACK, PacketTypes.PUBACK,
+              PacketTypes.PUBREC, PacketTypes.SUBACK, PacketTypes.UNSUBACK,
+              PacketTypes.DISCONNECT], },
+    136 : { "Server unavailable" : [PacketTypes.CONNACK] },
+    137 : { "Server busy" : [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    138 : { "Banned" : [PacketTypes.CONNACK] },
+    139 : { "Server shutting down" : [PacketTypes.DISCONNECT] },
+    140 : { "Bad authentication method" :
+            [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    141 : { "Keep alive timeout" : [PacketTypes.DISCONNECT] },
+    142 : { "Session taken over" : [PacketTypes.DISCONNECT] },
+    143 : { "Topic filter invalid" :
+            [PacketTypes.SUBACK, PacketTypes.UNSUBACK, PacketTypes.DISCONNECT]},
+    144 : { "Topic name invalid" :
+            [PacketTypes.CONNACK, PacketTypes.PUBACK,
+            PacketTypes.PUBREC, PacketTypes.DISCONNECT]},
+    145 : { "Packet identifier in use" :
+            [PacketTypes.PUBACK, PacketTypes.PUBREC,
+             PacketTypes.SUBACK, PacketTypes.UNSUBACK]},
+    146 : { "Packet identifier not found" :
+            [PacketTypes.PUBREL, PacketTypes.PUBCOMP] },
+    147 : { "Receive maximum exceeded": [PacketTypes.DISCONNECT] },
+    148 : { "Topic aliad invalid": [PacketTypes.DISCONNECT] },
+    149 : { "Packet too large": [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    150 : { "Message rate too high": [PacketTypes.DISCONNECT] },
+    151 : { "Quota exceeded": [PacketTypes.CONNACK, PacketTypes.PUBACK,
+          PacketTypes.PUBREC, PacketTypes.SUBACK, PacketTypes.DISCONNECT], },
+    152 : { "Administrative action" : [PacketTypes.DISCONNECT] },
+    153 : { "Payload format invalid" :
+            [PacketTypes.PUBACK, PacketTypes.PUBREC, PacketTypes.DISCONNECT]},
+    154 : { "Retain not supported" :
+            [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    155 : { "QoS not supported" :
+            [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    156 : { "Use another server" :
+            [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    157 : { "Server moved" :
+            [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    158 : { "Shared subscription not supported" :
+            [PacketTypes.SUBACK, PacketTypes.DISCONNECT] },
+    159 : { "Connection rate exceeded" :
+            [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
+    160 : { "Maximum connect time" :
+            [PacketTypes.DISCONNECT] },
+    161 : { "Subscription identifiers not supported" :
+            [PacketTypes.SUBACK, PacketTypes.DISCONNECT] },
+    162 : { "Wildcard subscription not supported" :
+            [PacketTypes.SUBACK, PacketTypes.DISCONNECT] },
+    }
 
 
 class MBIs:
