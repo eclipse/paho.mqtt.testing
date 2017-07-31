@@ -17,7 +17,9 @@ class Test(unittest.TestCase):
 
     def testProperties(self):
       for packetType in MQTTV5.PacketTypes.indexes:
+        #print("Properties", MQTTV5.Packets.Names[packetType])
         p = MQTTV5.Properties(packetType)
+        q = MQTTV5.Properties(packetType)
         if packetType not in [MQTTV5.PacketTypes.SUBSCRIBE,
                               MQTTV5.PacketTypes.UNSUBSCRIBE,
                               MQTTV5.PacketTypes.PINGREQ,
@@ -27,11 +29,16 @@ class Test(unittest.TestCase):
            with self.assertRaises(MQTTV5.MQTTException):
              p.UserProperty = ("jk", "jk")
         if packetType in [MQTTV5.PacketTypes.PUBLISH]:
-            p.PayloadFormatIndicator = '3'
-      self.assertTrue(p.pack() == p.unpack(p.pack())[0].pack(), "For packet type %s" % (MQTTV5.Packets.Names[packetType]))
+            p.PayloadFormatIndicator = 3
+        #print(packetType, str(p.pack())+ " " + str(p.unpack(p.pack())[0].pack()))
+        before = str(p)
+        after = str(q.unpack(p.pack())[0])
+        self.assertTrue(before == after,
+            "For packet type %s" % (MQTTV5.Packets.Names[packetType]))
 
     def testBasicPackets(self):
       for packet in MQTTV5.classes:
+        #print("BasicPacket", packet.__name__)
         if packet == MQTTV5.Subscribes:
           p = packet()
           p.data = [("#", 2)]
@@ -43,19 +50,20 @@ class Test(unittest.TestCase):
         self.assertEqual(before, after)
 
     def testReasonCodes(self):
-      r = MQTTV5.reasonCodes()
-      self.assertEqual(r.getName(0, MQTTV5.PacketTypes.DISCONNECT),
+      r = MQTTV5.ReasonCodes(MQTTV5.PacketTypes.DISCONNECT, "Normal disconnection")
+      self.assertEqual(r.__getName__(MQTTV5.PacketTypes.DISCONNECT, 0),
         "Normal disconnection")
       self.assertEqual(r.getId("Normal disconnection"), 0)
-      self.assertEqual(r.getName(0, MQTTV5.PacketTypes.PUBREL),
+      self.assertEqual(r.__getName__(MQTTV5.PacketTypes.PUBREL, 0),
               "Success")
+      r = MQTTV5.ReasonCodes(MQTTV5.PacketTypes.CONNACK)
       self.assertEqual(r.getId("Success"), 0)
-      self.assertEqual(r.getName(162, MQTTV5.PacketTypes.DISCONNECT),
+      self.assertEqual(r.__getName__(MQTTV5.PacketTypes.DISCONNECT, 162),
         "Wildcard subscription not supported")
       self.assertEqual(r.getId("Packet too large"), 149)
       with self.assertRaises(AssertionError):
-          r.getName(201, MQTTV5.PacketTypes.PUBREL)
-          r,getName(146, MQTTV5.PacketTypes.CONNACK)
+          r.__getName__(201, MQTTV5.PacketTypes.PUBREL)
+          r.__getName__(146, MQTTV5.PacketTypes.CONNACK)
           r.getId("rubbish")
 
 if __name__ == "__main__":

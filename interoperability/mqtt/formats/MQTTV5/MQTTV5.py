@@ -44,7 +44,7 @@ class PacketTypes:
   PINGREQ, PINGRESP, DISCONNECT, AUTH = indexes
 
 
-class Packets:
+class Packets(object):
 
   Names = [ "reserved", \
     "Connect", "Connack", "Publish", "Puback", "Pubrec", "Pubrel", \
@@ -58,11 +58,16 @@ class Packets:
     buffer = self.fh.pack(0)
     return buffer
 
-  def __repr__(self):
-    return repr(self.fh)
+  def __str__(self):
+    return str(self.fh)
 
   def __eq__(self, packet):
     return self.fh == packet.fh if packet else False
+
+  def __setattr__(self, name, value):
+    if name not in self.names:
+      raise MQTTException(name + " Attribute name must be one of "+str(self.names))
+    object.__setattr__(self, name, value)
 
 
 def PacketType(byte):
@@ -75,13 +80,13 @@ def PacketType(byte):
     rc = None
   return rc
 
-class reasonCodes:
+class ReasonCodes:
   """
     The reason code used in MQTT V5.0
 
   """
 
-  def getName(self, identifier, packetType):
+  def __getName__(self, packetType, identifier):
     """
     used when displaying the reason code
     """
@@ -98,15 +103,34 @@ class reasonCodes:
     """
     identifier = None
     for code in self.names.keys():
-      if name in self.names[code]:
-        identifier = code
+      if name in self.names[code].keys():
+        if self.packetType in self.names[code][name]:
+          identifier = code
         break
     assert identifier != None
     return identifier
 
-  def __init__(self):
+  def set(self, name):
+    self.value = self.getId(name)
+
+  def unpack(self, buffer):
+    name = self.__getName__(self.packetType, buffer[0])
+    self.value = self.getId(name)
+    return 1
+
+  def getName(self):
+    return self.__getName__(self.packetType, self.value)
+
+  def __str__(self):
+    return self.getName()
+
+  def pack(self):
+    return bytes([self.value])
+
+  def __init__(self, packetType, aName="Success"):
+    self.packetType = packetType
     self.names = {
-    0 : { "Success" : [PacketTypes.CONNECT, PacketTypes.PUBACK,
+    0 : { "Success" : [PacketTypes.CONNACK, PacketTypes.PUBACK,
         PacketTypes.PUBREC, PacketTypes.PUBREL, PacketTypes.PUBCOMP,
         PacketTypes.UNSUBACK, PacketTypes.AUTH],
           "Normal disconnection" : [PacketTypes.DISCONNECT],
@@ -181,6 +205,7 @@ class reasonCodes:
     162 : { "Wildcard subscription not supported" :
             [PacketTypes.SUBACK, PacketTypes.DISCONNECT] },
     }
+    self.set(aName)
 
 
 class MBIs:
@@ -277,10 +302,10 @@ class FixedHeaders(object):
       raise MQTTException(name + " Attribute name must be one of "+str(names))
     object.__setattr__(self, name, value)
 
-  def __repr__(self):
+  def __str__(self):
     "return printable representation of our data"
-    return Packets.classNames[self.PacketType]+'(fh.DUP='+repr(self.DUP)+ \
-           ", fh.QoS="+repr(self.QoS)+", fh.RETAIN="+repr(self.RETAIN)
+    return Packets.classNames[self.PacketType]+'(fh.DUP='+str(self.DUP)+ \
+           ", fh.QoS="+str(self.QoS)+", fh.RETAIN="+str(self.RETAIN)
 
   def pack(self, length):
     "pack data into string buffer ready for transmission down socket"
@@ -447,6 +472,30 @@ class Properties(object):
             % (name, Packets.Names[self.packetType]) )
       object.__setattr__(self, name, value)
 
+  def __str__(self):
+    buffer = "["
+    for name in self.names.keys():
+      compressedName = name.replace(' ', '')
+      if hasattr(self, compressedName):
+        buffer += compressedName +" : "+str(getattr(self, compressedName))
+    buffer += "]"
+    return buffer
+
+  def isEmpty(self):
+    rc = True
+    for name in self.names.keys():
+      compressedName = name.replace(' ', '')
+      if hasattr(self, compressedName):
+        rc = False
+        break
+    return rc
+
+  def clear(self):
+    for name in self.names.keys():
+      compressedName = name.replace(' ', '')
+      if hasattr(self, compressedName):
+        delattr(self, compressedName)
+
   def writeProperty(self, identifier, type, value):
     buffer = b""
     buffer += MBIs.encode(identifier) # identifier
@@ -498,11 +547,19 @@ class Properties(object):
       value, valuelen = readUTF(buffer, propslen)
       buffer = buffer[valuelen:] # strip the bytes used by the value
       value1, valuelen1 = readUTF(buffer, propslen - valuelen)
-      value += value1
+      value = (value, value1)
       valuelen += valuelen1
     return value, valuelen
 
+  def getNameFromIdent(self, identifier):
+    rc = None
+    for name in self.names:
+      if self.names[name] == identifier:
+        rc = name
+    return rc
+
   def unpack(self, buffer):
+    self.clear()
     # deserialize properties into attributes from buffer received from network
     propslen, MBIlen = MBIs.decode(buffer)
     buffer = buffer[MBIlen:] # strip the bytes used by the MBI
@@ -514,18 +571,19 @@ class Properties(object):
       value, valuelen = self.readProperty(buffer, attr_type, propslen)
       buffer = buffer[valuelen:] # strip the bytes used by the value
       propslen -= valuelen
+      setattr(self, self.getNameFromIdent(identifier), value)
     return self, propslen + MBIlen
-
-
-class ConnectFlags:
-
-  def __init__(self):
-    pass
 
 
 class Connects(Packets):
 
   def __init__(self, buffer = None):
+    object.__setattr__(self, "names",
+         ["fh", "properties", "ProtocolName", "ProtocolVersion",
+          "ClientIdentifier", "CleanSession", "KeepAliveTimer",
+          "WillFlag", "WillQoS", "WillRETAIN", "WillTopic", "WillMessage",
+          "usernameFlag", "passwordFlag", "username", "password"])
+
     self.fh = FixedHeaders(PacketTypes.CONNECT)
 
     # variable header
@@ -551,15 +609,6 @@ class Connects(Packets):
     #self.properties = Properties()
     if buffer != None:
       self.unpack(buffer)
-
-  def __setattr__(self, name, value):
-    names = ["fh", "properties", "ProtocolName", "ProtocolVersion",
-                  "ClientIdentifier", "CleanSession", "KeepAliveTimer",
-                  "WillFlag", "WillQoS", "WillRETAIN", "WillTopic", "WillMessage",
-                  "usernameFlag", "passwordFlag", "username", "password"]
-    if name not in names:
-      raise MQTTException(name + " Attribute name must be one of "+str(names))
-    Packets.__setattr__(self, name, value)
 
   def pack(self):
     connectFlags = bytes([(self.CleanSession << 1) | (self.WillFlag << 2) | \
@@ -593,12 +642,15 @@ class Connects(Packets):
       assert self.fh.QoS == 0, "[MQTT-2.1.2-1] QoS was not 0, was %d" % self.fh.QoS
       assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
 
+      # to allow the server to send back a CONNACK with unsupported protocol version,
+      # the following two assertions will need to be disabled
       self.ProtocolName, valuelen = readUTF(buffer[curlen:], packlen - curlen)
       curlen += valuelen
       assert self.ProtocolName == "MQTT", "Wrong protocol name %s" % self.ProtocolName
 
       self.ProtocolVersion = buffer[curlen]
       curlen += 1
+      assert self.ProtocolVersion == 5, "Wrong protocol version %s" % self.ProtocolVersion
 
       connectFlags = buffer[curlen]
       assert (connectFlags & 0x01) == 0, "[MQTT-3.1.2-3] reserved connect flag must be 0"
@@ -661,20 +713,21 @@ class Connects(Packets):
       raise
 
   def __str__(self):
-    buf = repr(self.fh)+", ProtocolName="+str(self.ProtocolName)+", ProtocolVersion=" +\
-          repr(self.ProtocolVersion)+", CleanSession="+repr(self.CleanSession) +\
-          ", WillFlag="+repr(self.WillFlag)+", KeepAliveTimer=" +\
-          repr(self.KeepAliveTimer)+", ClientId="+str(self.ClientIdentifier) +\
-          ", usernameFlag="+repr(self.usernameFlag)+", passwordFlag="+repr(self.passwordFlag)
+    buf = str(self.fh)+", ProtocolName="+str(self.ProtocolName)+", ProtocolVersion=" +\
+          str(self.ProtocolVersion)+", CleanSession="+str(self.CleanSession) +\
+          ", WillFlag="+str(self.WillFlag)+", KeepAliveTimer=" +\
+          str(self.KeepAliveTimer)+", ClientId="+str(self.ClientIdentifier) +\
+          ", usernameFlag="+str(self.usernameFlag)+", passwordFlag="+str(self.passwordFlag)
     if self.WillFlag:
-      buf += ", WillQoS=" + repr(self.WillQoS) +\
-             ", WillRETAIN=" + repr(self.WillRETAIN) +\
+      buf += ", WillQoS=" + str(self.WillQoS) +\
+             ", WillRETAIN=" + str(self.WillRETAIN) +\
              ", WillTopic='"+ self.WillTopic +\
              "', WillMessage='"+str(self.WillMessage)+"'"
     if self.username:
       buf += ", username="+self.username
     if self.password:
       buf += ", password="+str(self.password)
+    buf += ", properties="+str(self.properties)
     return buf+")"
 
   def __eq__(self, packet):
@@ -691,23 +744,29 @@ class Connects(Packets):
            self.WillRETAIN == packet.WillRETAIN and \
            self.WillTopic == packet.WillTopic and \
            self.WillMessage == packet.WillMessage
+    if rc:
+      rc = self.properties == packet.properties
     return rc
 
 
 class Connacks(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, ReasonCode=0):
+  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, ReasonCode="Success"):
+    object.__setattr__(self, "names",
+         ["fh", "sessionPresent", "reasonCode"])
     self.fh = FixedHeaders(PacketTypes.CONNACK)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
-    self.flags = 0
-    self.reasonCode = ReasonCode
+    self.sessionPresent = 0
+    self.reasonCode = ReasonCodes(PacketTypes.CONNACK, ReasonCode)
     if buffer != None:
       self.unpack(buffer)
 
   def pack(self):
-    buffer = bytes([self.flags, self.reasonCode])
+    flags = self.sessionPresent # works because there is only one flag
+    buffer = bytes([flags])
+    buffer += self.reasonCode.pack()
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
@@ -716,14 +775,15 @@ class Connacks(Packets):
     assert PacketType(buffer) == PacketTypes.CONNACK
     self.fh.unpack(buffer)
     assert self.fh.remainingLength == 2, "Connack packet is wrong length %d" % self.fh.remainingLength
-    assert buffer[2] in  [0, 1], "Connect Acknowledge Flags"
-    self.reasonCode = buffer[3]
+    assert buffer[2] in [0, 1], "Connect Acknowledge Flags"
+    self.sessionPresent = buffer[2]
+    self.reasonCode.unpack(buffer[3:])
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
 
-  def __repr__(self):
-    return repr(self.fh)+", Session present="+str((self.flags & 0x01) == 1)+", ReturnCode="+repr(self.reasonCode)+")"
+  def __str__(self):
+    return str(self.fh)+", Session present="+str((self.sessionPresent & 0x01) == 1)+", ReturnCode="+str(self.reasonCode)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -732,38 +792,72 @@ class Connacks(Packets):
 
 class Disconnects(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False):
+  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False,
+          reasonCode="Normal disconnection"):
+    object.__setattr__(self, "names",
+        ["fh", "DUP", "QoS", "RETAIN", "reasonCode", "properties"])
     self.fh = FixedHeaders(PacketTypes.DISCONNECT)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
+    # variable header
+    self.reasonCode = ReasonCodes(PacketTypes.DISCONNECT, reasonCode)
+    self.properties = Properties(PacketTypes.DISCONNECT)
     if buffer != None:
       self.unpack(buffer)
 
+  def pack(self):
+    buffer = b""
+    if self.reasonCode.getName() != "Normal disconnection" or not self.properties.isEmpty():
+      buffer += self.reasonCode.pack()
+      if not self.properties.isEmpty():
+        buffer += self.properties.pack()
+    buffer = self.fh.pack(len(buffer)) + buffer
+    return buffer
+
   def unpack(self, buffer):
+    self.properties.clear()
+    self.reasonCode.set("Normal disconnection")
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.DISCONNECT
-    self.fh.unpack(buffer)
-    assert self.fh.remainingLength == 0, "Disconnect packet is wrong length %d" % self.fh.remainingLength
-    logger.info("[MQTT-3.14.1-1] disconnect reserved bits must be 0")
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
+    fhlen = self.fh.unpack(buffer)
+    assert len(buffer) >= fhlen + self.fh.remainingLength
+    assert self.fh.DUP == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
+    curlen = 0
+    if self.fh.remainingLength > 0:
+      self.reasonCode.unpack(buffer[curlen:])
+      curlen += 1
+    if self.fh.remainingLength > 1:
+      curlen += self.properties.unpack(buffer[curlen:])[1]
+    assert curlen == self.fh.remainingLength, \
+            "DISCONNECT packet is wrong length %d" % self.fh.remainingLength
+    return fhlen + self.fh.remainingLength
 
-  def __repr__(self):
-    return repr(self.fh)+")"
+  def __str__(self):
+    return str(self.fh)+", ReasonCode: "+str(self.reasonCode)+", Properties: "+str(self.properties)
+
+  def __eq__(self, packet):
+    return Packets.__eq__(self, packet) and \
+           self.reasonCode == packet.reasonCode and \
+           self.properties == packet.properties
 
 
 class Publishes(Packets):
 
   def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, MsgId=1, TopicName="", Payload=b""):
+    object.__setattr__(self, "names",
+          ["fh", "DUP", "QoS", "RETAIN", "topicName", "packetIdentifier",
+           "properties", "data"])
     self.fh = FixedHeaders(PacketTypes.PUBLISH)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
     # variable header
     self.topicName = TopicName
-    self.messageIdentifier = MsgId
+    self.packetIdentifier = MsgId
+    self.properties = Properties(PacketTypes.PUBLISH)
     # payload
     self.data = Payload
     if buffer != None:
@@ -772,7 +866,8 @@ class Publishes(Packets):
   def pack(self):
     buffer = writeUTF(self.topicName)
     if self.fh.QoS != 0:
-      buffer +=  writeInt16(self.messageIdentifier)
+      buffer +=  writeInt16(self.packetIdentifier)
+    buffer += self.properties.pack()
     buffer += self.data
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
@@ -792,23 +887,24 @@ class Publishes(Packets):
       raise
     curlen += valuelen
     if self.fh.QoS != 0:
-      self.messageIdentifier = readInt16(buffer[curlen:])
+      self.packetIdentifier = readInt16(buffer[curlen:])
       logger.info("[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2")
       curlen += 2
-      assert self.messageIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
+      assert self.packetIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
     else:
       logger.info("[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0")
-      self.messageIdentifier = 0
+      self.packetIdentifier = 0
+    curlen += self.properties.unpack(buffer[curlen:])[1]
     self.data = buffer[curlen:fhlen + self.fh.remainingLength]
     if self.fh.QoS == 0:
       assert self.fh.DUP == False, "[MQTT-2.1.2-4]"
     return fhlen + self.fh.remainingLength
 
-  def __repr__(self):
-    rc = repr(self.fh)
+  def __str__(self):
+    rc = str(self.fh)
     if self.fh.QoS != 0:
-      rc += ", MsgId="+repr(self.messageIdentifier)
-    rc += ", TopicName="+repr(self.topicName)+", Payload="+repr(self.data)+")"
+      rc += ", MsgId="+str(self.packetIdentifier)
+    rc += ", TopicName="+str(self.topicName)+", Payload="+str(self.data)+")"
     return rc
 
   def __eq__(self, packet):
@@ -816,189 +912,131 @@ class Publishes(Packets):
          self.topicName == packet.topicName and \
          self.data == packet.data
     if rc and self.fh.QoS != 0:
-      rc = self.messageIdentifier == packet.messageIdentifier
+      rc = self.packetIdentifier == packet.packetIdentifier
     return rc
 
 
-class Pubacks(Packets):
+class Acks(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, MsgId=1):
-    self.fh = FixedHeaders(PacketTypes.PUBACK)
+  def __init__(self, ackType, buffer, DUP, QoS, RETAIN, packetId):
+    object.__setattr__(self, "names",
+        ["fh", "DUP", "QoS", "RETAIN", "packetIdentifier",
+         "reasonCode", "properties"])
+    self.fh = FixedHeaders(ackType)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
     # variable header
-    self.messageIdentifier = MsgId
+    self.packetIdentifier = packetId
+    self.reasonCode = ReasonCodes(ackType)
+    self.properties = Properties(ackType)
+    object.__setattr__(self, "ackType", ackType)
+    object.__setattr__(self, "ackName", Packets.Names[self.ackType])
     if buffer != None:
       self.unpack(buffer)
 
   def pack(self):
-    buffer = writeInt16(self.messageIdentifier)
+    buffer = writeInt16(self.packetIdentifier)
+    if self.reasonCode.getName() != "Success" or not self.properties.isEmpty():
+      buffer += self.reasonCode.pack()
+      if not self.properties.isEmpty():
+        buffer += self.properties.pack()
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
   def unpack(self, buffer):
+    self.properties.clear()
+    self.reasonCode.set("Success")
     assert len(buffer) >= 2
-    assert PacketType(buffer) == PacketTypes.PUBACK
+    assert PacketType(buffer) == self.ackType
     fhlen = self.fh.unpack(buffer)
-    assert self.fh.remainingLength == 2, "Puback packet is wrong length %d" % self.fh.remainingLength
+    assert self.fh.remainingLength in [2, 3, 4], \
+        "%s packet is wrong length %d" % (self.ackName, self.fh.remainingLength)
     assert len(buffer) >= fhlen + self.fh.remainingLength
-    self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] Puback reserved bits must be 0"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] Puback reserved bits must be 0"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] Puback reserved bits must be 0"
-    return fhlen + 2
+    self.packetIdentifier = readInt16(buffer[fhlen:])
+    curlen = fhlen + 2
+    assert self.fh.DUP == False, "[MQTT-2.1.2-1] %s reserved bits must be 0" %\
+      self.ackName
+    if self.ackType == PacketTypes.PUBREL:
+      assert self.fh.QoS == 2, "[MQTT-3.6.1-1] %s reserved bits must be 0010" %\
+        self.ackName
+    else:
+      assert self.fh.QoS == 0, "[MQTT-2.1.2-1] %s reserved bits must be 0" %\
+        self.ackName
+    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] %s reserved bits must be 0" %\
+      self.ackName
+    if self.fh.remainingLength > 2:
+      self.reasonCode.unpack(buffer[curlen:])
+      curlen += 1
+    if self.fh.remainingLength > 3:
+      self.properties.unpack(buffer[curlen:])
+    return fhlen + self.fh.remainingLength
 
-  def __repr__(self):
-    return repr(self.fh)+", MsgId "+repr(self.messageIdentifier)
+  def __str__(self):
+    return str(self.fh)+", PacketId "+str(self.packetIdentifier)
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
-           self.messageIdentifier == packet.messageIdentifier
+           self.packetIdentifier == packet.packetIdentifier
 
 
-class Pubrecs(Packets):
+class Pubacks(Acks):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, MsgId=1):
-    self.fh = FixedHeaders(PacketTypes.PUBREC)
-    self.fh.DUP = DUP
-    self.fh.QoS = QoS
-    self.fh.RETAIN = RETAIN
-    # variable header
-    self.messageIdentifier = MsgId
-    if buffer != None:
-      self.unpack(buffer)
+  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, PacketId=1):
+    Acks.__init__(self, PacketTypes.PUBACK, buffer, DUP, QoS, RETAIN, PacketId)
 
-  def pack(self):
-    buffer = writeInt16(self.messageIdentifier)
-    buffer = self.fh.pack(len(buffer)) + buffer
-    return buffer
+class Pubrecs(Acks):
 
-  def unpack(self, buffer):
-    assert len(buffer) >= 2
-    assert PacketType(buffer) == PacketTypes.PUBREC
-    fhlen = self.fh.unpack(buffer)
-    assert self.fh.remainingLength == 2, "Pubrec packet is wrong length %d" % self.fh.remainingLength
-    assert len(buffer) >= fhlen + self.fh.remainingLength
-    self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] Pubrec reserved bits must be 0"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] Pubrec reserved bits must be 0"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] Pubrec reserved bits must be 0"
-    return fhlen + 2
+  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, PacketId=1):
+    Acks.__init__(self, PacketTypes.PUBREC, buffer, DUP, QoS, RETAIN, PacketId)
 
-  def __repr__(self):
-    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+")"
+class Pubrels(Acks):
 
-  def __eq__(self, packet):
-    return Packets.__eq__(self, packet) and \
-           self.messageIdentifier == packet.messageIdentifier
+  def __init__(self, buffer=None, DUP=False, QoS=2, RETAIN=False, PacketId=1):
+    Acks.__init__(self, PacketTypes.PUBREL, buffer, DUP, QoS, RETAIN, PacketId)
 
+class Pubcomps(Acks):
 
-class Pubrels(Packets):
-
-  def __init__(self, buffer=None, DUP=False, QoS=1, RETAIN=False, MsgId=1):
-    self.fh = FixedHeaders(PacketTypes.PUBREL)
-    self.fh.DUP = DUP
-    self.fh.QoS = QoS
-    self.fh.RETAIN = RETAIN
-    # variable header
-    self.messageIdentifier = MsgId
-    if buffer != None:
-      self.unpack(buffer)
-
-  def pack(self):
-    buffer = writeInt16(self.messageIdentifier)
-    buffer = self.fh.pack(len(buffer)) + buffer
-    return buffer
-
-  def unpack(self, buffer):
-    assert len(buffer) >= 2
-    assert PacketType(buffer) == PacketTypes.PUBREL
-    fhlen = self.fh.unpack(buffer)
-    assert self.fh.remainingLength == 2, "Pubrel packet is wrong length %d" % self.fh.remainingLength
-    assert len(buffer) >= fhlen + self.fh.remainingLength
-    self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] DUP should be False in PUBREL"
-    assert self.fh.QoS == 1, "[MQTT-2.1.2-1] QoS should be 1 in PUBREL"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] RETAIN should be False in PUBREL"
-    logger.info("[MQTT-3.6.1-1] bits in fixed header for pubrel are ok")
-    return fhlen + 2
-
-  def __repr__(self):
-    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+")"
-
-  def __eq__(self, packet):
-    return Packets.__eq__(self, packet) and \
-           self.messageIdentifier == packet.messageIdentifier
-
-
-class Pubcomps(Packets):
-
-  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, MsgId=1):
-    self.fh = FixedHeaders(PacketTypes.PUBCOMP)
-    self.fh.DUP = DUP
-    self.fh.QoS = QoS
-    self.fh.RETAIN = RETAIN
-    # variable header
-    self.messageIdentifier = MsgId
-    if buffer != None:
-      self.unpack(buffer)
-
-  def pack(self):
-    buffer = writeInt16(self.messageIdentifier)
-    buffer = self.fh.pack(len(buffer)) + buffer
-    return buffer
-
-  def unpack(self, buffer):
-    assert len(buffer) >= 2
-    assert PacketType(buffer) == PacketTypes.PUBCOMP
-    fhlen = self.fh.unpack(buffer)
-    assert len(buffer) >= fhlen + self.fh.remainingLength
-    assert self.fh.remainingLength == 2, "Pubcomp packet is wrong length %d" % self.fh.remainingLength
-    self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] DUP should be False in Pubcomp"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] QoS should be 0 in Pubcomp"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] Retain should be false in Pubcomp"
-    return fhlen + 2
-
-  def __repr__(self):
-    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+")"
-
-  def __eq__(self, packet):
-    return Packets.__eq__(self, packet) and \
-           self.messageIdentifier == packet.messageIdentifier
-
+  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, PacketId=1):
+    Acks.__init__(self, PacketTypes.PUBCOMP, buffer, DUP, QoS, RETAIN, PacketId)
 
 class Subscribes(Packets):
 
   def __init__(self, buffer=None, DUP=False, QoS=1, RETAIN=False, MsgId=1, Data=[]):
+    object.__setattr__(self, "names",
+       ["fh", "DUP", "QoS", "RETAIN", "packetIdentifier",
+        "properties", "data"])
     self.fh = FixedHeaders(PacketTypes.SUBSCRIBE)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
     # variable header
-    self.messageIdentifier = MsgId
+    self.packetIdentifier = MsgId
+    self.properties = Properties(PacketTypes.SUBSCRIBE)
     # payload - list of topic, qos pairs
     self.data = Data[:]
     if buffer != None:
       self.unpack(buffer)
 
   def pack(self):
-    buffer = writeInt16(self.messageIdentifier)
+    buffer = writeInt16(self.packetIdentifier)
+    buffer += self.properties.pack()
     for d in self.data:
       buffer += writeUTF(d[0]) + bytes([d[1]])
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
   def unpack(self, buffer):
+    self.properties.clear()
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.SUBSCRIBE
     fhlen = self.fh.unpack(buffer)
     assert len(buffer) >= fhlen + self.fh.remainingLength
     logger.info("[MQTT-2.3.1-1] packet indentifier must be in subscribe")
-    self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.messageIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
+    self.packetIdentifier = readInt16(buffer[fhlen:])
+    assert self.packetIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
     leftlen = self.fh.remainingLength - 2
+    leftlen -= self.properties.unpack(buffer[-leftlen:])[1]
     self.data = []
     while leftlen > 0:
       topic, topiclen = readUTF(buffer[-leftlen:], leftlen)
@@ -1014,84 +1052,98 @@ class Subscribes(Packets):
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] RETAIN must be false in subscribe"
     return fhlen + self.fh.remainingLength
 
-  def __repr__(self):
-    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+\
-           ", Data="+repr(self.data)+")"
+  def __str__(self):
+    return str(self.fh)+", MsgId="+str(self.packetIdentifier)+\
+           ", Data="+str(self.data)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
-           self.messageIdentifier == packet.messageIdentifier and \
+           self.packetIdentifier == packet.packetIdentifier and \
            self.data == packet.data
 
 
-class Subacks(Packets):
+class UnsubSubacks(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, MsgId=1, Data=[]):
-    self.fh = FixedHeaders(PacketTypes.SUBACK)
+  def __init__(self, packetType, buffer, DUP, QoS, RETAIN, PacketId, reasonCodes):
+    object.__setattr__(self, "names",
+      ["fh", "DUP", "QoS", "RETAIN", "packetIdentifier",
+       "reasonCodes", "properties"])
+    object.__setattr__(self, "packetType", packetType)
+    self.fh = FixedHeaders(self.packetType)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
     # variable header
-    self.messageIdentifier = MsgId
-    # payload - list of qos
-    self.data = Data[:]
+    self.packetIdentifier = PacketId
+    self.properties = Properties(self.packetType)
+    # payload - list of reason codes corresponding to topics in subscribe
+    self.reasonCodes = reasonCodes[:]
     if buffer != None:
       self.unpack(buffer)
 
   def pack(self):
-    buffer = writeInt16(self.messageIdentifier)
-    for d in self.data:
-      buffer += bytes([d])
+    buffer = writeInt16(self.packetIdentifier)
+    buffer += self.properties.pack()
+    buffer += bytes([reasoncode.pack() for reasonCode in self.reasonCodes])
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
   def unpack(self, buffer):
     assert len(buffer) >= 2
-    assert PacketType(buffer) == PacketTypes.SUBACK
+    assert PacketType(buffer) == self.packetType
     fhlen = self.fh.unpack(buffer)
     assert len(buffer) >= fhlen + self.fh.remainingLength
-    self.messageIdentifier = readInt16(buffer[fhlen:])
+    self.packetIdentifier = readInt16(buffer[fhlen:])
     leftlen = self.fh.remainingLength - 2
-    self.data = []
+    leftlen -= self.properties.unpack(buffer[-leftlen:])[1]
+    self.reasonCodes = []
     while leftlen > 0:
-      qos = buffer[-leftlen]
-      assert qos in [0, 1, 2, 0x80], "[MQTT-3.9.3-2] return code in QoS must be 0, 1, 2 or 0x80"
+      reasonCode = ReasonCodes(self.packetType, buffer[-leftlen])
+      assert reasonCode in [0, 1, 2, 0x80], "[MQTT-3.9.3-2] return code in QoS must be 0, 1, 2 or 0x80"
       leftlen -= 1
-      self.data.append(qos)
+      self.reasonCodes.append(reasonCode)
     assert leftlen == 0
     assert self.fh.DUP == False, "[MQTT-2.1.2-1] DUP should be false in suback"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1] QoS should be 0 in suback"
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] Retain should be false in suback"
     return fhlen + self.fh.remainingLength
 
-  def __repr__(self):
-    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+\
-           ", Data="+repr(self.data)+")"
+  def __str__(self):
+    return str(self.fh)+", PacketId="+str(self.packetIdentifier)+\
+           ", reason codes="+str(self.reasonCodes)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
-           self.messageIdentifier == packet.messageIdentifier and \
+           self.packetIdentifier == packet.packetIdentifier and \
            self.data == packet.data
+
+
+class Subacks(UnsubSubacks):
+
+  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, PacketId=1, reasonCodes=[]):
+      UnsubSubacks.__init__(self, PacketTypes.SUBACK, buffer, DUP, QoS, RETAIN, PacketId, reasonCodes)
 
 
 class Unsubscribes(Packets):
 
-  def __init__(self, buffer=None, DUP=False, QoS=1, RETAIN=False, MsgId=1, Data=[]):
+  def __init__(self, buffer=None, DUP=False, QoS=1, RETAIN=False, PacketId=1, TopicFilters=[]):
+    object.__setattr__(self, "names",
+       ["fh", "DUP", "QoS", "RETAIN", "packetIdentifier", "topicFilters"])
     self.fh = FixedHeaders(PacketTypes.UNSUBSCRIBE)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
     # variable header
-    self.messageIdentifier = MsgId
+    self.packetIdentifier = PacketId
     # payload - list of topics
-    self.data = Data[:]
+    self.topicFilters = TopicFilters[:]
     if buffer != None:
       self.unpack(buffer)
 
   def pack(self):
-    buffer = writeInt16(self.messageIdentifier)
-    for d in self.data:
-      buffer += writeUTF(d)
+    buffer = writeInt16(self.packetIdentifier)
+    for topicFilter in self.topicFilters:
+      buffer += writeUTF(topicFilter)
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
@@ -1101,14 +1153,14 @@ class Unsubscribes(Packets):
     fhlen = self.fh.unpack(buffer)
     assert len(buffer) >= fhlen + self.fh.remainingLength
     logger.info("[MQTT-2.3.1-1] packet indentifier must be in unsubscribe")
-    self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.messageIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
+    self.packetIdentifier = readInt16(buffer[fhlen:])
+    assert self.packetIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
     leftlen = self.fh.remainingLength - 2
-    self.data = []
+    self.topicFilters = []
     while leftlen > 0:
       topic = readUTF(buffer[-leftlen:], leftlen)
       leftlen -= len(topic) + 2
-      self.data.append(topic)
+      self.topicFilters.append(topic)
     assert leftlen == 0
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 1, "[MQTT-2.1.2-1]"
@@ -1116,57 +1168,27 @@ class Unsubscribes(Packets):
     logger.info("[MQTT-3-10.1-1] fixed header bits are 0,0,1,0")
     return fhlen + self.fh.remainingLength
 
-  def __repr__(self):
-    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+\
-           ", Data="+repr(self.data)+")"
+  def __str__(self):
+    return str(self.fh)+", MsgId="+str(self.packetIdentifier)+\
+           ", Data="+str(self.topicFilters)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
-           self.messageIdentifier == packet.messageIdentifier and \
-           self.data == packet.data
+           self.packetIdentifier == packet.packetIdentifier and \
+           self.topicFilters == packet.topicFilters
 
 
-class Unsubacks(Packets):
+class Unsubacks(UnsubSubacks):
 
-  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, MsgId=1):
-    self.fh = FixedHeaders(PacketTypes.UNSUBACK)
-    self.fh.DUP = DUP
-    self.fh.QoS = QoS
-    self.fh.RETAIN = RETAIN
-    # variable header
-    self.messageIdentifier = MsgId
-    if buffer != None:
-      self.unpack(buffer)
-
-  def pack(self):
-    buffer = writeInt16(self.messageIdentifier)
-    buffer = self.fh.pack(len(buffer)) + buffer
-    return buffer
-
-  def unpack(self, buffer):
-    assert len(buffer) >= 2
-    assert PacketType(buffer) == PacketTypes.UNSUBACK
-    fhlen = self.fh.unpack(buffer)
-    assert len(buffer) >= fhlen + self.fh.remainingLength
-    self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.messageIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
-    self.messageIdentifier = readInt16(buffer[fhlen:])
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
-    return fhlen + self.fh.remainingLength
-
-  def __repr__(self):
-    return repr(self.fh)+", MsgId="+repr(self.messageIdentifier)+")"
-
-  def __eq__(self, packet):
-    return Packets.__eq__(self, packet) and \
-           self.messageIdentifier == packet.messageIdentifier
+  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, PacketId=1, reasonCodes=[]):
+      UnsubSubacks.__init__(self, PacketTypes.UNSUBACK, buffer, DUP, QoS, RETAIN,
+          PacketId, reasonCodes)
 
 
 class Pingreqs(Packets):
 
   def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False):
+    object.__setattr__(self, "names", ["fh", "DUP", "QoS", "RETAIN"])
     self.fh = FixedHeaders(PacketTypes.PINGREQ)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -1184,13 +1206,14 @@ class Pingreqs(Packets):
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
     return fhlen
 
-  def __repr__(self):
-    return repr(self.fh)+")"
+  def __str__(self):
+    return str(self.fh)+")"
 
 
 class Pingresps(Packets):
 
   def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False):
+    object.__setattr__(self, "names", ["fh", "DUP", "QoS", "RETAIN"])
     self.fh = FixedHeaders(PacketTypes.PINGRESP)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
@@ -1208,12 +1231,113 @@ class Pingresps(Packets):
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
     return fhlen
 
-  def __repr__(self):
-    return repr(self.fh)+")"
+  def __str__(self):
+    return str(self.fh)+")"
+
+
+class Disconnects(Packets):
+
+  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False,
+          reasonCode="Normal disconnection"):
+    object.__setattr__(self, "names",
+        ["fh", "DUP", "QoS", "RETAIN", "reasonCode", "properties"])
+    self.fh = FixedHeaders(PacketTypes.DISCONNECT)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.RETAIN = RETAIN
+    # variable header
+    self.reasonCode = ReasonCodes(PacketTypes.DISCONNECT, reasonCode)
+    self.properties = Properties(PacketTypes.DISCONNECT)
+    if buffer != None:
+      self.unpack(buffer)
+
+  def pack(self):
+    buffer = b""
+    if self.reasonCode.getName() != "Normal disconnection" or not self.properties.isEmpty():
+      buffer += self.reasonCode.pack()
+      if not self.properties.isEmpty():
+        buffer += self.properties.pack()
+    buffer = self.fh.pack(len(buffer)) + buffer
+    return buffer
+
+  def unpack(self, buffer):
+    self.properties.clear()
+    self.reasonCode.set("Normal disconnection")
+    assert len(buffer) >= 2
+    assert PacketType(buffer) == PacketTypes.DISCONNECT
+    fhlen = self.fh.unpack(buffer)
+    assert len(buffer) >= fhlen + self.fh.remainingLength
+    assert self.fh.DUP == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
+    curlen = 0
+    if self.fh.remainingLength > 0:
+      self.reasonCode.unpack(buffer[curlen:])
+      curlen += 1
+    if self.fh.remainingLength > 1:
+      curlen += self.properties.unpack(buffer[curlen:])[1]
+    assert curlen == self.fh.remainingLength, \
+            "DISCONNECT packet is wrong length %d" % self.fh.remainingLength
+    return fhlen + self.fh.remainingLength
+
+  def __str__(self):
+    return str(self.fh)+", ReasonCode: "+str(self.reasonCode)+", Properties: "+str(self.properties)
+
+  def __eq__(self, packet):
+    return Packets.__eq__(self, packet) and \
+           self.reasonCode == packet.reasonCode and \
+           self.properties == packet.properties
+
+
+class Auths(Packets):
+
+  def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False,
+          reasonCode="Success"):
+    object.__setattr__(self, "names",
+        ["fh", "DUP", "QoS", "RETAIN", "reasonCode", "properties"])
+    self.fh = FixedHeaders(PacketTypes.AUTH)
+    self.fh.DUP = DUP
+    self.fh.QoS = QoS
+    self.fh.RETAIN = RETAIN
+    # variable header
+    self.reasonCode = ReasonCodes(PacketTypes.AUTH, reasonCode)
+    self.properties = Properties(PacketTypes.AUTH)
+    if buffer != None:
+      self.unpack(buffer)
+
+  def pack(self):
+    buffer = self.reasonCode.pack()
+    buffer += self.properties.pack()
+    buffer = self.fh.pack(len(buffer)) + buffer
+    return buffer
+
+  def unpack(self, buffer):
+    assert len(buffer) >= 2
+    assert PacketType(buffer) == PacketTypes.AUTH
+    fhlen = self.fh.unpack(buffer)
+    assert len(buffer) >= fhlen + self.fh.remainingLength
+    assert self.fh.DUP == False, "[MQTT-2.1.2-1] AUTH reserved bits must be 0"
+    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] AUTH reserved bits must be 0"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] AUTH reserved bits must be 0"
+    curlen = fhlen
+    curlen += self.reasonCode.unpack(buffer[curlen:])
+    curlen += self.properties.unpack(buffer[curlen:])[1]
+    assert curlen == fhlen + self.fh.remainingLength, \
+            "AUTH packet is wrong length %d %d" % (self.fh.remainingLength, curlen)
+    return fhlen + self.fh.remainingLength
+
+  def __str__(self):
+    return str(self.fh)+", ReasonCode: "+str(self.reasonCode)+", Properties: "+str(self.properties)
+
+  def __eq__(self, packet):
+    return Packets.__eq__(self, packet) and \
+           self.reasonCode == packet.reasonCode and \
+           self.properties == packet.properties
+
 
 classes = [Connects, Connacks, Publishes, Pubacks, Pubrecs,
            Pubrels, Pubcomps, Subscribes, Subacks, Unsubscribes,
-           Unsubacks, Pingreqs, Pingresps, Disconnects]
+           Unsubacks, Pingreqs, Pingresps, Disconnects, Auths]
 
 def unpackPacket(buffer):
   if PacketType(buffer) != None:
