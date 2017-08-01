@@ -166,10 +166,10 @@ class Client:
     else:
       publish.packetIdentifier = self.__nextMsgid()
       if publish.fh.QoS == 2:
-        publish.pubrec_received = False
+        pass #publish.pubrec_received = False
       self.__receiver.outMsgs[publish.packetIdentifier] = publish
     publish.topicName = topic
-    publish.data = payload
+    publish.data = payload if type(payload) == type(b"") else bytes(payload, "utf8")
     sendtosocket(self.sock, publish.pack())
     return publish.packetIdentifier
 

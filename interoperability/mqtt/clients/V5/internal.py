@@ -52,85 +52,85 @@ class Receivers:
       return
     logging.debug("in :%s", str(packet))
 
-    if packet.fh.MessageType == MQTTV5.SUBACK:
+    if packet.fh.PacketType == MQTTV5.PacketTypes.SUBACK:
       if hasattr(callback, "subscribed"):
-        callback.subscribed(packet.messageIdentifier, packet.data)
+        callback.subscribed(packet.packetIdentifier, packet.data)
 
-    elif packet.fh.MessageType == MQTTV5.UNSUBACK:
+    elif packet.fh.PacketType == MQTTV5.PacketTypes.UNSUBACK:
       if hasattr(callback, "unsubscribed"):
-        callback.unsubscribed(packet.messageIdentifier)
+        callback.unsubscribed(packet.packetIdentifier)
 
-    elif packet.fh.MessageType == MQTTV5.PUBACK:
+    elif packet.fh.PacketType == MQTTV5.PacketTypes.PUBACK:
       "check if we are expecting a puback"
-      if packet.messageIdentifier in self.outMsgs.keys() and \
-        self.outMsgs[packet.messageIdentifier].fh.QoS == 1:
-        del self.outMsgs[packet.messageIdentifier]
+      if packet.packetIdentifier in self.outMsgs.keys() and \
+        self.outMsgs[packet.packetIdentifier].fh.QoS == 1:
+        del self.outMsgs[packet.packetIdentifier]
         if hasattr(callback, "published"):
-          callback.published(packet.messageIdentifier)
+          callback.published(packet.packetIdentifier)
       else:
         raise Exception("No QoS 1 with that message id sent")
 
-    elif packet.fh.MessageType == MQTTV5.PUBREC:
-      if packet.messageIdentifier in self.outMsgs.keys():
-        self.outMsgs[packet.messageIdentifier].pubrec_received == True
-        self.pubrel.messageIdentifier = packet.messageIdentifier
+    elif packet.fh.PacketType == MQTTV5.PacketTypes.PUBREC:
+      if packet.packetIdentifier in self.outMsgs.keys():
+        #self.outMsgs[packet.packetIdentifier].pubrec_received = True
+        self.pubrel.packetIdentifier = packet.packetIdentifier
         logging.debug("out: %s", str(self.pubrel))
         self.socket.send(self.pubrel.pack())
       else:
         raise Exception("PUBREC received for unknown msg id "+ \
-                    str(packet.messageIdentifier))
+                    str(packet.packetIdentifier))
 
-    elif packet.fh.MessageType == MQTTV5.PUBREL:
+    elif packet.fh.PacketType == MQTTV5.PacketTypes.PUBREL:
       "release QOS 2 publication to client, & send PUBCOMP"
-      msgid = packet.messageIdentifier
-      if packet.messageIdentifier not in self.inMsgs.keys():
+      msgid = packet.packetIdentifier
+      if packet.packetIdentifier not in self.inMsgs.keys():
         pass # what should we do here?
       else:
-        pub = self.inMsgs[packet.messageIdentifier]
+        pub = self.inMsgs[packet.packetIdentifier]
         if callback == None or \
            callback.publishArrived(pub.topicName, pub.data, 2,
-                           pub.fh.RETAIN, pub.messageIdentifier):
-          del self.inMsgs[packet.messageIdentifier]
-          self.pubcomp.messageIdentifier = packet.messageIdentifier
+                           pub.fh.RETAIN, pub.packetIdentifier):
+          del self.inMsgs[packet.packetIdentifier]
+          self.pubcomp.packetIdentifier = packet.packetIdentifier
           logging.debug("out: %s", str(self.pubcomp))
           self.socket.send(self.pubcomp.pack())
         if callback == None:
           return (pub.topicName, pub.data, 2,
-                           pub.fh.RETAIN, pub.messageIdentifier)
+                           pub.fh.RETAIN, pub.packetIdentifier)
 
-    elif packet.fh.MessageType == MQTTV5.PUBCOMP:
+    elif packet.fh.PacketType == MQTTV5.PacketTypes.PUBCOMP:
       "finished with this message id"
-      if packet.messageIdentifier in self.outMsgs.keys():
-        del self.outMsgs[packet.messageIdentifier]
+      if packet.packetIdentifier in self.outMsgs.keys():
+        del self.outMsgs[packet.packetIdentifier]
         if hasattr(callback, "published"):
-          callback.published(packet.messageIdentifier)
+          callback.published(packet.packetIdentifier)
       else:
         raise Exception("PUBCOMP received for unknown msg id "+ \
-                    str(packet.messageIdentifier))
+                    str(packet.packetIdentifier))
 
-    elif packet.fh.MessageType == MQTTV5.PUBLISH:
+    elif packet.fh.PacketType == MQTTV5.PacketTypes.PUBLISH:
       if self.paused:
         return
       if packet.fh.QoS == 0:
         if callback == None:
           return (packet.topicName, packet.data, 0,
-                           packet.fh.RETAIN, packet.messageIdentifier)
+                           packet.fh.RETAIN, packet.packetIdentifier)
         else:
           callback.publishArrived(packet.topicName, packet.data, 0,
-                        packet.fh.RETAIN, packet.messageIdentifier)
+                        packet.fh.RETAIN, packet.packetIdentifier)
       elif packet.fh.QoS == 1:
         if callback == None:
           return (packet.topicName, packet.data, 1,
-                           packet.fh.RETAIN, packet.messageIdentifier)
+                           packet.fh.RETAIN, packet.packetIdentifier)
         else:
           if callback.publishArrived(packet.topicName, packet.data, 1,
-                           packet.fh.RETAIN, packet.messageIdentifier):
-            self.puback.messageIdentifier = packet.messageIdentifier
+                           packet.fh.RETAIN, packet.packetIdentifier):
+            self.puback.packetIdentifier = packet.packetIdentifier
             logging.debug("out: %s", str(self.puback))
             self.socket.send(self.puback.pack())
       elif packet.fh.QoS == 2:
-        self.inMsgs[packet.messageIdentifier] = packet
-        self.pubrec.messageIdentifier = packet.messageIdentifier
+        self.inMsgs[packet.packetIdentifier] = packet
+        self.pubrec.packetIdentifier = packet.packetIdentifier
         logging.debug("out: %s", str(self.pubrec))
         self.socket.send(self.pubrec.pack())
 
@@ -141,7 +141,7 @@ class Receivers:
     for packetid in self.outMsgs.keys():
       packet = self.outMsgs[packetid]
       if packet.fh.QoS == 2 and hasattr(packet, "pubrec_received"):
-        self.pubrel.messageIdentifier = packet.messageIdentifier
+        self.pubrel.packetIdentifier = packet.packetIdentifier
         packet = self.pubrel
       else:
         packet.fh.DUP = True

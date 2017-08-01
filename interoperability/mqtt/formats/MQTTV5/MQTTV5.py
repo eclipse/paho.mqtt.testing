@@ -779,7 +779,7 @@ class Connacks(Packets):
       self.unpack(buffer)
 
   def pack(self):
-    flags = 0x01 if self.sessionPresent else 0x00 
+    flags = 0x01 if self.sessionPresent else 0x00
     buffer = bytes([flags])
     buffer += self.reasonCode.pack()
     buffer = self.fh.pack(len(buffer)) + buffer
@@ -864,7 +864,7 @@ class Publishes(Packets):
   def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, MsgId=1, TopicName="", Payload=b""):
     object.__setattr__(self, "names",
           ["fh", "DUP", "QoS", "RETAIN", "topicName", "packetIdentifier",
-           "properties", "data"])
+           "properties", "data", "qos2state"])
     self.fh = FixedHeaders(PacketTypes.PUBLISH)
     self.fh.DUP = DUP
     self.fh.QoS = QoS

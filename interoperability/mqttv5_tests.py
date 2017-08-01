@@ -1,9 +1,23 @@
 import unittest, mqtt, time
 
+class callbacks(mqtt.clients.V5.Callback):
+
+  def __init__(self, test):
+    self.count = 0
+    self.test = test
+
+  def publishArrived(self, topicName, payload, qos, retained, msgid):
+    self.test.assertEqual(topicName, "k")
+    self.test.assertEqual(qos, self.count)
+    self.test.assertEqual(retained, False)
+    self.test.assertEqual(payload, bytes("qos "+str(self.count), "utf8"))
+    self.count += 1
+    return True
+
 class Test(unittest.TestCase):
 
   def testBasicClient(self):
-    callback = mqtt.clients.V5.Callback()
+    callback = callbacks(self)
 
     aclient = mqtt.clients.V5.Client("myclientid")
     aclient.registerCallback(callback)
@@ -19,6 +33,7 @@ class Test(unittest.TestCase):
     aclient.publish("k", "qos 2", 2)
     time.sleep(1.0)
     aclient.disconnect()
+    self.assertEqual(callback.count, 3)
 
 
 if __name__ == "__main__":
