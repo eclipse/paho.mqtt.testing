@@ -36,6 +36,31 @@ class Test(unittest.TestCase):
         self.assertTrue(before == after,
             "For packet type %s" % (MQTTV5.Packets.Names[packetType]))
 
+
+    def testPropertyTypes(self):
+        packetType = MQTTV5.PacketTypes.PUBLISH
+        p = MQTTV5.Properties(packetType)
+        q = MQTTV5.Properties(packetType)
+        # Byte
+        p.PayloadFormatIndicator = 56
+        # Two Byte Integer
+        p.TopicAlias = 378
+        # Four Byte Integer
+        p.PublicationExpiryInterval = 108927
+        # Variable Byte Integer
+        p.SubscriptionIdentifier = 45678988
+        # Binary Data
+        p.CorrelationData = bytes([4,6,6])
+        # UTF-8 Encoded String
+        p.ContentType = "Content type test"
+        # UTF-8 Encoded String Pair
+        p.UserProperty = ("a property name", "a property value")
+        before = str(p)
+        after = str(q.unpack(p.pack())[0])
+        #print(p, after)
+        self.assertTrue(before == after,
+            "For packet type %s" % (MQTTV5.Packets.Names[packetType]))
+
     def testBasicPackets(self):
       for packet in MQTTV5.classes:
         #print("BasicPacket", packet.__name__)

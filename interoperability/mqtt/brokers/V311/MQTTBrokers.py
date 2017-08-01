@@ -19,7 +19,7 @@
 
 import traceback, random, sys, string, copy, threading, logging, socket, time, uuid
 
-from ..formats import MQTTV311 as MQTTV3
+from mqtt.formats import MQTTV311 as MQTTV3
 
 from .Brokers import Brokers
 

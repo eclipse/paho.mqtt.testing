@@ -332,6 +332,17 @@ def writeInt16(length):
 def readInt16(buf):
   return buf[0]*256 + buf[1]
 
+def writeInt32(length):
+  buffer = [length // 16777216]
+  length %= 16777216
+  buffer += [length // 65536]
+  length %= 65536
+  buffer += [length // 256, length % 256]
+  return bytes(buffer)
+
+def readInt32(buf):
+  return buf[0]*16777216 + buf[1]*65536 + buf[2]*256 + buf[3]
+
 def writeUTF(data):
   # data could be a string, or bytes.  If string, encode into bytes with utf-8
   return writeInt16(len(data)) + (data if type(data) == type(b"") else bytes(data, "utf-8"))
@@ -474,10 +485,14 @@ class Properties(object):
 
   def __str__(self):
     buffer = "["
+    first = True
     for name in self.names.keys():
       compressedName = name.replace(' ', '')
       if hasattr(self, compressedName):
+        if not first:
+          buffer += ", "
         buffer += compressedName +" : "+str(getattr(self, compressedName))
+        first = False
     buffer += "]"
     return buffer
 
@@ -758,13 +773,13 @@ class Connacks(Packets):
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
-    self.sessionPresent = 0
+    self.sessionPresent = False
     self.reasonCode = ReasonCodes(PacketTypes.CONNACK, ReasonCode)
     if buffer != None:
       self.unpack(buffer)
 
   def pack(self):
-    flags = self.sessionPresent # works because there is only one flag
+    flags = 0x01 if self.sessionPresent else 0x00 
     buffer = bytes([flags])
     buffer += self.reasonCode.pack()
     buffer = self.fh.pack(len(buffer)) + buffer
@@ -776,7 +791,7 @@ class Connacks(Packets):
     self.fh.unpack(buffer)
     assert self.fh.remainingLength == 2, "Connack packet is wrong length %d" % self.fh.remainingLength
     assert buffer[2] in [0, 1], "Connect Acknowledge Flags"
-    self.sessionPresent = buffer[2]
+    self.sessionPresent = (buffer[2] == 0x01)
     self.reasonCode.unpack(buffer[3:])
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
@@ -1346,28 +1361,3 @@ def unpackPacket(buffer):
   else:
     packet = None
   return packet
-
-if __name__ == "__main__":
-  fh = FixedHeaders(PacketTypes.CONNECT)
-  tests = [0, 56, 127, 128, 8888, 16383, 16384, 65535, 2097151, 2097152,
-           20555666, 268435454, 268435455]
-  for x in tests:
-    try:
-      assert x == MBIs.decode(MBIs.encode(x))[0]
-    except AssertionError:
-      print("Test failed for x =", x, MBIs.decode(MBIs.encode(x)))
-  try:
-    MBIs.decode(MBIs.encode(268435456))
-    print("Error")
-  except AssertionError:
-    pass
-
-  for packet in classes[1:]:
-    before = str(packet())
-    after = str(unpackPacket(packet().pack()))
-    print("before:", before, "\nafter:", after)
-    try:
-      assert before == after
-    except:
-      print("before:", before, "\nafter:", after)
-  print("End")

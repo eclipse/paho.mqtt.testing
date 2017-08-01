@@ -21,7 +21,7 @@ import socket, time, _thread, logging
 
 from . import internal
 
-from ..formats import MQTTV311 as MQTTV3
+from mqtt.formats import MQTTV311 as MQTTV3
 
 
 logger = logging.getLogger("mqtt-client")

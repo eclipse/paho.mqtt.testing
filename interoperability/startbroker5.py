@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import mqtt.broker5, sys, logging
+import mqtt, sys, logging
 
 if __name__ == "__main__":
   formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s %(message)s',  datefmt='%Y%m%d %H%M%S')
@@ -26,4 +26,4 @@ if __name__ == "__main__":
   broker_logger = logging.getLogger('MQTT broker')
   broker_logger.addHandler(ch)
   broker_logger.propagate = False # don't pass log entries up to the root logger 
-  mqtt.broker5.main(sys.argv)
+  mqtt.brokers.V5.main(sys.argv)
