@@ -323,9 +323,10 @@ class MQTTBrokers:
         respqoss.append(ReasonCodes(MQTTV5.PacketTypes.SUBACK, "Unspecified error"))
       else:
         if topicFilter == "test/QoS 1 only":
-          respqoss.append(min(1, QoS))
-      elif topicFilter == "test/QoS 0 only":
-          respqoss.append(min(0, QoS))
+          respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK,
+             MQTTV5.ReasonCodes.min(1, QoS)))
+        elif topicFilter == "test/QoS 0 only":
+          respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, min(0, QoS)))
         else:
           respqoss.append(QoS)
         topics.append(topicFilter)
