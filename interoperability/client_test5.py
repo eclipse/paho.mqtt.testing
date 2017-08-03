@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import mqtt.clients.V311 as mqtt_client, time, logging, socket, sys, getopt, traceback
+import mqtt.clients.V5 as mqtt_client, time, logging, socket, sys, getopt, traceback
 
 class Callbacks(mqtt_client.Callback):
 

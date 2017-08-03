@@ -92,4 +92,8 @@ class Test(unittest.TestCase):
           r.getId("rubbish")
 
 if __name__ == "__main__":
+    import sys
+    if sys.version_info[0] < 3:
+        print("This program requires Python 3")
+        sys.exit()
     unittest.main()

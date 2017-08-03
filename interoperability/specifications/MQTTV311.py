@@ -1,16 +1,16 @@
 """
 *******************************************************************
   Copyright (c) 2013, 2015 IBM Corp.
- 
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
 *******************************************************************
@@ -39,7 +39,7 @@ logger = logging.getLogger("MQTTV311_spec")
 #logger.setLevel(logging.INFO)
 
 class Clients:
-	
+
 	def __init__(self):
 		self.msgid = 0
 		self.running = False
@@ -59,7 +59,7 @@ class Clients:
 		self.running = True
 		packet = None
 		try:
-			while True:		
+			while True:
 				packet = MQTTV3.unpackPacket(MQTTV3.getPacket(state.sockets[sockid]))
 				if packet == None:
 					break
@@ -124,7 +124,7 @@ class BrokerSockets:
 	#	print("requesting broker attribute", name)
 	#	raise AttributeError
 
-	
+
 class ClientSockets:
 
 	def __init__(self, real=False):
@@ -145,12 +145,12 @@ class ClientSockets:
 				broker_logger.setLevel(logging.INFO)
 				broker_logger.addHandler(mqtt.broker.coverage.handler)
 				state.broker = mqtt.broker.MQTTBrokers() # add parameters later
-		
+
 	def connect(self, destination):
 		if self.real:
 			self.sock.connect(destination)
 		else:
-			self.connected = True	 
+			self.connected = True
 
 	def recv(self, length):
 		if self.real:
@@ -173,7 +173,7 @@ class ClientSockets:
 				raise Exception("not connected")
 			self.brokerSocket.buffer += data
 			try:
-				state.broker.handleRequest(self.brokerSocket)	
+				state.broker.handleRequest(self.brokerSocket)
 			except:
 				self.failurePending = True # only indicate connection failure next time around, like a real socket
 			return len(data)
@@ -236,16 +236,16 @@ def socket_close(sockid : "socket"):
 	sock.close()
 
 mbt.finishedWith(socket_close, "sockid")
-	
+
 
 """
 	protocol name           valid, invalid
 	protocol version        valid, invalid
-	clientID	        lengths 0, 1, 22, 23; characters?
+	clientID	            lengths 0, 1, 22, 23; characters?
 	cleansession	        true, false
 	will: topic, message, qos, retained
-	keepAlive                0, 60, 
-	username                 None, 
+	keepAlive                0, 60,
+	username                 None,
 	password                 None
 """
 @mbt.action
@@ -269,7 +269,7 @@ def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean",
     #	connect.WillRETAIN = 0
 	#   connect.WillTopic = None        # UTF-8
     #	connect.WillMessage = None      # binary
-	sock.send(connect.pack())	
+	sock.send(connect.pack())
 	time.sleep(0.5)
 	checksocket(sockid)
 	response = state.clientlist[sockid].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
@@ -359,8 +359,8 @@ def puback(publish : "publishes"):
 		pubrec = MQTTV3.Pubrecs()
 		pubrec.messageIdentifier = publish.messageIdentifier
 		sock.send(pubrec.pack())
-		
-mbt.finishedWith(puback, "publish")		
+
+mbt.finishedWith(puback, "publish")
 
 @mbt.action
 def pubcomp(pubrel : "pubrels"):
@@ -383,7 +383,7 @@ def pingreq():
 
 """
  choice lists should be ordered but unique - ordered sets
-   options: 
+   options:
    sequenced - add sequence number
    frequency of choices (somehow)
 
@@ -394,7 +394,7 @@ mbt.choices("boolean", (True, False))
 
 mbt.choices("hostnames", ("localhost",))
 mbt.choices("ports", (1883,))
-mbt.choices("clientids", ("", "normal", "23 characters4567890123", 
+mbt.choices("clientids", ("", "normal", "23 characters4567890123",
                "A clientid that is longer than 23 chars - should work in 3.1.1"))
 
 topics =  ("TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA")
@@ -423,7 +423,7 @@ mbt.model.addReturnType("publishes")
 
  Selection callback.  Pick the next step from a list of options.
 
- This makes sure 
+ This makes sure
 
 	1) connect is called after socket_create
 	2) pubrel, puback, pubcomp are processed as quickly as possible
@@ -431,7 +431,7 @@ mbt.model.addReturnType("publishes")
 """
 
 def select(frees):
-	global state 
+	global state
 	current_state = copy.deepcopy(state)
 	free_names = set([f[0].getName() for f in frees])
 	logger.debug("*** after_socket_create %s %s", state.after_socket_create, state.last_free_names)
@@ -444,7 +444,7 @@ def select(frees):
 			curname = random.choice(list(diff))
 			frees = [f for f in frees if f[0].getName() == curname]
 			state.after_socket_create.add(curname)
-	else:	
+	else:
 		for f in frees:
 			if f[0].getName() in ["pubrel", "puback", "pubcomp"]:
 				frees = [f]
@@ -461,11 +461,11 @@ def restart():
 		state.clients.append(Clients())
 	state.next_client = 0
 	for i in range(len(state.sockets)):
-		state.sockets[i].close() # just to make sure 
+		state.sockets[i].close() # just to make sure
 	while len(state.sockets) > 0:
 		del state.sockets[0]
 
-mbt.model.restartCallback = restart	
+mbt.model.restartCallback = restart
 
 
 def between(str, str1, str2):
@@ -485,7 +485,7 @@ def replace(str, str1, str2, replace_str):
   if start != -1 and end != -1:
     rc = str[:start] + replace_str + str[end:]
   return rc
-  
+
 
 def observationCheckCallback(observation, results):
 	# results is a list of tuples (str(observation), observation)
@@ -499,13 +499,13 @@ def observationCheckCallback(observation, results):
 				logger.debug("observation found")
 				return k
 		return None
-	else:	
+	else:
 		return observation if observation in [x for x, y in results] else None
 
 
 """
 
-callback to modify call, used during test running 
+callback to modify call, used during test running
 
 """
 hostname = None
@@ -526,7 +526,7 @@ def callCallback(action, kwargs):
 
 callback to modify API call, used during test generation
 
-Chooses the packetid parameter, to 
+Chooses the packetid parameter, to
 
 """
 def generateCallCallback(action, kwargs):
@@ -544,5 +544,3 @@ if __name__ == "__main__":
 		stepping = True
 
 	mbt.run(stepping=stepping)
-
-
