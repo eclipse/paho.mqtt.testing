@@ -135,6 +135,7 @@ class Client:
       self.__receiver.socket = self.sock
     if self.callback:
       id = _thread.start_new_thread(self.__receiver, (self.callback,))
+    print("connack response", response) 
     return response
 
 
