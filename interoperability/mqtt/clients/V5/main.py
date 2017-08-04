@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2017 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -94,6 +94,10 @@ class Client:
   def connect(self, host="localhost", port=1883, cleansession=True, keepalive=0, newsocket=True, protocolName=None,
               willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None):
     if newsocket:
+      try:
+        self.sock.close()
+      except:
+        pass
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self.sock.settimeout(.5)
       self.sock.connect((host, port))
@@ -135,7 +139,6 @@ class Client:
       self.__receiver.socket = self.sock
     if self.callback:
       id = _thread.start_new_thread(self.__receiver, (self.callback,))
-    print("connack response", response) 
     return response
 
 
@@ -153,7 +156,7 @@ class Client:
   def unsubscribe(self, topics):
     unsubscribe = MQTTV5.Unsubscribes()
     unsubscribe.packetIdentifier = self.__nextMsgid()
-    unsubscribe.data = topics
+    unsubscribe.topicFilters = topics
     sendtosocket(self.sock, unsubscribe.pack())
     return unsubscribe.packetIdentifier
 

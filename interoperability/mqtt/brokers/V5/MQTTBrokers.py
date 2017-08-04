@@ -320,7 +320,7 @@ class MQTTBrokers:
     respqoss = []
     for topicFilter, QoS in packet.data:
       if topicFilter == "test/nosubscribe":
-        respqoss.append(ReasonCodes(MQTTV5.PacketTypes.SUBACK, "Unspecified error"))
+        respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, "Unspecified error"))
       else:
         if topicFilter == "test/QoS 1 only":
           respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK,
@@ -343,7 +343,7 @@ class MQTTBrokers:
     respond(sock, resp)
 
   def unsubscribe(self, sock, packet):
-    self.broker.unsubscribe(self.clients[sock].id, packet.data)
+    self.broker.unsubscribe(self.clients[sock].id, packet.topicFilters)
     resp = MQTTV5.Unsubacks()
     logger.info("[MQTT-2.3.1-7] Unsuback has same message id as unsubscribe")
     logger.info("[MQTT-3.10.4-4] Unsuback must be sent - same message id as unsubscribe")

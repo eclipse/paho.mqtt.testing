@@ -69,6 +69,16 @@ class Test(unittest.TestCase):
           p.data = [("#", 2)]
           before = str(p)
           after = str(MQTTV5.unpackPacket(p.pack()))
+        elif packet == MQTTV5.Unsubscribes:
+          p = packet()
+          p.topicFilters = [("#")]
+          before = str(p)
+          after = str(MQTTV5.unpackPacket(p.pack()))
+        elif packet == MQTTV5.Subacks:
+          p = packet()
+          p.reasonCodes = [MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, "Unspecified error")]
+          before = str(p)
+          after = str(MQTTV5.unpackPacket(p.pack()))
         else:
           before = str(packet())
           after = str(MQTTV5.unpackPacket(packet().pack()))

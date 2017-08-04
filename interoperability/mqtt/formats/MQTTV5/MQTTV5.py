@@ -1099,7 +1099,8 @@ class UnsubSubacks(Packets):
   def pack(self):
     buffer = writeInt16(self.packetIdentifier)
     buffer += self.properties.pack()
-    buffer += bytes([reasoncode.pack() for reasonCode in self.reasonCodes])
+    for reasonCode in self.reasonCodes:
+      buffer += reasonCode.pack()
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
@@ -1113,8 +1114,9 @@ class UnsubSubacks(Packets):
     leftlen -= self.properties.unpack(buffer[-leftlen:])[1]
     self.reasonCodes = []
     while leftlen > 0:
-      reasonCode = ReasonCodes(self.packetType, buffer[-leftlen])
-      assert reasonCode in [0, 1, 2, 0x80], "[MQTT-3.9.3-2] return code in QoS must be 0, 1, 2 or 0x80"
+      reasonCode = ReasonCodes(self.packetType, "Granted QoS 0")
+      reasonCode.unpack(buffer[-leftlen:])
+      assert reasonCode.value in [0, 1, 2, 0x80], "[MQTT-3.9.3-2] return code in QoS must be 0, 1, 2 or 0x80"
       leftlen -= 1
       self.reasonCodes.append(reasonCode)
     assert leftlen == 0
@@ -1125,7 +1127,7 @@ class UnsubSubacks(Packets):
 
   def __str__(self):
     return str(self.fh)+", PacketId="+str(self.packetIdentifier)+\
-           ", reason codes="+str(self.reasonCodes)+")"
+           ", reason codes="+str([str(rc) for rc in self.reasonCodes])+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -1173,8 +1175,8 @@ class Unsubscribes(Packets):
     leftlen = self.fh.remainingLength - 2
     self.topicFilters = []
     while leftlen > 0:
-      topic = readUTF(buffer[-leftlen:], leftlen)
-      leftlen -= len(topic) + 2
+      topic, topiclen = readUTF(buffer[-leftlen:], leftlen)
+      leftlen -= topiclen
       self.topicFilters.append(topic)
     assert leftlen == 0
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
