@@ -134,14 +134,13 @@ class Test(unittest.TestCase):
         succeeded = False
       except Exception as exc:
         pass # exception expected
-
       try:
         aclient.connect(host=host, port=port, protocolName="hj") # should fail - wrong protocol name
         succeeded = False
       except Exception as exc:
         pass # exception expected
-
       print("Basic test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
       return succeeded
 
     def test_retained_messages(self):
@@ -183,6 +182,7 @@ class Test(unittest.TestCase):
       except:
         traceback.print_exc()
       print("Retained message test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
       return succeeded
 
     def will_message_test(self):
@@ -205,6 +205,7 @@ class Test(unittest.TestCase):
         traceback.print_exc()
         succeeded = False
       print("Will message test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
       return succeeded
 
     # 0 length clientid
@@ -230,6 +231,7 @@ class Test(unittest.TestCase):
         traceback.print_exc()
         succeeded = False
       print("Zero length clientid test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
       return succeeded
 
     def test_offline_message_queueing(self):
@@ -262,6 +264,7 @@ class Test(unittest.TestCase):
         traceback.print_exc()
         succeeded = False
       print("Offline message queueing test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
       return succeeded
 
     def test_overlapping_subscriptions(self):
@@ -290,6 +293,7 @@ class Test(unittest.TestCase):
         traceback.print_exc()
         succeeded = False
       print("Overlapping subscriptions test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
       return succeeded
 
 
@@ -311,6 +315,7 @@ class Test(unittest.TestCase):
         traceback.print_exc()
         succeeded = False
       print("Keepalive test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
       return succeeded
 
 
@@ -339,6 +344,7 @@ class Test(unittest.TestCase):
         traceback.print_exc()
         succeeded = False
       print("Redelivery on reconnect test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
       return succeeded
 
     def test_subscribe_failure(self):
@@ -357,6 +363,7 @@ class Test(unittest.TestCase):
         traceback.print_exc()
         succeeded = False
       print("Subscribe failure test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
       return succeeded
 
 
@@ -380,6 +387,36 @@ class Test(unittest.TestCase):
         traceback.print_exc()
         succeeded = False
       print("$ topics test", "succeeded" if succeeded else "failed")
+      self.assertEqual(succeeded, True)
+      return succeeded
+
+    def test_unsubscribe(self):
+      print("Unsubscribe test")
+      succeeded = True
+      try:
+        callback2.clear()
+        bclient.connect(host=host, port=port, cleansession=True)
+        bclient.subscribe([topics[0]], [2])
+        bclient.subscribe([topics[1]], [2])
+        bclient.subscribe([topics[2]], [2])
+        time.sleep(1) # wait for all retained messages, hopefully
+        # Unsubscribed from one topic
+        bclient.unsubscribe([topics[0]])
+
+        aclient.connect(host=host, port=port, cleansession=True)
+        aclient.publish(topics[0], b"", 1, retained=False)
+        aclient.publish(topics[1], b"", 1, retained=False)
+        aclient.publish(topics[2], b"", 1, retained=False)
+        time.sleep(2)
+
+        bclient.disconnect()
+        aclient.disconnect()
+        self.assertEqual(len(callback2.messages), 2, callback2.messages)
+      except:
+        traceback.print_exc()
+        succeeded = False
+      self.assertEqual(succeeded, True)
+      print("unsubscribe tests", "succeeded" if succeeded else "failed")
       return succeeded
 
 
