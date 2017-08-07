@@ -33,6 +33,8 @@ logger = logging.getLogger('MQTTV5')
 class MQTTException(Exception):
   pass
 
+class ProtocolError(MQTTException):
+  pass
 
 class PacketTypes:
 

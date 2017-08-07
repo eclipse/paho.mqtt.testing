@@ -454,7 +454,7 @@ class Test(unittest.TestCase):
       self.assertEqual(connack.sessionPresent, False)
       aclient.disconnect()
 
-      connect_properties.SessionExpiryInterval = 0
+      connect_properties.SessionExpiryInterval = 1
       connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties)
       self.assertEqual(connack.reasonCode.getName(), "Success")
       self.assertEqual(connack.sessionPresent, False)
@@ -467,9 +467,15 @@ class Test(unittest.TestCase):
       # session should still exist
       connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties)
       self.assertEqual(connack.reasonCode.getName(), "Success")
-      self.assertEqual(connack.sessionPresent, False)
+      self.assertEqual(connack.sessionPresent, True)
       disconnect_properties.SessionExpiryInterval = 0
       aclient.disconnect(properties = disconnect_properties)
+
+      # session should immediately expire
+      connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, False)
+      aclient.disconnect()
 
 
 if __name__ == "__main__":

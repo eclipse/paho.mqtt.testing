@@ -208,19 +208,24 @@ class MQTTBrokers:
       if raw_packet == None:
         # will message
         self.disconnect(sock, None, sendWillMessage=True)
-        sendWillMessage = True
+        terminate = True
       else:
         packet = MQTTV5.unpackPacket(raw_packet)
         if packet:
-          sendWillMessage = self.handlePacket(packet, sock)
+          try:
+            terminate = self.handlePacket(packet, sock)
+          except MQTTV5.ProtocolError:
+            self.disconnect(sock, reasonCode="Protocol error")
+            raise
         else:
+          self.disconnect(sock, reasonCode="Malformed packet")
           raise MQTTV5.MQTTException("[MQTT-2.0.0-1] handleRequest: badly formed MQTT packet")
     finally:
       self.lock.release()
-    return sendWillMessage
+    return terminate
 
   def handlePacket(self, packet, sock):
-    sendWillMessage = False
+    terminate = False
     logger.info("in: "+str(packet))
     if sock not in self.clients.keys() and packet.fh.PacketType != MQTTV5.PacketTypes.CONNECT:
       self.disconnect(sock, packet)
@@ -230,8 +235,8 @@ class MQTTBrokers:
       if sock in self.clients.keys():
         self.clients[sock].lastPacket = time.time()
     if packet.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT:
-      sendWillMessage = True
-    return sendWillMessage
+      terminate = True
+    return terminate
 
   def connect(self, sock, packet):
     if packet.ProtocolName != "MQTT":
@@ -308,17 +313,21 @@ class MQTTBrokers:
     respond(sock, resp)
     me.resend()
 
-  def disconnect(self, sock, packet, sendWillMessage=False):
+  def disconnect(self, sock, packet=None, sendWillMessage=False, reasonCode=None):
     logger.info("[MQTT-3.14.4-2] Client must not send any more packets after disconnect")
     me = self.clients[sock]
     # Session expiry
     if packet and hasattr(packet.properties, "SessionExpiryInterval"):
       if me.sessionExpiryInterval == 0 and packet.properties.SessionExpiryInterval > 0:
-        pass # protocol error, return 0x82
+        raise MQTTV5.ProtocolError("[MQTT-3.1.0-2] Can't reset SessionExpiryInterval from 0")
       else:
         me.sessionExpiryInterval = packet.properties.SessionExpiryInterval
+    if reasonCode:
+      resp = MQTTV5.Disconnects(reasonCode=reasonCode) # reasonCode is text
+      respond(sock, resp)
     if sock in self.clients.keys():
-      self.broker.disconnect(me.id, sendWillMessage)
+      self.broker.disconnect(me.id, willMessage=sendWillMessage,
+          sessionExpiryInterval=me.sessionExpiryInterval)
       del self.clients[sock]
     try:
       sock.shutdown(socket.SHUT_RDWR) # must call shutdown to close socket immediately

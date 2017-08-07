@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2017 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -164,8 +164,7 @@ class MyHandler(socketserver.StreamRequestHandler):
         if (len(exc.args) > 0):
           logger.error(exc.args[0])
         else:
-          logger.error("")
-          traceback.print_exc()
+          logger.error(str(exc))
         break
       except:
         logger.exception("MyHandler")
@@ -203,8 +202,7 @@ class TCPHandler(socketserver.StreamRequestHandler):
         if (len(exc.args) > 0):
           logger.error(exc.args[0])
         else:
-          logger.error("")
-          traceback.print_exc()
+          logger.error(str(exc))
         break
       except:
         logger.exception("MyHandler")
