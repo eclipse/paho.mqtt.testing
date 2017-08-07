@@ -225,7 +225,8 @@ class Client:
     self.__receiver.paused = True
 
   def resume(self):
-    self.__receiver.paused = False
+    if self.__receiver:
+      self.__receiver.paused = False
 
 
 if __name__ == "__main__":
