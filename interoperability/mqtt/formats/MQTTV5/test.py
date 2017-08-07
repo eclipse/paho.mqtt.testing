@@ -30,6 +30,9 @@ class Test(unittest.TestCase):
              p.UserProperty = ("jk", "jk")
         if packetType in [MQTTV5.PacketTypes.PUBLISH]:
             p.PayloadFormatIndicator = 3
+        if packetType in [MQTTV5.PacketTypes.CONNECT,
+           MQTTV5.PacketTypes.DISCONNECT]:
+            p.SessionExpiryInterval = 120
         #print(packetType, str(p.pack())+ " " + str(p.unpack(p.pack())[0].pack()))
         before = str(p)
         after = str(q.unpack(p.pack())[0])

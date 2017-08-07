@@ -16,4 +16,4 @@
 *******************************************************************
 """
 
-from .main import Callback, Client
+from .main import Callback, Client, MQTTV5

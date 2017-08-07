@@ -1,16 +1,16 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
- 
+  Copyright (c) 2013, 2017 IBM Corp.
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
 *******************************************************************
@@ -22,7 +22,7 @@ from . import Topics
 from .SubscriptionEngines import SubscriptionEngines
 
 logger = logging.getLogger('MQTT broker')
- 
+
 class Brokers:
 
   def __init__(self, overlapping_single=True):
@@ -43,15 +43,15 @@ class Brokers:
       logger.info("[MQTT-3.1.2-7] retained messages not cleaned up as part of session state for client %s", aClientid)
     self.se.clearSubscriptions(aClientid)
 
-  def connect(self, aClient):
+  def connect(self, aClient, clean=False):
     aClient.connected = True
-    aClient.timestamp = time.clock()
+    #aClient.timestamp = time.clock()
     self.__clients[aClient.id] = aClient
-    if aClient.cleansession:
+    if clean:
       self.cleanSession(aClient.id)
 
-  def terminate(self, aClientid):
-    "Abrupt disconnect which also causes a will msg to be sent out"
+  def sendWillMessage(self, aClientid):
+    "Sends the will message, if any, for a client"
     if aClientid in self.__clients.keys() and self.__clients[aClientid].connected:
       if self.__clients[aClientid].will != None:
         logger.info("[MQTT-3.1.2-8] sending will message for client %s", aClientid)
@@ -61,19 +61,21 @@ class Brokers:
         else:
           logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
         self.publish(aClientid, willtopic, willmsg, willQoS, willRetain)
-      self.disconnect(aClientid)
 
-  def disconnect(self, aClientid):
+  def disconnect(self, aClientid, willMessage=False, sessionExpiryInterval=-1):
+    if willMessage:
+      self.sendWillMessage(aClientid)
     if aClientid in self.__clients.keys():
       self.__clients[aClientid].connected = False
-      if self.__clients[aClientid].cleansession:
+      if sessionExpiryInterval == 0:
         logger.info("[MQTT-3.1.2-6] broker must discard the session data for client %s", aClientid)
         self.cleanSession(aClientid)
         del self.__clients[aClientid]
       else:
         logger.info("[MQTT-3.1.2-4] broker must store the session data for client %s", aClientid)
-        self.__clients[aClientid].timestamp = time.clock()
-        self.__clients[aClientid].connected = False 
+        #self.__clients[aClientid].timestamp = time.clock()
+        self.__clients[aClientid].sessionEndedTime = time.monotonic()
+        self.__clients[aClientid].connected = False
         logger.info("[MQTT-3.1.2-10] will message is deleted after use or disconnect, for client %s", aClientid)
         logger.info("[MQTT-3.14.4-3] on receipt of disconnect, will message is deleted")
         self.__clients[aClientid].will = None
@@ -84,7 +86,7 @@ class Brokers:
 
   def publish(self, aClientid, topic, message, qos, retained=False):
     """publish to all subscribed connected clients
-       also to any disconnected non-cleansession clients with qos in [1,2]
+       also to any disconnected non-cleanstart clients with qos in [1,2]
     """
     if retained:
       logger.info("[MQTT-2.1.2-6] store retained message and QoS")
@@ -98,7 +100,7 @@ class Brokers:
         logger.info("[MQTT-3.3.5-1] overlapping subscriptions")
       if retained:
         logger.info("[MQTT-2.1.2-10] outgoing publish does not have retained flag set")
-      if self.overlapping_single:   
+      if self.overlapping_single:
         out_qos = min(self.se.qosOf(subscriber, topic), qos)
         self.__clients[subscriber].publishArrived(topic, message, out_qos)
       else:
@@ -133,7 +135,7 @@ class Brokers:
 
   def getSubscriptions(self, aClientid=None):
     return self.se.getSubscriptions(aClientid)
- 
+
 def unit_tests():
   bn = Brokers()
 
@@ -142,7 +144,7 @@ def unit_tests():
     def __init__(self, anId):
      self.id = anId # required
      self.msgqueue = []
-     self.cleansession = True
+     self.cleanstart = True
 
     def publishArrived(self, topic, msg, qos, retained=False):
       "required by broker node class"
@@ -150,7 +152,7 @@ def unit_tests():
       self.msgqueue.append((topic, msg, qos))
 
   Client1 = Clients("Client1")
-  Client1.cleansession = False
+  Client1.cleanstart = False
 
   bn.connect(Client1)
   bn.subscribe(Client1.id, "topic1", 1)
@@ -187,14 +189,14 @@ def unit_tests():
   bn.disconnect(Client1.id)
 
   Client2 = Clients("Client2")
-  Client2.cleansession = False
+  Client2.cleanstart = False
   bn.connect(Client2)
   bn.publish(Client2.id, "topic2/a", "queued message 0", 0)
   bn.publish(Client2.id, "topic2/a", "queued message 1", 1)
   bn.publish(Client2.id, "topic2/a", "queued message 2", 2)
 
   bn.connect(Client1)
-  Client1.cleansession = False
+  Client1.cleanstart = False
   print(Client1.msgqueue)
   assert Client1.msgqueue.pop(0) == ("topic2/a", "queued message 0", 0)
   assert Client1.msgqueue.pop(0) == ("topic2/a", "queued message 1", 1)
@@ -202,5 +204,3 @@ def unit_tests():
 
   bn.disconnect(Client1.id)
   bn.disconnect(Client2.id)
-
- 

@@ -37,9 +37,11 @@ def respond(sock, packet):
 
 class MQTTClients:
 
-  def __init__(self, anId, cleansession, keepalive, socket, broker):
+  def __init__(self, anId, cleanStart, sessionExpiryInterval, keepalive, socket, broker):
     self.id = anId # required
-    self.cleansession = cleansession
+    self.cleanStart = cleanStart
+    self.sessionExpiryInterval = sessionExpiryInterval
+    self.sessionEndedTime = 0
     self.socket = socket
     self.msgid = 1
     self.outbound = [] # message objects - for ordering
@@ -197,7 +199,7 @@ class MQTTBrokers:
   def handleRequest(self, sock):
     "this is going to be called from multiple threads, so synchronize"
     self.lock.acquire()
-    terminate = False
+    sendWillMessage = False
     try:
       try:
         raw_packet = MQTTV5.getPacket(sock)
@@ -205,20 +207,20 @@ class MQTTBrokers:
         raise MQTTV5.MQTTException("[MQTT-4.8.0-1] 'transient error' reading packet, closing connection")
       if raw_packet == None:
         # will message
-        self.disconnect(sock, None, terminate=True)
-        terminate = True
+        self.disconnect(sock, None, sendWillMessage=True)
+        sendWillMessage = True
       else:
         packet = MQTTV5.unpackPacket(raw_packet)
         if packet:
-          terminate = self.handlePacket(packet, sock)
+          sendWillMessage = self.handlePacket(packet, sock)
         else:
           raise MQTTV5.MQTTException("[MQTT-2.0.0-1] handleRequest: badly formed MQTT packet")
     finally:
       self.lock.release()
-    return terminate
+    return sendWillMessage
 
   def handlePacket(self, packet, sock):
-    terminate = False
+    sendWillMessage = False
     logger.info("in: "+str(packet))
     if sock not in self.clients.keys() and packet.fh.PacketType != MQTTV5.PacketTypes.CONNECT:
       self.disconnect(sock, packet)
@@ -228,8 +230,8 @@ class MQTTBrokers:
       if sock in self.clients.keys():
         self.clients[sock].lastPacket = time.time()
     if packet.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT:
-      terminate = True
-    return terminate
+      sendWillMessage = True
+    return sendWillMessage
 
   def connect(self, sock, packet):
     if packet.ProtocolName != "MQTT":
@@ -249,7 +251,7 @@ class MQTTBrokers:
       logger.info("[MQTT-3.1.4-5] When rejecting connect, no more data must be processed")
       raise MQTTV5.MQTTException("[MQTT-3.1.0-2] Second connect packet")
     if len(packet.ClientIdentifier) == 0:
-      if self.zero_length_clientids == False or packet.CleanSession == False:
+      if self.zero_length_clientids == False or packet.CleanStart == False:
         if self.zero_length_clientids:
           logger.info("[MQTT-3.1.3-8] Reject 0-length clientid with cleansession false")
         logger.info("[MQTT-3.1.3-9] if clientid is rejected, must send connack 2 and close connection")
@@ -272,34 +274,51 @@ class MQTTBrokers:
           self.disconnect(s, None)
           break
     me = None
-    if not packet.CleanSession:
+    clean = False
+    if packet.CleanStart:
+      clean = True
+    else:
       me = self.broker.getClient(packet.ClientIdentifier) # find existing state, if there is any
+      # has that state expired?
+      if me and me.sessionExpiryInterval >= 0 and time.monotonic() - me.sessionEndedTime > me.sessionExpiryInterval:
+        me = None
+        clean = True
       if me:
         logger.info("[MQTT-3.1.3-2] clientid used to retrieve client state")
     resp = MQTTV5.Connacks()
     resp.sessionPresent = True if me else False
+    # Session expiry
+    if hasattr(packet.properties, "SessionExpiryInterval"):
+      sessionExpiryInterval = packet.properties.SessionExpiryInterval
+    else:
+      sessionExpiryInterval = -1 # no expiry
     if me == None:
-      me = MQTTClients(packet.ClientIdentifier, packet.CleanSession, packet.KeepAliveTimer, sock, self)
+      me = MQTTClients(packet.ClientIdentifier, packet.CleanStart, sessionExpiryInterval, packet.KeepAliveTimer, sock, self)
     else:
       me.socket = sock # set existing client state to new socket
-      me.cleansession = packet.CleanSession
+      me.cleanStart = packet.CleanStart
       me.keepalive = packet.KeepAliveTimer
+      me.sessionExpiryInterval = sessionExpiryInterval
     logger.info("[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts")
     self.clients[sock] = me
     me.will = (packet.WillTopic, packet.WillQoS, packet.WillMessage, packet.WillRETAIN) if packet.WillFlag else None
-    self.broker.connect(me)
+    self.broker.connect(me, clean)
     logger.info("[MQTT-3.2.0-1] the first response to a client must be a connack")
     resp.reasonCode.set("Success")
     respond(sock, resp)
     me.resend()
 
-  def disconnect(self, sock, packet, terminate=False):
+  def disconnect(self, sock, packet, sendWillMessage=False):
     logger.info("[MQTT-3.14.4-2] Client must not send any more packets after disconnect")
-    if sock in self.clients.keys():
-      if terminate:
-        self.broker.terminate(self.clients[sock].id)
+    me = self.clients[sock]
+    # Session expiry
+    if packet and hasattr(packet.properties, "SessionExpiryInterval"):
+      if me.sessionExpiryInterval == 0 and packet.properties.SessionExpiryInterval > 0:
+        pass # protocol error, return 0x82
       else:
-        self.broker.disconnect(self.clients[sock].id)
+        me.sessionExpiryInterval = packet.properties.SessionExpiryInterval
+    if sock in self.clients.keys():
+      self.broker.disconnect(me.id, sendWillMessage)
       del self.clients[sock]
     try:
       sock.shutdown(socket.SHUT_RDWR) # must call shutdown to close socket immediately
@@ -436,4 +455,4 @@ class MQTTBrokers:
       if client.keepalive > 0 and time.time() - client.lastPacket > client.keepalive * 1.5:
         # keep alive timeout
         logger.info("[MQTT-3.1.2-22] keepalive timeout for client %s", client.id)
-        self.disconnect(sock, None, terminate=True)
+        self.disconnect(sock, None, sendWillMessage=True)

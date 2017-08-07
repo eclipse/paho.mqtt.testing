@@ -32,7 +32,7 @@ class Callbacks(mqtt_client.Callback):
     self.__init__()
 
   def connectionLost(self, cause):
-    logging.info("connectionLost %s", str(cause))
+    logging.info("connectionLost %s" % str(cause))
 
   def publishArrived(self, topicName, payload, qos, retained, msgid):
     logging.info("publishArrived %s %s %d %d %d", topicName, payload, qos, retained, msgid)
@@ -58,7 +58,7 @@ def cleanup():
 
   for clientid in clientids:
     curclient = mqtt_client.Client(clientid.encode("utf-8"))
-    curclient.connect(host=host, port=port, cleansession=True)
+    curclient.connect(host=host, port=port, cleanstart=True)
     time.sleep(.1)
     curclient.disconnect()
     time.sleep(.1)
@@ -67,7 +67,7 @@ def cleanup():
   callback = Callbacks()
   curclient = mqtt_client.Client("clean retained".encode("utf-8"))
   curclient.registerCallback(callback)
-  curclient.connect(host=host, port=port, cleansession=True)
+  curclient.connect(host=host, port=port, cleanstart=True)
   curclient.subscribe(["#"], [0])
   time.sleep(2) # wait for all retained messages to arrive
   for message in callback.messages:
@@ -115,7 +115,8 @@ class Test(unittest.TestCase):
         aclient.connect(host=host, port=port)
         aclient.disconnect()
 
-        aclient.connect(host=host, port=port)
+        rc = aclient.connect(host=host, port=port)
+        self.assertEqual(rc.reasonCode.getName(), "Success")
         aclient.subscribe([topics[0]], [2])
         aclient.publish(topics[0], b"qos 0")
         aclient.publish(topics[0], b"qos 1", 1)
@@ -140,7 +141,7 @@ class Test(unittest.TestCase):
       except Exception as exc:
         pass # exception expected
 
-      logging.info("Basic test", "succeeded" if succeeded else "failed")
+      logging.info("Basic test %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
 
@@ -154,7 +155,7 @@ class Test(unittest.TestCase):
       try:
         # retained messages
         callback.clear()
-        aclient.connect(host=host, port=port, cleansession=True)
+        aclient.connect(host=host, port=port, cleanstart=True)
         aclient.publish(topics[1], b"qos 0", 0, retained=True)
         aclient.publish(topics[2], b"qos 1", 1, retained=True)
         aclient.publish(topics[3], b"qos 2", 2, retained=True)
@@ -163,11 +164,11 @@ class Test(unittest.TestCase):
         time.sleep(1)
         aclient.disconnect()
 
-        assert len(callback.messages) == 3
+        self.assertEqual(len(callback.messages), 3)
 
         # clear retained messages
         callback.clear()
-        aclient.connect(host=host, port=port, cleansession=True)
+        aclient.connect(host=host, port=port, cleanstart=True)
         aclient.publish(topics[1], b"", 0, retained=True)
         aclient.publish(topics[2], b"", 1, retained=True)
         aclient.publish(topics[3], b"", 2, retained=True)
@@ -180,7 +181,7 @@ class Test(unittest.TestCase):
         succeeded = True
       except:
         traceback.print_exc()
-      logging.info("Retained message test", "succeeded" if succeeded else "failed")
+      logging.info("Retained message test %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
 
@@ -190,9 +191,9 @@ class Test(unittest.TestCase):
       callback2.clear()
       assert len(callback2.messages) == 0, callback2.messages
       try:
-        aclient.connect(host=host, port=port, cleansession=True, willFlag=True,
+        aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
           willTopic=topics[2], willMessage=b"client not disconnected", keepalive=2)
-        bclient.connect(host=host, port=port, cleansession=False)
+        bclient.connect(host=host, port=port, cleanstart=False)
         bclient.subscribe([topics[2]], [2])
         time.sleep(.1)
         aclient.terminate()
@@ -202,7 +203,7 @@ class Test(unittest.TestCase):
       except:
         traceback.print_exc()
         succeeded = False
-      logging.info("Will message test", "succeeded" if succeeded else "failed")
+      logging.info("Will message test %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
 
@@ -214,13 +215,13 @@ class Test(unittest.TestCase):
         client0 = mqtt_client.Client("")
         fails = False
         try:
-          client0.connect(host=host, port=port, cleansession=False) # should be rejected
+          client0.connect(host=host, port=port, cleanstart=False) # should be rejected
         except:
           fails = True
         assert fails == True
         fails = False
         try:
-          client0.connect(host=host, port=port, cleansession=True) # should work
+          client0.connect(host=host, port=port, cleanstart=True) # should work
         except:
           fails = True
         assert fails == False
@@ -228,7 +229,7 @@ class Test(unittest.TestCase):
       except:
         traceback.print_exc()
         succeeded = False
-      logging.info("Zero length clientid test", "succeeded" if succeeded else "failed")
+      logging.info("Zero length clientid test %s", "succeeded" if succeeded else "failed")
       return succeeded
 
     def test_offline_message_queueing(self):
@@ -237,18 +238,18 @@ class Test(unittest.TestCase):
         # message queueing for offline clients
         callback.clear()
 
-        aclient.connect(host=host, port=port, cleansession=False)
+        aclient.connect(host=host, port=port, cleanstart=False)
         aclient.subscribe([wildtopics[5]], [2])
         aclient.disconnect()
 
-        bclient.connect(host=host, port=port, cleansession=True)
+        bclient.connect(host=host, port=port, cleanstart=True)
         bclient.publish(topics[1], b"qos 0", 0)
         bclient.publish(topics[2], b"qos 1", 1)
         bclient.publish(topics[3], b"qos 2", 2)
         time.sleep(2)
         bclient.disconnect()
 
-        aclient.connect(host=host, port=port, cleansession=False)
+        aclient.connect(host=host, port=port, cleanstart=False)
         time.sleep(2)
         aclient.disconnect()
 
@@ -258,7 +259,7 @@ class Test(unittest.TestCase):
       except:
         traceback.print_exc()
         succeeded = False
-      logging.info("Offline message queueing test", "succeeded" if succeeded else "failed")
+      logging.info("Offline message queueing test %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
 
@@ -287,7 +288,7 @@ class Test(unittest.TestCase):
       except:
         traceback.print_exc()
         succeeded = False
-      logging.info("Overlapping subscriptions test", "succeeded" if succeeded else "failed")
+      logging.info("Overlapping subscriptions test %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
 
@@ -299,9 +300,9 @@ class Test(unittest.TestCase):
       succeeded = True
       try:
         callback2.clear()
-        aclient.connect(host=host, port=port, cleansession=True, keepalive=5, willFlag=True,
+        aclient.connect(host=host, port=port, cleanstart=True, keepalive=5, willFlag=True,
               willTopic=topics[4], willMessage=b"keepalive expiry")
-        bclient.connect(host=host, port=port, cleansession=True, keepalive=0)
+        bclient.connect(host=host, port=port, cleanstart=True, keepalive=0)
         bclient.subscribe([topics[4]], [2])
         time.sleep(15)
         bclient.disconnect()
@@ -309,7 +310,7 @@ class Test(unittest.TestCase):
       except:
         traceback.print_exc()
         succeeded = False
-      logging.info("Keepalive test", "succeeded" if succeeded else "failed")
+      logging.info("Keepalive test %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
 
@@ -322,7 +323,7 @@ class Test(unittest.TestCase):
       try:
         callback.clear()
         callback2.clear()
-        bclient.connect(host=host, port=port, cleansession=False)
+        bclient.connect(host=host, port=port, cleanstart=False)
         bclient.subscribe([wildtopics[6]], [2])
         bclient.pause() # stops responding to incoming publishes
         bclient.publish(topics[1], b"", 1, retained=False)
@@ -331,14 +332,14 @@ class Test(unittest.TestCase):
         bclient.disconnect()
         assert len(callback2.messages) == 0, "length should be 0: %s" % callback2.messages
         bclient.resume()
-        bclient.connect(host=host, port=port, cleansession=False)
+        bclient.connect(host=host, port=port, cleanstart=False)
         time.sleep(3)
         assert len(callback2.messages) == 2, "length should be 2: %s" % callback2.messages
         bclient.disconnect()
       except:
         traceback.print_exc()
         succeeded = False
-      logging.info("Redelivery on reconnect test", "succeeded" if succeeded else "failed")
+      logging.info("Redelivery on reconnect test %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
 
@@ -358,7 +359,7 @@ class Test(unittest.TestCase):
       except:
         traceback.print_exc()
         succeeded = False
-      logging.info("Subscribe failure test", "succeeded" if succeeded else "failed")
+      logging.info("Subscribe failure test %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
 
@@ -370,7 +371,7 @@ class Test(unittest.TestCase):
       succeeded = True
       try:
         callback2.clear()
-        bclient.connect(host=host, port=port, cleansession=True, keepalive=0)
+        bclient.connect(host=host, port=port, cleanstart=True, keepalive=0)
         bclient.subscribe([wildtopics[5]], [2])
         time.sleep(1) # wait for all retained messages, hopefully
         callback2.clear()
@@ -381,7 +382,7 @@ class Test(unittest.TestCase):
       except:
         traceback.print_exc()
         succeeded = False
-      logging.info("$ topics test", "succeeded" if succeeded else "failed")
+      logging.info("$ topics test %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
 
@@ -390,7 +391,7 @@ class Test(unittest.TestCase):
       succeeded = True
       try:
         callback2.clear()
-        bclient.connect(host=host, port=port, cleansession=True)
+        bclient.connect(host=host, port=port, cleanstart=True)
         bclient.subscribe([topics[0]], [2])
         bclient.subscribe([topics[1]], [2])
         bclient.subscribe([topics[2]], [2])
@@ -398,7 +399,7 @@ class Test(unittest.TestCase):
         # Unsubscribed from one topic
         bclient.unsubscribe([topics[0]])
 
-        aclient.connect(host=host, port=port, cleansession=True)
+        aclient.connect(host=host, port=port, cleanstart=True)
         aclient.publish(topics[0], b"", 1, retained=False)
         aclient.publish(topics[1], b"", 1, retained=False)
         aclient.publish(topics[2], b"", 1, retained=False)
@@ -410,9 +411,65 @@ class Test(unittest.TestCase):
       except:
         traceback.print_exc()
         succeeded = False
-      logging.info("unsubscribe tests", "succeeded" if succeeded else "failed")
+      logging.info("unsubscribe tests %s", "succeeded" if succeeded else "failed")
       self.assertEqual(succeeded, True)
       return succeeded
+
+    def test_session_expiry(self):
+      # no session expiry property == never expire
+
+      connect_properties = mqtt_client.MQTTV5.Properties(mqtt_client.MQTTV5.PacketTypes.CONNECT)
+
+      connect_properties.SessionExpiryInterval = 0
+      connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, False)
+      aclient.subscribe([topics[0]], [2])
+      aclient.disconnect()
+
+      # session should immediately expire
+      connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, False)
+      aclient.disconnect()
+
+      connect_properties.SessionExpiryInterval = 5
+      connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, False)
+      aclient.subscribe([topics[0]], [2])
+      aclient.disconnect()
+
+      time.sleep(2)
+      # session should still exist
+      connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, True)
+      aclient.disconnect()
+
+      time.sleep(6)
+      # session should not exist
+      connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, False)
+      aclient.disconnect()
+
+      connect_properties.SessionExpiryInterval = 0
+      connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, False)
+      aclient.subscribe([topics[0]], [2])
+      disconnect_properties = mqtt_client.MQTTV5.Properties(mqtt_client.MQTTV5.PacketTypes.DISCONNECT)
+      disconnect_properties.SessionExpiryInterval = 5
+      aclient.disconnect(properties = disconnect_properties)
+
+      time.sleep(3)
+      # session should still exist
+      connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, False)
+      disconnect_properties.SessionExpiryInterval = 0
+      aclient.disconnect(properties = disconnect_properties)
 
 
 if __name__ == "__main__":
@@ -451,7 +508,7 @@ if __name__ == "__main__":
   root = logging.getLogger()
   root.setLevel(logging.ERROR)
 
-  logging.info("hostname", host, "port", port)
+  logging.info("hostname %s port %d", host, port)
 
   for i in range(iterations):
     unittest.main()

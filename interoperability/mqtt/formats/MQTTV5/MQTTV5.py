@@ -90,7 +90,7 @@ class ReasonCodes:
     """
     used when displaying the reason code
     """
-    assert identifier in self.names.keys()
+    assert identifier in self.names.keys(), identifier
     names = self.names[identifier]
     namelist = [name for name in names.keys() if packetType in names[name]]
     assert len(namelist) == 1
@@ -476,7 +476,7 @@ class Properties(object):
     else:
       # the name could have spaces in, or not.  Remove spaces before assignment
       if name not in [name.replace(' ', '') for name in self.names.keys()]:
-        raise MQTTException("Attribute name must be one of "+str(names.keys()))
+        raise MQTTException("Attribute name must be one of "+str(self.names.keys()))
       # check that this attribute applies to the packet type
       if self.packetType not in self.properties[self.getIdentFromName(name)][1]:
         raise MQTTException("Attribute %s does not apply to packet type %s"
@@ -578,14 +578,15 @@ class Properties(object):
     # deserialize properties into attributes from buffer received from network
     propslen, MBIlen = MBIs.decode(buffer)
     buffer = buffer[MBIlen:] # strip the bytes used by the MBI
-    while propslen > 0: # properties length is 0 if there are none
+    propslenleft = propslen
+    while propslenleft > 0: # properties length is 0 if there are none
       identifier, MBIlen = MBIs.decode(buffer) # property identifier
       buffer = buffer[MBIlen:] # strip the bytes used by the MBI
-      propslen -= MBIlen
+      propslenleft -= MBIlen
       attr_type = self.properties[identifier][0]
-      value, valuelen = self.readProperty(buffer, attr_type, propslen)
+      value, valuelen = self.readProperty(buffer, attr_type, propslenleft)
       buffer = buffer[valuelen:] # strip the bytes used by the value
-      propslen -= valuelen
+      propslenleft -= valuelen
       setattr(self, self.getNameFromIdent(identifier), value)
     return self, propslen + MBIlen
 
@@ -595,7 +596,7 @@ class Connects(Packets):
   def __init__(self, buffer = None):
     object.__setattr__(self, "names",
          ["fh", "properties", "ProtocolName", "ProtocolVersion",
-          "ClientIdentifier", "CleanSession", "KeepAliveTimer",
+          "ClientIdentifier", "CleanStart", "KeepAliveTimer",
           "WillFlag", "WillQoS", "WillRETAIN", "WillTopic", "WillMessage",
           "usernameFlag", "passwordFlag", "username", "password"])
 
@@ -604,7 +605,7 @@ class Connects(Packets):
     # variable header
     self.ProtocolName = "MQTT"
     self.ProtocolVersion = 5
-    self.CleanSession = True
+    self.CleanStart = True
     self.WillFlag = False
     self.WillQoS = 0
     self.WillRETAIN = 0
@@ -626,7 +627,7 @@ class Connects(Packets):
       self.unpack(buffer)
 
   def pack(self):
-    connectFlags = bytes([(self.CleanSession << 1) | (self.WillFlag << 2) | \
+    connectFlags = bytes([(self.CleanStart << 1) | (self.WillFlag << 2) | \
                        (self.WillQoS << 3) | (self.WillRETAIN << 5) | \
                        (self.usernameFlag << 6) | (self.passwordFlag << 7)])
     buffer = writeUTF(self.ProtocolName) + bytes([self.ProtocolVersion]) + \
@@ -669,7 +670,7 @@ class Connects(Packets):
 
       connectFlags = buffer[curlen]
       assert (connectFlags & 0x01) == 0, "[MQTT-3.1.2-3] reserved connect flag must be 0"
-      self.CleanSession = ((connectFlags >> 1) & 0x01) == 1
+      self.CleanStart = ((connectFlags >> 1) & 0x01) == 1
       self.WillFlag = ((connectFlags >> 2) & 0x01) == 1
       self.WillQoS = (connectFlags >> 3) & 0x03
       self.WillRETAIN = (connectFlags >> 5) & 0x01
@@ -729,7 +730,7 @@ class Connects(Packets):
 
   def __str__(self):
     buf = str(self.fh)+", ProtocolName="+str(self.ProtocolName)+", ProtocolVersion=" +\
-          str(self.ProtocolVersion)+", CleanSession="+str(self.CleanSession) +\
+          str(self.ProtocolVersion)+", CleanStart="+str(self.CleanStart) +\
           ", WillFlag="+str(self.WillFlag)+", KeepAliveTimer=" +\
           str(self.KeepAliveTimer)+", ClientId="+str(self.ClientIdentifier) +\
           ", usernameFlag="+str(self.usernameFlag)+", passwordFlag="+str(self.passwordFlag)
@@ -749,7 +750,7 @@ class Connects(Packets):
     rc = Packets.__eq__(self, packet) and \
            self.ProtocolName == packet.ProtocolName and \
            self.ProtocolVersion == packet.ProtocolVersion and \
-           self.CleanSession == packet.CleanSession and \
+           self.CleanStart == packet.CleanStart and \
            self.WillFlag == packet.WillFlag and \
            self.KeepAliveTimer == packet.KeepAliveTimer and \
            self.ClientIdentifier == packet.ClientIdentifier and \
@@ -1287,13 +1288,13 @@ class Disconnects(Packets):
     assert self.fh.DUP == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
-    curlen = 0
+    curlen = fhlen
     if self.fh.remainingLength > 0:
       self.reasonCode.unpack(buffer[curlen:])
       curlen += 1
     if self.fh.remainingLength > 1:
       curlen += self.properties.unpack(buffer[curlen:])[1]
-    assert curlen == self.fh.remainingLength, \
+    assert curlen == fhlen + self.fh.remainingLength, \
             "DISCONNECT packet is wrong length %d" % self.fh.remainingLength
     return fhlen + self.fh.remainingLength
 

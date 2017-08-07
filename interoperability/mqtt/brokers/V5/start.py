@@ -1,16 +1,16 @@
 """
 *******************************************************************
   Copyright (c) 2013, 2014 IBM Corp.
- 
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
      Ian Craggs - add websockets support
@@ -44,7 +44,7 @@ class BufferedSockets:
         out = self.buffer[:bufsize]
         self.buffer = self.buffer[bufsize:]
         return out
-        
+
       header1 = ord(self.socket.recv(1))
       header2 = ord(self.socket.recv(1))
 
@@ -122,7 +122,7 @@ class MyHandler(socketserver.StreamRequestHandler):
            b"Connection: Upgrade\r\n" +\
            b"Sec-WebSocket-Protocol: mqtt\r\n" +\
            b"Sec-WebSocket-Accept: " + digest +b"\r\n\r\n"
-    return client.send(resp) 
+    return client.send(resp)
 
   def handle(self):
     global server
@@ -165,6 +165,7 @@ class MyHandler(socketserver.StreamRequestHandler):
           logger.error(exc.args[0])
         else:
           logger.error("")
+          traceback.print_exc()
         break
       except:
         logger.exception("MyHandler")
@@ -203,6 +204,7 @@ class TCPHandler(socketserver.StreamRequestHandler):
           logger.error(exc.args[0])
         else:
           logger.error("")
+          traceback.print_exc()
         break
       except:
         logger.exception("MyHandler")
@@ -230,7 +232,7 @@ def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=188
     server.server_activate()
     server.serve_forever()
   except KeyboardInterrupt:
-    pass 
+    pass
   except:
     logger.exception("startBroker")
   finally:
@@ -256,7 +258,7 @@ def reinitialize():
 
 def main(argv):
   try:
-    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:", ["help", "publish_on_pubrel=", "overlapping_single=", 
+    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:", ["help", "publish_on_pubrel=", "overlapping_single=",
         "dropQoS0=", "port=", "zero_length_clientids="])
   except getopt.GetoptError as err:
     print(err) # will print something like "option -a not recognized"

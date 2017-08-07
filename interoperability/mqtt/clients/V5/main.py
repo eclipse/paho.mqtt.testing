@@ -68,7 +68,8 @@ class Client:
     self.msgid = 1
     self.callback = None
     self.__receiver = None
-    self.cleansession = True
+    self.cleanstart = True
+    self.sessionexpiry = 0
 
 
   def __nextMsgid(self):
@@ -91,8 +92,9 @@ class Client:
     self.callback = callback
 
 
-  def connect(self, host="localhost", port=1883, cleansession=True, keepalive=0, newsocket=True, protocolName=None,
-              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None):
+  def connect(self, host="localhost", port=1883, cleanstart=True, keepalive=0, newsocket=True, protocolName=None,
+              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None,
+              properties=None):
     if newsocket:
       try:
         self.sock.close()
@@ -104,7 +106,7 @@ class Client:
 
     connect = MQTTV5.Connects()
     connect.ClientIdentifier = self.clientid
-    connect.CleanSession = cleansession
+    connect.CleanStart = cleanstart
     connect.KeepAliveTimer = keepalive
     if protocolName:
       connect.ProtocolName = protocolName
@@ -124,6 +126,9 @@ class Client:
       connect.passwordFlag = True
       connect.password = password
 
+    if properties:
+      connect.properties = properties
+
     sendtosocket(self.sock, connect.pack())
 
     response = MQTTV5.unpackPacket(MQTTV5.getPacket(self.sock))
@@ -131,9 +136,9 @@ class Client:
       raise MQTTV5.MQTTException("connect failed - socket closed, no connack")
     assert response.fh.PacketType == MQTTV5.PacketTypes.CONNACK
 
-    self.cleansession = cleansession
+    self.cleanstart = cleanstart
     assert response.reasonCode.getName() == "Success", "connect was %s" % str(response)
-    if self.cleansession or self.__receiver == None:
+    if self.cleanstart or self.__receiver == None:
       self.__receiver = internal.Receivers(self.sock)
     else:
       self.__receiver.socket = self.sock
@@ -178,7 +183,7 @@ class Client:
     return publish.packetIdentifier
 
 
-  def disconnect(self):
+  def disconnect(self, properties=None):
     if self.__receiver:
       self.__receiver.stopping = True
       count = 0
@@ -192,9 +197,11 @@ class Client:
         assert self.__receiver.inMsgs == {}, self.__receiver.inMsgs
         assert self.__receiver.outMsgs == {}, self.__receiver.outMsgs
     disconnect = MQTTV5.Disconnects()
+    if properties:
+      disconnect.properties = properties
     sendtosocket(self.sock, disconnect.pack())
     time.sleep(1.1)
-    if self.cleansession:
+    if self.sessionexpiry == 0:
       self.__receiver = None
     else:
       self.__receiver.socket = None
