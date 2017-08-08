@@ -24,10 +24,10 @@ class Test(unittest.TestCase):
                               MQTTV5.PacketTypes.UNSUBSCRIBE,
                               MQTTV5.PacketTypes.PINGREQ,
                               MQTTV5.PacketTypes.PINGRESP]:
-           p.UserProperty = ("jk", "jk")
+           p.UserPropertyList = [("jk", "jk"), ("kk", "kl")]
         else:
            with self.assertRaises(MQTTV5.MQTTException):
-             p.UserProperty = ("jk", "jk")
+             p.UserPropertyList = [("jk", "jk")]
         if packetType in [MQTTV5.PacketTypes.PUBLISH]:
             p.PayloadFormatIndicator = 3
         if packetType in [MQTTV5.PacketTypes.CONNECT,
@@ -57,7 +57,7 @@ class Test(unittest.TestCase):
         # UTF-8 Encoded String
         p.ContentType = "Content type test"
         # UTF-8 Encoded String Pair
-        p.UserProperty = ("a property name", "a property value")
+        p.UserPropertyList = [("a property name", "a property value")]
         before = str(p)
         after = str(q.unpack(p.pack())[0])
         #print(p, after)

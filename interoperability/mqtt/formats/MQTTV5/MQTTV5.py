@@ -408,7 +408,7 @@ class Properties(object):
       "Topic Alias" : 35,
       "Maximum QoS" : 36,
       "Retain Available" : 37,
-      "User Property" : 38,
+      "User Property List" : 38,
       "Maximum Packet Size" : 39,
       "Wildcard Subscription Available" : 40,
       "Subscription Identifier Available" : 41,
@@ -463,6 +463,7 @@ class Properties(object):
     }
 
   def getIdentFromName(self, compressedName):
+    # return the identifier corresponding to the property name
     result = -1
     for name in self.names.keys():
       if compressedName == name.replace(' ', ''):
@@ -537,10 +538,17 @@ class Properties(object):
     buffer = b""
     for name in self.names.keys():
       compressedName = name.replace(' ', '')
+      isList = False
+      if compressedName.endswith('List'):
+        isList = True
       if hasattr(self, compressedName):
         identifier = self.getIdentFromName(compressedName)
         attr_type = self.properties[identifier][0]
-        buffer += self.writeProperty(identifier, attr_type,
+        if isList:
+          for prop in getattr(self, compressedName):
+            buffer += self.writeProperty(identifier, attr_type, prop)
+        else:
+          buffer += self.writeProperty(identifier, attr_type,
                            getattr(self, compressedName))
     return MBIs.encode(len(buffer)) + buffer
 
@@ -589,7 +597,15 @@ class Properties(object):
       value, valuelen = self.readProperty(buffer, attr_type, propslenleft)
       buffer = buffer[valuelen:] # strip the bytes used by the value
       propslenleft -= valuelen
-      setattr(self, self.getNameFromIdent(identifier), value)
+      propname = self.getNameFromIdent(identifier)
+      if propname.endswith('List'):
+        compressedName = propname.replace(' ', '')
+        if not hasattr(self, compressedName):
+          setattr(self, propname, [value])
+        else:
+          setattr(self, propname, getattr(self, compressedName) + [value])
+      else:
+        setattr(self, propname, value)
     return self, propslen + MBIlen
 
 
