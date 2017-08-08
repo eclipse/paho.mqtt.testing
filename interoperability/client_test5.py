@@ -503,6 +503,34 @@ class Test(unittest.TestCase):
       qoss = [callback.messages[i][2] for i in range(3)]
       self.assertTrue(1 in qoss and 2 in qoss and 0 in qoss, qoss)
 
+    def test_payload_format(self):
+      callback.clear()
+      aclient.connect(host=host, port=port, cleanstart=True)
+      aclient.subscribe([topics[0]], [2])
+      publish_properties = mqtt_client.MQTTV5.Properties(mqtt_client.MQTTV5.PacketTypes.PUBLISH)
+      publish_properties.PayloadFormatIndicator = 1
+      publish_properties.ContentType = "My name"
+      aclient.publish(topics[0], b"", 0, retained=False, properties=publish_properties)
+      aclient.publish(topics[0], b"", 1, retained=False, properties=publish_properties)
+      aclient.publish(topics[0], b"", 2, retained=False, properties=publish_properties)
+      while len(callback.messages) < 3:
+        time.sleep(.1)
+      aclient.disconnect()
+
+      self.assertEqual(len(callback.messages), 3, callback.messages)
+      props = callback.messages[0][5]
+      print(props.ContentType)
+      self.assertEqual(props.ContentType, "My name", props.ContentType)
+      self.assertEqual(props.PayloadFormatIndicator, 1, props.PayloadFormatIndicator)
+      props = callback.messages[1][5]
+      self.assertEqual(props.ContentType, "My name", props.ContentType)
+      self.assertEqual(props.PayloadFormatIndicator, 1, props.PayloadFormatIndicator)
+      props = callback.messages[2][5]
+      self.assertEqual(props.ContentType, "My name", props.ContentType)
+      self.assertEqual(props.PayloadFormatIndicator, 1, props.PayloadFormatIndicator)
+      qoss = [callback.messages[i][2] for i in range(3)]
+      self.assertTrue(1 in qoss and 2 in qoss and 0 in qoss, qoss)
+
     def test_publication_expiry(self):
       pass
 
