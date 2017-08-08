@@ -150,40 +150,44 @@ class Test(unittest.TestCase):
       qos1topic="fromb/qos 1"
       qos2topic="fromb/qos2"
       wildcardtopic="fromb/+"
-      logging.info("Retained message test starting")
-      succeeded = False
-      try:
-        # retained messages
-        callback.clear()
-        aclient.connect(host=host, port=port, cleanstart=True)
-        aclient.publish(topics[1], b"qos 0", 0, retained=True)
-        aclient.publish(topics[2], b"qos 1", 1, retained=True)
-        aclient.publish(topics[3], b"qos 2", 2, retained=True)
-        time.sleep(1)
-        aclient.subscribe([wildtopics[5]], [2])
-        time.sleep(1)
-        aclient.disconnect()
 
-        self.assertEqual(len(callback.messages), 3)
+      publish_properties = mqtt_client.MQTTV5.Properties(mqtt_client.MQTTV5.PacketTypes.PUBLISH)
+      publish_properties.UserPropertyList = [("a", "2"), ("c", "3")]
 
-        # clear retained messages
-        callback.clear()
-        aclient.connect(host=host, port=port, cleanstart=True)
-        aclient.publish(topics[1], b"", 0, retained=True)
-        aclient.publish(topics[2], b"", 1, retained=True)
-        aclient.publish(topics[3], b"", 2, retained=True)
-        time.sleep(1) # wait for QoS 2 exchange to be completed
-        aclient.subscribe([wildtopics[5]], [2])
-        time.sleep(1)
-        aclient.disconnect()
+      # retained messages
+      callback.clear()
+      aclient.connect(host=host, port=port, cleanstart=True)
+      aclient.publish(topics[1], b"qos 0", 0, retained=True, properties=publish_properties)
+      aclient.publish(topics[2], b"qos 1", 1, retained=True, properties=publish_properties)
+      aclient.publish(topics[3], b"qos 2", 2, retained=True, properties=publish_properties)
+      time.sleep(1)
+      aclient.subscribe([wildtopics[5]], [2])
+      time.sleep(1)
+      aclient.disconnect()
 
-        assert len(callback.messages) == 0, "callback messages is %s" % callback.messages
-        succeeded = True
-      except:
-        traceback.print_exc()
-      logging.info("Retained message test %s", "succeeded" if succeeded else "failed")
-      self.assertEqual(succeeded, True)
-      return succeeded
+      self.assertEqual(len(callback.messages), 3)
+      userprops = callback.messages[0][5].UserPropertyList
+      self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
+      userprops = callback.messages[1][5].UserPropertyList
+      self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
+      userprops = callback.messages[2][5].UserPropertyList
+      self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
+      qoss = [callback.messages[i][2] for i in range(3)]
+      self.assertTrue(1 in qoss and 2 in qoss and 0 in qoss, qoss)
+
+
+      # clear retained messages
+      callback.clear()
+      aclient.connect(host=host, port=port, cleanstart=True)
+      aclient.publish(topics[1], b"", 0, retained=True)
+      aclient.publish(topics[2], b"", 1, retained=True)
+      aclient.publish(topics[3], b"", 2, retained=True)
+      time.sleep(1) # wait for QoS 2 exchange to be completed
+      aclient.subscribe([wildtopics[5]], [2])
+      time.sleep(1)
+      aclient.disconnect()
+      self.assertEqual(len(callback.messages), 0, "callback messages is %s" % callback.messages)
+
 
     def test_will_message(self):
       # will messages
@@ -499,6 +503,8 @@ class Test(unittest.TestCase):
       qoss = [callback.messages[i][2] for i in range(3)]
       self.assertTrue(1 in qoss and 2 in qoss and 0 in qoss, qoss)
 
+    def test_publication_expiry(self):
+      pass
 
 if __name__ == "__main__":
   try:

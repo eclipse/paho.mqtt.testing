@@ -90,7 +90,7 @@ class Brokers:
     """
     if retained:
       logger.info("[MQTT-2.1.2-6] store retained message and QoS")
-      self.se.setRetained(topic, message, qos)
+      self.se.setRetained(topic, message, qos, properties)
     else:
       logger.info("[MQTT-2.1.2-12] non-retained message - do not store")
 
