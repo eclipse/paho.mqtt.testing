@@ -34,9 +34,9 @@ class Callbacks(mqtt_client.Callback):
   def connectionLost(self, cause):
     logging.info("connectionLost %s" % str(cause))
 
-  def publishArrived(self, topicName, payload, qos, retained, msgid):
-    logging.info("publishArrived %s %s %d %d %d", topicName, payload, qos, retained, msgid)
-    self.messages.append((topicName, payload, qos, retained, msgid))
+  def publishArrived(self, topicName, payload, qos, retained, msgid, properties=None):
+    logging.info("publishArrived %s %s %d %d %d %s", topicName, payload, qos, retained, msgid, str(properties))
+    self.messages.append((topicName, payload, qos, retained, msgid, properties))
     return True
 
   def published(self, msgid):
@@ -476,6 +476,28 @@ class Test(unittest.TestCase):
       self.assertEqual(connack.reasonCode.getName(), "Success")
       self.assertEqual(connack.sessionPresent, False)
       aclient.disconnect()
+
+    def test_user_properties(self):
+      callback.clear()
+      aclient.connect(host=host, port=port, cleanstart=True)
+      aclient.subscribe([topics[0]], [2])
+      publish_properties = mqtt_client.MQTTV5.Properties(mqtt_client.MQTTV5.PacketTypes.PUBLISH)
+      publish_properties.UserPropertyList = [("a", "2"), ("c", "3")]
+      aclient.publish(topics[0], b"", 0, retained=False, properties=publish_properties)
+      aclient.publish(topics[0], b"", 1, retained=False, properties=publish_properties)
+      aclient.publish(topics[0], b"", 2, retained=False, properties=publish_properties)
+      while len(callback.messages) < 3:
+        time.sleep(.1)
+      aclient.disconnect()
+      self.assertEqual(len(callback.messages), 3, callback.messages)
+      userprops = callback.messages[0][5].UserPropertyList
+      self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
+      userprops = callback.messages[1][5].UserPropertyList
+      self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
+      userprops = callback.messages[2][5].UserPropertyList
+      self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
+      qoss = [callback.messages[i][2] for i in range(3)]
+      self.assertTrue(1 in qoss and 2 in qoss and 0 in qoss, qoss)
 
 
 if __name__ == "__main__":

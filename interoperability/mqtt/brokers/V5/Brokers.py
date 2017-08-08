@@ -60,7 +60,7 @@ class Brokers:
           logger.info("[MQTT-3.1.2-17] sending will message retained for client %s", aClientid)
         else:
           logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
-        self.publish(aClientid, willtopic, willmsg, willQoS, willRetain)
+        self.publish(aClientid, willtopic, willmsg, willQoS, None, willRetain)
 
   def disconnect(self, aClientid, willMessage=False, sessionExpiryInterval=-1):
     if willMessage:
@@ -84,7 +84,7 @@ class Brokers:
     for c in self.__clients.keys()[:]: # copy the array because disconnect will remove an element
       self.disconnect(c)
 
-  def publish(self, aClientid, topic, message, qos, retained=False):
+  def publish(self, aClientid, topic, message, qos, properties, retained=False):
     """publish to all subscribed connected clients
        also to any disconnected non-cleanstart clients with qos in [1,2]
     """
@@ -102,11 +102,11 @@ class Brokers:
         logger.info("[MQTT-2.1.2-10] outgoing publish does not have retained flag set")
       if self.overlapping_single:
         out_qos = min(self.se.qosOf(subscriber, topic), qos)
-        self.__clients[subscriber].publishArrived(topic, message, out_qos)
+        self.__clients[subscriber].publishArrived(topic, message, out_qos, properties)
       else:
         for subscription in self.se.getSubscriptions(topic, subscriber):
           out_qos = min(subscription.getQoS(), qos)
-          self.__clients[subscriber].publishArrived(topic, message, out_qos)
+          self.__clients[subscriber].publishArrived(topic, message, out_qos, properties)
 
   def __doRetained__(self, aClientid, topic, qos):
     # topic can be single, or a list
@@ -120,9 +120,9 @@ class Brokers:
         if s not in topicsUsed and Topics.topicMatches(t, s):
           # topic has retained publication
           topicsUsed.append(s)
-          (ret_msg, ret_qos) = self.se.getRetained(s)
+          (ret_msg, ret_qos, properties) = self.se.getRetained(s)
           thisqos = min(ret_qos, qos[i])
-          self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, True)
+          self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, properties, True)
       i += 1
 
   def subscribe(self, aClientid, topic, qos):

@@ -92,7 +92,7 @@ class Receivers:
         pub = self.inMsgs[packet.packetIdentifier]
         if callback == None or \
            callback.publishArrived(pub.topicName, pub.data, 2,
-                           pub.fh.RETAIN, pub.packetIdentifier):
+                           pub.fh.RETAIN, pub.packetIdentifier, pub.properties):
           del self.inMsgs[packet.packetIdentifier]
           self.pubcomp.packetIdentifier = packet.packetIdentifier
           logger.debug("out: %s", str(self.pubcomp))
@@ -120,14 +120,14 @@ class Receivers:
                            packet.fh.RETAIN, packet.packetIdentifier)
         else:
           callback.publishArrived(packet.topicName, packet.data, 0,
-                        packet.fh.RETAIN, packet.packetIdentifier)
+                        packet.fh.RETAIN, packet.packetIdentifier, packet.properties)
       elif packet.fh.QoS == 1:
         if callback == None:
           return (packet.topicName, packet.data, 1,
                            packet.fh.RETAIN, packet.packetIdentifier)
         else:
           if callback.publishArrived(packet.topicName, packet.data, 1,
-                           packet.fh.RETAIN, packet.packetIdentifier):
+                           packet.fh.RETAIN, packet.packetIdentifier, packet.properties):
             self.puback.packetIdentifier = packet.packetIdentifier
             logger.debug("out: %s", str(self.puback))
             self.socket.send(self.puback.pack())

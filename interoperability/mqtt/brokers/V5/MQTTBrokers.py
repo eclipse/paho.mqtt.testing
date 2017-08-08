@@ -84,13 +84,15 @@ class MQTTClients:
           resp.packetIdentifier = pub.packetIdentifier
           respond(self.socket, resp)
 
-  def publishArrived(self, topic, msg, qos, retained=False):
+  def publishArrived(self, topic, msg, qos, properties, retained=False):
     pub = MQTTV5.Publishes()
     logger.info("[MQTT-3.2.3-3] topic name must match the subscription's topic filter")
     pub.topicName = topic
     pub.data = msg
     pub.fh.QoS = qos
     pub.fh.RETAIN = retained
+    if properties: # properties length is 0 if there are no properties
+      pub.properties = properties
     if retained:
       logger.info("[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe")
     if pub.fh.RETAIN:
@@ -386,13 +388,13 @@ class MQTTBrokers:
       raise MQTTV5.MQTTException("[MQTT-3.3.2-2][MQTT-4.7.1-1] wildcards not allowed in topic name")
     if packet.fh.QoS == 0:
       self.broker.publish(self.clients[sock].id,
-             packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
+             packet.topicName, packet.data, packet.fh.QoS, packet.properties, packet.fh.RETAIN)
     elif packet.fh.QoS == 1:
       if packet.fh.DUP:
         logger.info("[MQTT-3.3.1-3] Incoming publish DUP 1 ==> outgoing publish with DUP 0")
         logger.info("[MQTT-4.3.2-2] server must store message in accordance with QoS 1")
       self.broker.publish(self.clients[sock].id,
-             packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
+             packet.topicName, packet.data, packet.fh.QoS, packet.properties, packet.fh.RETAIN)
       resp = MQTTV5.Pubacks()
       logger.info("[MQTT-2.3.1-6] puback messge id same as publish")
       resp.packetIdentifier = packet.packetIdentifier
@@ -416,7 +418,7 @@ class MQTTBrokers:
         else:
           myclient.inbound.append(packet.packetIdentifier)
           logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")
-          self.broker.publish(myclient, packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
+          self.broker.publish(myclient, packet.topicName, packet.data, packet.fh.QoS, packet.properties, packet.fh.RETAIN)
       resp = MQTTV5.Pubrecs()
       logger.info("[MQTT-2.3.1-6] pubrec messge id same as publish")
       resp.packetIdentifier = packet.packetIdentifier
@@ -427,7 +429,7 @@ class MQTTBrokers:
     pub = myclient.pubrel(packet.packetIdentifier)
     if pub:
       if self.publish_on_pubrel:
-        self.broker.publish(myclient.id, pub.topicName, pub.data, pub.fh.QoS, pub.fh.RETAIN)
+        self.broker.publish(myclient.id, pub.topicName, pub.data, pub.fh.QoS, pub.properties, pub.fh.RETAIN)
         del myclient.inbound[packet.packetIdentifier]
       else:
         myclient.inbound.remove(packet.packetIdentifier)

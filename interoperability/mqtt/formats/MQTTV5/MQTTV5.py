@@ -938,6 +938,7 @@ class Publishes(Packets):
     rc = str(self.fh)
     if self.fh.QoS != 0:
       rc += ", MsgId="+str(self.packetIdentifier)
+    rc += ", Properties: "+str(self.properties)
     rc += ", TopicName="+str(self.topicName)+", Payload="+str(self.data)+")"
     return rc
 

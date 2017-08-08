@@ -166,7 +166,7 @@ class Client:
     return unsubscribe.packetIdentifier
 
 
-  def publish(self, topic, payload, qos=0, retained=False):
+  def publish(self, topic, payload, qos=0, retained=False, properties=None):
     publish = MQTTV5.Publishes()
     publish.fh.QoS = qos
     publish.fh.RETAIN = retained
@@ -178,6 +178,8 @@ class Client:
         pass #publish.pubrec_received = False
       self.__receiver.outMsgs[publish.packetIdentifier] = publish
     publish.topicName = topic
+    if properties:
+      publish.properties = properties
     publish.data = payload if type(payload) == type(b"") else bytes(payload, "utf8")
     sendtosocket(self.sock, publish.pack())
     return publish.packetIdentifier
