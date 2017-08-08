@@ -519,7 +519,6 @@ class Test(unittest.TestCase):
 
       self.assertEqual(len(callback.messages), 3, callback.messages)
       props = callback.messages[0][5]
-      print(props.ContentType)
       self.assertEqual(props.ContentType, "My name", props.ContentType)
       self.assertEqual(props.PayloadFormatIndicator, 1, props.PayloadFormatIndicator)
       props = callback.messages[1][5]
@@ -532,7 +531,36 @@ class Test(unittest.TestCase):
       self.assertTrue(1 in qoss and 2 in qoss and 0 in qoss, qoss)
 
     def test_publication_expiry(self):
-      pass
+      callback.clear()
+      callback2.clear()
+      bclient.connect(host=host, port=port, cleanstart=True)
+      bclient.subscribe([topics[0]], [2])
+      bclient.disconnect()
+
+      aclient.connect(host=host, port=port, cleanstart=True)
+      publish_properties = mqtt_client.MQTTV5.Properties(mqtt_client.MQTTV5.PacketTypes.PUBLISH)
+      publish_properties.PublicationExpiryInterval = 1
+      aclient.publish(topics[0], b"qos 1 - expire", 1, retained=False, properties=publish_properties)
+      aclient.publish(topics[0], b"qos 2 - expire", 2, retained=False, properties=publish_properties)
+      publish_properties.PublicationExpiryInterval = 6
+      aclient.publish(topics[0], b"qos 1 - don't expire", 1, retained=False, properties=publish_properties)
+      aclient.publish(topics[0], b"qos 2 - don't expire", 2, retained=False, properties=publish_properties)
+
+      time.sleep(3)
+      bclient.connect(host=host, port=port, cleanstart=False)
+      total = 0
+      while len(callback2.messages) < 1 and total < 10:
+        interval = .1
+        total += interval
+        time.sleep(interval)
+      time.sleep(1)
+      self.assertEqual(len(callback2.messages), 2, callback2.messages)
+      self.assertTrue(callback2.messages[0][5].PublicationExpiryInterval < 6,
+                             callback2.messages[0][5].PublicationExpiryInterval)
+      self.assertTrue(callback2.messages[1][5].PublicationExpiryInterval < 6,
+                                   callback2.messages[1][5].PublicationExpiryInterval)                             
+      aclient.disconnect()
+
 
 if __name__ == "__main__":
   try:

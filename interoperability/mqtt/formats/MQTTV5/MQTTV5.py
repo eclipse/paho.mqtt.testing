@@ -883,7 +883,7 @@ class Publishes(Packets):
   def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, MsgId=1, TopicName="", Payload=b""):
     object.__setattr__(self, "names",
           ["fh", "DUP", "QoS", "RETAIN", "topicName", "packetIdentifier",
-           "properties", "data", "qos2state"])
+           "properties", "data", "qos2state", "receivedTime"])
     self.fh = FixedHeaders(PacketTypes.PUBLISH)
     self.fh.DUP = DUP
     self.fh.QoS = QoS

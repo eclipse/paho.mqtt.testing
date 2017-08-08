@@ -60,7 +60,7 @@ class Brokers:
           logger.info("[MQTT-3.1.2-17] sending will message retained for client %s", aClientid)
         else:
           logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
-        self.publish(aClientid, willtopic, willmsg, willQoS, None, willRetain)
+        self.publish(aClientid, willtopic, willmsg, willQoS, None, time.monotonic(), willRetain)
 
   def disconnect(self, aClientid, willMessage=False, sessionExpiryInterval=-1):
     if willMessage:
@@ -84,7 +84,7 @@ class Brokers:
     for c in self.__clients.keys()[:]: # copy the array because disconnect will remove an element
       self.disconnect(c)
 
-  def publish(self, aClientid, topic, message, qos, properties, retained=False):
+  def publish(self, aClientid, topic, message, qos, properties, receivedTime, retained):
     """publish to all subscribed connected clients
        also to any disconnected non-cleanstart clients with qos in [1,2]
     """
@@ -102,11 +102,11 @@ class Brokers:
         logger.info("[MQTT-2.1.2-10] outgoing publish does not have retained flag set")
       if self.overlapping_single:
         out_qos = min(self.se.qosOf(subscriber, topic), qos)
-        self.__clients[subscriber].publishArrived(topic, message, out_qos, properties)
+        self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime)
       else:
         for subscription in self.se.getSubscriptions(topic, subscriber):
           out_qos = min(subscription.getQoS(), qos)
-          self.__clients[subscriber].publishArrived(topic, message, out_qos, properties)
+          self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime)
 
   def __doRetained__(self, aClientid, topic, qos):
     # topic can be single, or a list
