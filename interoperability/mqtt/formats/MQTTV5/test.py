@@ -67,27 +67,20 @@ class Test(unittest.TestCase):
     def testBasicPackets(self):
       for packet in MQTTV5.classes:
         #print("BasicPacket", packet.__name__)
+        p = packet()
         if packet == MQTTV5.Subscribes:
-          p = packet()
           options = MQTTV5.SubscribeOptions(2)
           options.retainHandling = 2
           options.noLocal = True
           p.data = [("#", options)]
-          before = str(p)
-          after = str(MQTTV5.unpackPacket(p.pack()))
         elif packet == MQTTV5.Unsubscribes:
-          p = packet()
           p.topicFilters = [("#")]
-          before = str(p)
-          after = str(MQTTV5.unpackPacket(p.pack()))
         elif packet == MQTTV5.Subacks:
-          p = packet()
           p.reasonCodes = [MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, "Unspecified error")]
-          before = str(p)
-          after = str(MQTTV5.unpackPacket(p.pack()))
-        else:
-          before = str(packet())
-          after = str(MQTTV5.unpackPacket(packet().pack()))
+        elif packet == MQTTV5.Connacks:
+          p.properties.AssignedClientIdentifier = "klklkl"
+        before = str(p)
+        after = str(MQTTV5.unpackPacket(p.pack()))
         self.assertEqual(before, after)
 
     def testReasonCodes(self):

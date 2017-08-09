@@ -791,13 +791,14 @@ class Connacks(Packets):
 
   def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, ReasonCode="Success"):
     object.__setattr__(self, "names",
-         ["fh", "sessionPresent", "reasonCode"])
+         ["fh", "sessionPresent", "reasonCode", "properties"])
     self.fh = FixedHeaders(PacketTypes.CONNACK)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
     self.sessionPresent = False
     self.reasonCode = ReasonCodes(PacketTypes.CONNACK, ReasonCode)
+    self.properties = Properties(PacketTypes.CONNACK)
     if buffer != None:
       self.unpack(buffer)
 
@@ -805,23 +806,27 @@ class Connacks(Packets):
     flags = 0x01 if self.sessionPresent else 0x00
     buffer = bytes([flags])
     buffer += self.reasonCode.pack()
+    buffer += self.properties.pack()
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
   def unpack(self, buffer):
     assert len(buffer) >= 4
     assert PacketType(buffer) == PacketTypes.CONNACK
-    self.fh.unpack(buffer)
-    assert self.fh.remainingLength == 2, "Connack packet is wrong length %d" % self.fh.remainingLength
-    assert buffer[2] in [0, 1], "Connect Acknowledge Flags"
-    self.sessionPresent = (buffer[2] == 0x01)
-    self.reasonCode.unpack(buffer[3:])
+    curlen = self.fh.unpack(buffer)
+    assert buffer[curlen] in [0, 1], "Connect Acknowledge Flags"
+    self.sessionPresent = (buffer[curlen] == 0x01)
+    curlen += 1
+    curlen += self.reasonCode.unpack(buffer[curlen:])
+    curlen += self.properties.unpack(buffer[curlen:])[1]
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
     assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
 
   def __str__(self):
-    return str(self.fh)+", Session present="+str((self.sessionPresent & 0x01) == 1)+", ReturnCode="+str(self.reasonCode)+")"
+    return str(self.fh)+", Session present="+str((self.sessionPresent & 0x01) == 1)+\
+          ", ReturnCode="+str(self.reasonCode)+\
+          ", properties="+str(self.properties)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \

@@ -633,6 +633,14 @@ class Test(unittest.TestCase):
       cleanRetained()
 
 
+    def test_assigned_clientid(self):
+      noidclient = mqtt_client.Client("")
+      connack = noidclient.connect(host=host, port=port, cleanstart=True)
+      noidclient.disconnect()
+      print(connack.properties.AssignedClientIdentifier)
+      self.assertTrue(connack.properties.AssignedClientIdentifier != "")
+
+
 if __name__ == "__main__":
   try:
     opts, args = getopt.gnu_getopt(sys.argv[1:], "h:p:zdsn:",

@@ -255,12 +255,12 @@ class MQTTBrokers:
     return terminate
 
   def connect(self, sock, packet):
+    resp = MQTTV5.Connacks()
     if packet.ProtocolName != "MQTT":
       self.disconnect(sock, None)
       raise MQTTV5.MQTTException("[MQTT-3.1.2-1] Wrong protocol name %s" % packet.ProtocolName)
     if packet.ProtocolVersion != 5:
       logger.error("[MQTT-3.1.2-2] Wrong protocol version %d", packet.ProtocolVersion)
-      resp = MQTTV5.Connacks()
       resp.returnCode = 1
       respond(sock, resp)
       logger.info("[MQTT-3.2.2-5] must close connection after non-zero connack")
@@ -276,7 +276,6 @@ class MQTTBrokers:
         if self.zero_length_clientids:
           logger.info("[MQTT-3.1.3-8] Reject 0-length clientid with cleansession false")
         logger.info("[MQTT-3.1.3-9] if clientid is rejected, must send connack 2 and close connection")
-        resp = MQTTV5.Connacks()
         resp.returnCode = 2
         respond(sock, resp)
         logger.info("[MQTT-3.2.2-5] must close connection after non-zero connack")
@@ -285,8 +284,9 @@ class MQTTBrokers:
         return
       else:
         logger.info("[MQTT-3.1.3-7] 0-length clientid must have cleansession true")
-        packet.ClientIdentifier = uuid.uuid4() # give the client a unique clientid
+        packet.ClientIdentifier = str(uuid.uuid4()) # give the client a unique clientid
         logger.info("[MQTT-3.1.3-6] 0-length clientid must be assigned a unique id %s", packet.ClientIdentifier)
+        resp.properties.AssignedClientIdentifier = packet.ClientIdentifier
     logger.info("[MQTT-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed")
     if packet.ClientIdentifier in [client.id for client in self.clients.values()]: # is this client already connected on a different socket?
       for s in self.clients.keys():
@@ -306,7 +306,6 @@ class MQTTBrokers:
         clean = True
       if me:
         logger.info("[MQTT-3.1.3-2] clientid used to retrieve client state")
-    resp = MQTTV5.Connacks()
     resp.sessionPresent = True if me else False
     # Session expiry
     if hasattr(packet.properties, "SessionExpiryInterval"):
