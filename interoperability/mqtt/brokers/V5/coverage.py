@@ -1,16 +1,16 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
- 
+  Copyright (c) 2013, 2017 IBM Corp.
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
 *******************************************************************
@@ -74,21 +74,23 @@ def getCoverage():
           coverages.add(statement)
   return ({"exceptions" : exceptions, "coverages" : coverages})
 
-class Handlers(logging.Handler):
+class Filters:
 
   def __init__(self):
-    logging.Handler.__init__(self)
     self.coverages = getCoverage()
     self.found = set([])
 
-  def emit(self, record):
-    line = record.message
+  def filter(self, record):
+    line = record.getMessage()
+    rc = True
     if line.find("[MQTT") != -1:
       statement = "[MQTT"+between(line, "[MQTT", "]")+"]"
+      rc = statement not in self.found
       self.found.add(statement)
+    return rc
 
   def getmeasures(self):
-    lines = []	
+    lines = []
     for key in self.coverages.keys():
        found = self.coverages[key].intersection(self.found)
        lines.append("%s %d out of %d = %d%%" % \
@@ -106,12 +108,10 @@ class Handlers(logging.Handler):
     for curline in self.getmeasures():
       logger.info(curline)
 
-handler = Handlers()
+filter = Filters()
 
 def measure():
-  return handler.measure()
+  return filter.measure()
 
 def getmeasures():
-  return handler.getmeasures()
-
-
+  return filter.getmeasures()

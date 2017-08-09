@@ -101,33 +101,43 @@ class Brokers:
       if retained:
         logger.info("[MQTT-2.1.2-10] outgoing publish does not have retained flag set")
       if self.overlapping_single:
-        out_qos = min(self.se.qosOf(subscriber, topic), qos)
-        self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime)
+        options = self.se.optionsOf(subscriber, topic)
+        out_qos = min(options.QoS, qos)
+        if not options.noLocal or subscriber != aClientid: # noLocal
+          outretain = retained if options.retainAsPublished else False
+          self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
       else:
         for subscription in self.se.getSubscriptions(topic, subscriber):
           out_qos = min(subscription.getQoS(), qos)
-          self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime)
+          if not subscription.getOptions().noLocal or subscriber != aClientid: # noLocal
+            outretain = retained if options.retainAsPublished else False
+            self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
 
-  def __doRetained__(self, aClientid, topic, qos):
+  def __doRetained__(self, aClientid, topic, subsoptions, resubscribeds):
     # topic can be single, or a list
     if type(topic) != type([]):
       topic = [topic]
-      qos = [qos]
+      suboptions = [subsoptions]
     i = 0
     for t in topic: # t is a wildcard subscription topic
+      if subsoptions[i].retainHandling == 2 or \
+        (subsoptions[i].retainHandling == 1 and resubscribeds[i]):
+        i += 1
+        continue
       topicsUsed = []
       for s in self.se.getRetainedTopics(t): # s is a non-wildcard retained topic
         if s not in topicsUsed and Topics.topicMatches(t, s):
           # topic has retained publication
           topicsUsed.append(s)
           (ret_msg, ret_qos, properties) = self.se.getRetained(s)
-          thisqos = min(ret_qos, qos[i])
+          thisqos = min(ret_qos, subsoptions[i].QoS)
           self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, properties, True)
       i += 1
 
-  def subscribe(self, aClientid, topic, qos):
-    rc = self.se.subscribe(aClientid, topic, qos)
-    self.__doRetained__(aClientid, topic, qos)
+  def subscribe(self, aClientid, topic, options):
+    rc = self.se.subscribe(aClientid, topic, options)
+    resubscribeds = [resubscribed for (x, resubscribed) in rc]
+    self.__doRetained__(aClientid, topic, options, resubscribeds)
     return rc
 
   def unsubscribe(self, aClientid, topic):

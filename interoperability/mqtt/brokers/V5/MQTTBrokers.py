@@ -46,7 +46,7 @@ def respond(sock, packet):
     try:
       sock.send(packet.pack()) # Could get socket error on send
     except:
-      pass
+      traceback.print_exc()
 
 class MQTTClients:
 
@@ -360,23 +360,25 @@ class MQTTBrokers:
 
   def subscribe(self, sock, packet):
     topics = []
-    qoss = []
+    optionss = []
     respqoss = []
-    for topicFilter, QoS in packet.data:
+    for topicFilter, subsoption in packet.data:
+      QoS = subsoption.QoS
       if topicFilter == "test/nosubscribe":
         respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, "Unspecified error"))
       else:
         if topicFilter == "test/QoS 1 only":
           respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK,
-             MQTTV5.ReasonCodes.min(1, QoS)))
+             identifier=MQTTV5.ReasonCodes.min(1, QoS)))
         elif topicFilter == "test/QoS 0 only":
-          respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, min(0, QoS)))
+          respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, identifier=min(0, QoS)))
         else:
-          respqoss.append(QoS)
+          respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, identifier=QoS))
         topics.append(topicFilter)
-        qoss.append(respqoss[-1])
+        subsoption.QoS = respqoss[-1].value # might have been downgraded
+        optionss.append(subsoption)
     if len(topics) > 0:
-      self.broker.subscribe(self.clients[sock].id, topics, qoss)
+      self.broker.subscribe(self.clients[sock].id, topics, optionss)
     resp = MQTTV5.Subacks()
     logger.info("[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe")
     logger.info("[MQTT-3.8.4-1] Must respond with suback")

@@ -69,7 +69,10 @@ class Test(unittest.TestCase):
         #print("BasicPacket", packet.__name__)
         if packet == MQTTV5.Subscribes:
           p = packet()
-          p.data = [("#", 2)]
+          options = MQTTV5.SubscribeOptions(2)
+          options.retainHandling = 2
+          options.noLocal = True
+          p.data = [("#", options)]
           before = str(p)
           after = str(MQTTV5.unpackPacket(p.pack()))
         elif packet == MQTTV5.Unsubscribes:
@@ -103,6 +106,7 @@ class Test(unittest.TestCase):
           r.__getName__(201, MQTTV5.PacketTypes.PUBREL)
           r.__getName__(146, MQTTV5.PacketTypes.CONNACK)
           r.getId("rubbish")
+
 
 if __name__ == "__main__":
     import sys

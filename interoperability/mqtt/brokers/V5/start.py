@@ -20,7 +20,7 @@
 import socketserver, select, sys, traceback, socket, logging, getopt, hashlib, base64
 
 from .MQTTBrokers import MQTTBrokers
-from .coverage import handler, measure
+from .coverage import filter, measure
 from mqtt.formats.MQTTV5.MQTTV5 import MQTTException
 
 broker = None
@@ -164,7 +164,10 @@ class MyHandler(socketserver.StreamRequestHandler):
         if (len(exc.args) > 0):
           logger.error(exc.args[0])
         else:
-          logger.error(str(exc))
+          outline = ""
+          for line in traceback.format_tb(exc.__traceback__):
+            outline += line
+          logger.error(outline)
         break
       except:
         logger.exception("MyHandler")
@@ -218,7 +221,7 @@ def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=188
   global logger, broker, server
   logger = logging.getLogger('MQTT broker')
   logger.setLevel(logging.INFO)
-  logger.addHandler(handler)
+  logger.addFilter(filter)
   broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0,
             zero_length_clientids=zero_length_clientids)
   logger.info("Starting the MQTT server on port %d", port)
@@ -241,10 +244,10 @@ def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=188
       pass
   server = None
   logger.info("Stopping the MQTT server on port %d", port)
-  handler.measure()
+  filter.measure()
 
 def measure():
-  return handler.getmeasures()
+  return filter.getmeasures()
 
 def stop():
   global server

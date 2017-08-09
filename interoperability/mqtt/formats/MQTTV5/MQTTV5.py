@@ -129,7 +129,7 @@ class ReasonCodes:
   def pack(self):
     return bytes([self.value])
 
-  def __init__(self, packetType, aName="Success"):
+  def __init__(self, packetType, aName="Success", identifier=-1):
     self.packetType = packetType
     self.names = {
     0 : { "Success" : [PacketTypes.CONNACK, PacketTypes.PUBACK,
@@ -207,7 +207,11 @@ class ReasonCodes:
     162 : { "Wildcard subscription not supported" :
             [PacketTypes.SUBACK, PacketTypes.DISCONNECT] },
     }
-    self.set(aName)
+    if identifier == -1:
+      self.set(aName)
+    else:
+      self.value = identifier
+      self.getName() # check it's good
 
 
 class MBIs:
@@ -1035,6 +1039,46 @@ class Pubcomps(Acks):
   def __init__(self, buffer=None, DUP=False, QoS=0, RETAIN=False, PacketId=1):
     Acks.__init__(self, PacketTypes.PUBCOMP, buffer, DUP, QoS, RETAIN, PacketId)
 
+class SubscribeOptions(object):
+
+  def __init__(self, QoS=0, noLocal=False, retainAsPublished=False, retainHandling=0):
+    object.__setattr__(self, "names",
+           ["QoS", "noLocal", "retainAsPublished", "retainHandling"])
+    self.QoS = QoS # bits 0,1
+    self.noLocal = noLocal # bit 2
+    self.retainAsPublished = retainAsPublished # bit 3
+    self.retainHandling = retainHandling # bits 4 and 5: 0, 1 or 2
+
+  def __setattr__(self, name, value):
+    if name not in self.names:
+      raise MQTTException(name + " Attribute name must be one of "+str(self.names))
+    object.__setattr__(self, name, value)
+
+  def pack(self):
+    assert self.QoS in [0, 1, 2]
+    assert self.retainHandling in [0, 1, 2]
+    noLocal = 1 if self.noLocal else 0
+    retainAsPublished = 1 if self.retainAsPublished else 0
+    buffer = bytes([(self.retainHandling << 4) | (retainAsPublished << 3) |\
+                         (noLocal << 2) | self.QoS])
+    return buffer
+
+  def unpack(self, buffer):
+    b0 = buffer[0]
+    self.retainHandling = ((b0 >> 4) & 0x03)
+    self.retainAsPublished = True if ((b0 >> 3) & 0x01) == 1 else False
+    self.noLocal = True if ((b0 >> 2) & 0x01) == 1 else False
+    self.QoS = (b0 & 0x03)
+    assert self.retainHandling in [0, 1, 2]
+    assert self.QoS in [0, 1, 2]
+    return 1
+
+  def __str__(self):
+    return "{QoS="+str(self.QoS)+", noLocal="+str(self.noLocal)+\
+        ", retainAsPublished="+str(self.retainAsPublished)+\
+        ", retainHandling="+str(self.retainHandling)+"}"
+
+
 class Subscribes(Packets):
 
   def __init__(self, buffer=None, DUP=False, QoS=1, RETAIN=False, MsgId=1, Data=[]):
@@ -1048,7 +1092,7 @@ class Subscribes(Packets):
     # variable header
     self.packetIdentifier = MsgId
     self.properties = Properties(PacketTypes.SUBSCRIBE)
-    # payload - list of topic, qos pairs
+    # payload - list of topic, subscribe option pairs
     self.data = Data[:]
     if buffer != None:
       self.unpack(buffer)
@@ -1057,7 +1101,7 @@ class Subscribes(Packets):
     buffer = writeInt16(self.packetIdentifier)
     buffer += self.properties.pack()
     for d in self.data:
-      buffer += writeUTF(d[0]) + bytes([d[1]])
+      buffer += writeUTF(d[0]) + d[1].pack()
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
@@ -1076,10 +1120,10 @@ class Subscribes(Packets):
     while leftlen > 0:
       topic, topiclen = readUTF(buffer[-leftlen:], leftlen)
       leftlen -= topiclen
-      qos = buffer[-leftlen]
-      assert qos in [0, 1, 2], "[MQTT-3-8.3-2] reserved bits must be zero"
+      options = SubscribeOptions()
+      options.unpack(buffer[-leftlen:])
       leftlen -= 1
-      self.data.append((topic, qos))
+      self.data.append((topic, options))
     assert len(self.data) > 0, "[MQTT-3.8.3-1] at least one topic, qos pair must be in subscribe"
     assert leftlen == 0
     assert self.fh.DUP == False, "[MQTT-2.1.2-1] DUP must be false in subscribe"
@@ -1089,7 +1133,7 @@ class Subscribes(Packets):
 
   def __str__(self):
     return str(self.fh)+", MsgId="+str(self.packetIdentifier)+\
-           ", Data="+str(self.data)+")"
+           ", Data="+str( [(x, str(y)) for (x, y) in self.data] ) +")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \

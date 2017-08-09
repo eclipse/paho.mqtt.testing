@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2017 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -36,32 +36,33 @@ class SubscriptionEngines:
    def reinitialize(self):
      self.__init__()
 
-   def subscribe(self, aClientid, topic, qos):
+   def subscribe(self, aClientid, topic, options):
      if type(topic) == type([]):
        rc = []
        count = 0
        for aTopic in topic:
-         rc.append(self.__subscribe(aClientid, aTopic, qos[count]))
+         rc.append(self.__subscribe(aClientid, aTopic, options[count]))
          count += 1
        if count > 1:
          logger.info("[MQTT-3.8.4-4] Multiple topics in one subscribe")
      else:
-       rc = self.__subscribe(aClientid, topic, qos)
+       rc = self.__subscribe(aClientid, topic, options)
      return rc
 
-   def __subscribe(self, aClientid, aTopic, aQos):
+   def __subscribe(self, aClientid, aTopic, options):
      "subscribe to one topic"
      rc = None
+     resubscribed = False
      if Topics.isValidTopicName(aTopic):
        subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
-       resubscribed = False
        for s in subscriptions:
          if s.getClientid() == aClientid and s.getTopic() == aTopic:
-           s.resubscribe(aQos)
-           return s
-       rc = Subscriptions(aClientid, aTopic, aQos)
-       subscriptions.append(rc)
-     return rc
+           s.resubscribe(options)
+           resubscribed = True
+       if not resubscribed:
+         rc = Subscriptions(aClientid, aTopic, options)
+         subscriptions.append(rc)
+     return rc, resubscribed
 
    def unsubscribe(self, aClientid, aTopic):
      matched = False
@@ -107,16 +108,16 @@ class SubscriptionEngines:
          rc = [sub for sub in subscriptions if sub.getClientid() == aClientid and Topics.topicMatches(sub.getTopic(), aTopic)]
      return rc
 
-   def qosOf(self, clientid, topic):
+   def optionsOf(self, clientid, topic):
      # if there are overlapping subscriptions, choose maximum QoS
      chosen = None
      for sub in self.getSubscriptions(topic, clientid):
        if chosen == None:
-         chosen = sub.getQoS()
+         chosen = sub.getOptions()
        else:
          logger.info("[MQTT-3.3.5-1] Overlapping subscriptions max QoS")
-         if sub.getQoS() > chosen:
-           chosen = sub.getQoS()
+         if sub.getQoS() > chosen.QoS:
+           chosen = sub.getOptions()
        # Omit the following optimization because we want to check for condition [MQTT-3.3.5-1]
        #if chosen == 2:
        #  break
@@ -145,7 +146,7 @@ class SubscriptionEngines:
          retained[aTopic] = (aMessage, aQoS, properties)
 
    def getRetained(self, aTopic):
-     "returns (msg, QoS) for a topic"
+     "returns (msg, QoS, properties) for a topic"
      result = None
      if Topics.isValidTopicName(aTopic):
        retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
