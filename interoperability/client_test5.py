@@ -28,9 +28,14 @@ class Callbacks(mqtt_client.Callback):
     self.publisheds = []
     self.subscribeds = []
     self.unsubscribeds = []
+    self.disconnects = []
 
   def clear(self):
     self.__init__()
+
+  def disconnected(self, reasoncode, properties):
+    logging.info("disconnected %s %s", str(reasoncode), str(properties))
+    self.disconnects.append((reasoncode, properties))
 
   def connectionLost(self, cause):
     logging.info("connectionLost %s" % str(cause))
@@ -704,8 +709,23 @@ class Test(unittest.TestCase):
       self.waitfor(callback.messages, 2, 3)
       self.assertEqual(len(callback.messages), 2, callback.messages)
 
-      aclient.disconnect()
+      aclient.disconnect() # should get rid of the topic aliases but not subscriptions
 
+      callback.clear()
+      aclient.connect(host=host, port=port, cleanstart=False)
+
+      aclient.publish(topics[0], b"topic alias 3", 1)
+      self.waitfor(callback.messages, 1, 3)
+      self.assertEqual(len(callback.messages), 1, callback.messages)
+
+      publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
+      publish_properties.TopicAlias = 23
+      aclient.publish("", b"topic alias 4", 1, properties=publish_properties)
+      self.waitfor(callback.messages, 1, 2) # should not be received
+      self.assertEqual(len(callback.messages), 1, callback.messages)
+
+      self.waitfor(callback.disconnects, 1, 2)
+      self.assertEqual(len(callback.disconnects), 1, callback.disconnects)
 
 if __name__ == "__main__":
   try:

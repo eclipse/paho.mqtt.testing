@@ -20,6 +20,7 @@ import types, time, logging
 
 from . import Topics
 from .SubscriptionEngines import SubscriptionEngines
+from mqtt.formats.MQTTV5 import ProtocolError
 
 logger = logging.getLogger('MQTT broker')
 
@@ -105,11 +106,9 @@ class Brokers:
         if properties.TopicAlias in self.__clients[aClientid].incomingTopicNames.keys():
           topic = self.__clients[aClientid].incomingTopicNames[properties.TopicAlias]
         else:
-          raise MQTTException("No topic alias set for id %d")
-      else:
-        raise MQTTException("No topic alias with zero length topic")
+          raise ProtocolError("Topic alias invalid %d" % properties.TopicAlias)
     assert len(topic) > 0
-    
+
     if retained:
       logger.info("[MQTT-2.1.2-6] store retained message and QoS")
       self.se.setRetained(topic, message, qos, properties)

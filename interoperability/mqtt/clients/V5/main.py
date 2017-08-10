@@ -59,6 +59,9 @@ class Callback:
   def unsubscribed(self, msgid):
     logger.debug("default unsubscribed %d", msgid)
 
+  def disconnected(self, reasoncode, properties):
+    logger.debug("default disconnected")
+
 
 
 class Client:

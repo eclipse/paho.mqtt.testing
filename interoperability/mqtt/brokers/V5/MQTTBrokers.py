@@ -71,6 +71,10 @@ class MQTTClients:
     self.incomingTopicAliases = {} # string -> int
     self.incomingTopicNames = {} # int -> string
 
+  def clearTopicAliases(self):
+    self.incomingTopicAliases = {} # string -> int
+    self.incomingTopicNames = {} # int -> string
+
   def resend(self):
     logger.debug("resending unfinished publications %s", str(self.outbound))
     if len(self.outbound) > 0:
@@ -231,16 +235,23 @@ class MQTTBrokers:
         self.disconnect(sock, None, sendWillMessage=True)
         terminate = True
       else:
-        packet = MQTTV5.unpackPacket(raw_packet)
-        if packet:
-          try:
+        try:
+          packet = MQTTV5.unpackPacket(raw_packet)
+          if packet:
             terminate = self.handlePacket(packet, sock)
-          except MQTTV5.ProtocolError:
-            self.disconnect(sock, reasonCode="Protocol error")
-            raise
-        else:
+          else:
+            self.disconnect(sock, reasonCode="Malformed packet")
+            terminate = True
+        except MQTTV5.MalformedPacket as error:
+          disconnect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
+          disconnect_properties.ReasonString = error.args[0]
           self.disconnect(sock, reasonCode="Malformed packet")
-          raise MQTTV5.MQTTException("[MQTT-2.0.0-1] handleRequest: badly formed MQTT packet")
+          terminate = True
+        except MQTTV5.ProtocolError as error:
+          disconnect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
+          disconnect_properties.ReasonString = error.args[0]
+          self.disconnect(sock, reasonCode="Protocol error", properties=disconnect_properties)
+          terminate = True
     finally:
       self.lock.release()
     return terminate
@@ -333,9 +344,10 @@ class MQTTBrokers:
     respond(sock, resp)
     me.resend()
 
-  def disconnect(self, sock, packet=None, sendWillMessage=False, reasonCode=None):
+  def disconnect(self, sock, packet=None, sendWillMessage=False, reasonCode=None, properties=None):
     logger.info("[MQTT-3.14.4-2] Client must not send any more packets after disconnect")
     me = self.clients[sock]
+    me.clearTopicAliases()
     # Session expiry
     if packet and hasattr(packet.properties, "SessionExpiryInterval"):
       if me.sessionExpiryInterval == 0 and packet.properties.SessionExpiryInterval > 0:
@@ -344,6 +356,8 @@ class MQTTBrokers:
         me.sessionExpiryInterval = packet.properties.SessionExpiryInterval
     if reasonCode:
       resp = MQTTV5.Disconnects(reasonCode=reasonCode) # reasonCode is text
+      if properties:
+        resp.properties = properties
       respond(sock, resp)
     if sock in self.clients.keys():
       self.broker.disconnect(me.id, willMessage=sendWillMessage,
@@ -406,7 +420,7 @@ class MQTTBrokers:
   def publish(self, sock, packet):
     packet.receivedTime = time.monotonic()
     if packet.topicName.find("+") != -1 or packet.topicName.find("#") != -1:
-      raise MQTTV5.MQTTException("[MQTT-3.3.2-2][MQTT-4.7.1-1] wildcards not allowed in topic name")
+      raise ProtocolError("Topic name invalid %s" % packet.topicName)
     if packet.fh.QoS == 0:
       self.broker.publish(self.clients[sock].id, packet.topicName,
              packet.data, packet.fh.QoS, packet.properties,

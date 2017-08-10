@@ -33,6 +33,9 @@ logger = logging.getLogger('MQTTV5')
 class MQTTException(Exception):
   pass
 
+class MalformedPacket(MQTTException):
+  pass
+
 class ProtocolError(MQTTException):
   pass
 
@@ -180,7 +183,7 @@ class ReasonCodes:
     146 : { "Packet identifier not found" :
             [PacketTypes.PUBREL, PacketTypes.PUBCOMP] },
     147 : { "Receive maximum exceeded": [PacketTypes.DISCONNECT] },
-    148 : { "Topic aliad invalid": [PacketTypes.DISCONNECT] },
+    148 : { "Topic alias invalid": [PacketTypes.DISCONNECT] },
     149 : { "Packet too large": [PacketTypes.CONNACK, PacketTypes.DISCONNECT] },
     150 : { "Message rate too high": [PacketTypes.DISCONNECT] },
     151 : { "Quota exceeded": [PacketTypes.CONNACK, PacketTypes.PUBACK,
@@ -357,19 +360,19 @@ def readUTF(buffer, maxlen):
   if maxlen >= 2:
     length = readInt16(buffer)
   else:
-    raise MQTTException("Not enough data to read string length")
+    raise MalformedPacket("Not enough data to read string length")
   maxlen -= 2
   if length > maxlen:
-    raise MQTTException("Length delimited string too long")
+    raise MalformedPacket("Length delimited string too long")
   buf = buffer[2:2+length].decode("utf-8")
   logger.info("[MQTT-4.7.3-2] topic names and filters not include null")
   zz = buf.find("\x00") # look for null in the UTF string
   if zz != -1:
-    raise MQTTException("[MQTT-1.5.3-2] Null found in UTF data "+buf)
+    raise MalformedPacket("[MQTT-1.5.3-2] Null found in UTF data "+buf)
   for c in range (0xD800, 0xDFFF):
     zz = buf.find(chr(c)) # look for D800-DFFF in the UTF string
     if zz != -1:
-      raise MQTTException("[MQTT-1.5.3-1] D800-DFFF found in UTF data "+buf)
+      raise MalformedPacket("[MQTT-1.5.3-1] D800-DFFF found in UTF data "+buf)
   if buf.find("\uFEFF") != -1:
     logger.info("[MQTT-1.5.3-3] U+FEFF in UTF string")
   return buf, length+2

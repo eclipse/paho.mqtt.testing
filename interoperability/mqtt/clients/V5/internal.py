@@ -59,6 +59,10 @@ class Receivers:
       if hasattr(callback, "subscribed"):
         callback.subscribed(packet.packetIdentifier, packet.reasonCodes)
 
+    elif packet.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT:
+      if hasattr(callback, "disconnected"):
+        callback.disconnected(packet.reasonCode, packet.properties)
+
     elif packet.fh.PacketType == MQTTV5.PacketTypes.UNSUBACK:
       if hasattr(callback, "unsubscribed"):
         callback.unsubscribed(packet.packetIdentifier)
