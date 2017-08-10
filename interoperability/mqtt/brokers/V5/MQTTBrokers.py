@@ -68,6 +68,8 @@ class MQTTClients:
     self.will = None
     self.keepalive = keepalive
     self.lastPacket = None
+    self.incomingTopicAliases = {} # string -> int
+    self.incomingTopicNames = {} # int -> string
 
   def resend(self):
     logger.debug("resending unfinished publications %s", str(self.outbound))
@@ -107,6 +109,9 @@ class MQTTClients:
     pub.receivedTime = receivedTime
     if properties: # properties length is 0 if there are no properties
       pub.properties = properties
+      if hasattr(properties, "TopicAlias"):
+        self.incomingTopicAliases[topic] = properties.TopicAlias
+        self.incomingTopicNames[properties.TopicAlias] = topic
     if retained:
       logger.info("[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe")
     if pub.fh.RETAIN:

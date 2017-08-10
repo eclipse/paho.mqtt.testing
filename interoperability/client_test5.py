@@ -532,11 +532,10 @@ class Test(unittest.TestCase):
 
     def waitfor(self, queue, depth, limit):
       total = 0
-      while len(queue) < 1 and total < limit:
+      while len(queue) < depth and total < limit:
         interval = .5
         total += interval
         time.sleep(interval)
-        time.sleep(1)
 
     def test_subscribe_options(self):
       callback.clear()
@@ -687,6 +686,25 @@ class Test(unittest.TestCase):
 
       callback.clear()
       callback2.clear()
+
+    def test_topic_alias(self):
+      callback.clear()
+
+      aclient.connect(host=host, port=port, cleanstart=True)
+      aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+      self.waitfor(callback.subscribeds, 1, 3)
+
+      publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
+      publish_properties.TopicAlias = 23
+      aclient.publish(topics[0], b"topic alias 1", 1, properties=publish_properties)
+      self.waitfor(callback.messages, 1, 3)
+      self.assertEqual(len(callback.messages), 1, callback.messages)
+
+      aclient.publish("", b"topic alias 2", 1, properties=publish_properties)
+      self.waitfor(callback.messages, 2, 3)
+      self.assertEqual(len(callback.messages), 2, callback.messages)
+
+      aclient.disconnect()
 
 
 if __name__ == "__main__":

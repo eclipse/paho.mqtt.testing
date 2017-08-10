@@ -88,6 +88,28 @@ class Brokers:
     """publish to all subscribed connected clients
        also to any disconnected non-cleanstart clients with qos in [1,2]
     """
+
+    def publishAction():
+      if hasattr(subsprops, "SubscriptionIdentifier"):
+        properties.SubscriptionIdentifier = subsprops.SubscriptionIdentifier
+      elif hasattr(properties, "SubscriptionIdentifier"):
+        delattr(properties, "SubscriptionIdentifier")
+      out_qos = min(options.QoS, qos)
+      if not options.noLocal or subscriber != aClientid: # noLocal
+        outretain = retained if options.retainAsPublished else False
+        self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
+
+    # topic alias
+    if len(topic) == 0:
+      if hasattr(properties, "TopicAlias"):
+        if properties.TopicAlias in self.__clients[aClientid].incomingTopicNames.keys():
+          topic = self.__clients[aClientid].incomingTopicNames[properties.TopicAlias]
+        else:
+          raise MQTTException("No topic alias set for id %d")
+      else:
+        raise MQTTException("No topic alias with zero length topic")
+    assert len(topic) > 0
+    
     if retained:
       logger.info("[MQTT-2.1.2-6] store retained message and QoS")
       self.se.setRetained(topic, message, qos, properties)
@@ -102,25 +124,11 @@ class Brokers:
         logger.info("[MQTT-2.1.2-10] outgoing publish does not have retained flag set")
       if self.overlapping_single:
         options, subsprops = self.se.optionsOf(subscriber, topic)
-        if hasattr(subsprops, "SubscriptionIdentifier"):
-          properties.SubscriptionIdentifier = subsprops.SubscriptionIdentifier
-        elif hasattr(properties, "SubscriptionIdentifier"):
-          delattr(properties, "SubscriptionIdentifier")
-        out_qos = min(options.QoS, qos)
-        if not options.noLocal or subscriber != aClientid: # noLocal
-          outretain = retained if options.retainAsPublished else False
-          self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
+        publishAction()
       else:
         for subscription in self.se.getSubscriptions(topic, subscriber):
           options, subsprops = subscription.getOptions()
-          if hasattr(subsprops, "SubscriptionIdentifier"):
-            properties.SubscriptionIdentifier = subsprops.SubscriptionIdentifier
-          elif hasattr(properties, "SubscriptionIdentifier"):
-            delattr(properties, "SubscriptionIdentifier")
-          out_qos = min(options.QoS, qos)
-          if not options.noLocal or subscriber != aClientid: # noLocal
-            outretain = retained if options.retainAsPublished else False
-            self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
+          publishAction()
 
   def __doRetained__(self, aClientid, topic, subsoptions, resubscribeds):
     # topic can be single, or a list
