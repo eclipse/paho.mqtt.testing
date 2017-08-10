@@ -262,30 +262,21 @@ class Test(unittest.TestCase):
       # overlapping subscriptions. When there is more than one matching subscription for the same client for a topic,
       # the server may send back one message with the highest QoS of any matching subscription, or one message for
       # each subscription with a matching QoS.
-      logging.info("Overlapping subscriptions test starting")
-      succeeded = True
-      try:
-        callback.clear()
-        callback2.clear()
-        aclient.connect(host=host, port=port)
-        aclient.subscribe([wildtopics[6], wildtopics[0]], [MQTTV5.SubscribeOptions(2), MQTTV5.SubscribeOptions(1)])
-        aclient.publish(topics[3], b"overlapping topic filters", 2)
-        time.sleep(1)
-        assert len(callback.messages) in [1, 2]
-        if len(callback.messages) == 1:
-          logging.info("This server is publishing one message for all matching overlapping subscriptions, not one for each.")
-          assert callback.messages[0][2] == 2
-        else:
-          logging.info("This server is publishing one message per each matching overlapping subscription.")
-          assert (callback.messages[0][2] == 2 and callback.messages[1][2] == 1) or \
-                 (callback.messages[0][2] == 1 and callback.messages[1][2] == 2), callback.messages
-        aclient.disconnect()
-      except:
-        traceback.print_exc()
-        succeeded = False
-      logging.info("Overlapping subscriptions test %s", "succeeded" if succeeded else "failed")
-      self.assertEqual(succeeded, True)
-      return succeeded
+      callback.clear()
+      callback2.clear()
+      aclient.connect(host=host, port=port)
+      aclient.subscribe([wildtopics[6], wildtopics[0]], [MQTTV5.SubscribeOptions(2), MQTTV5.SubscribeOptions(1)])
+      aclient.publish(topics[3], b"overlapping topic filters", 2)
+      time.sleep(1)
+      self.assertTrue(len(callback.messages) in [1, 2], callback.messages)
+      if len(callback.messages) == 1:
+        logging.info("This server is publishing one message for all matching overlapping subscriptions, not one for each.")
+        self.assertEqual(callback.messages[0][2], 2, callback.messages[0][2])
+      else:
+        logging.info("This server is publishing one message per each matching overlapping subscription.")
+        self.assertTrue((callback.messages[0][2] == 2 and callback.messages[1][2] == 1) or \
+                 (callback.messages[0][2] == 1 and callback.messages[1][2] == 2), callback.messages)
+      aclient.disconnect()
 
 
     def test_keepalive(self):
@@ -632,13 +623,29 @@ class Test(unittest.TestCase):
 
       cleanRetained()
 
-
     def test_assigned_clientid(self):
       noidclient = mqtt_client.Client("")
       connack = noidclient.connect(host=host, port=port, cleanstart=True)
       noidclient.disconnect()
-      print(connack.properties.AssignedClientIdentifier)
+      logging.info("Assigned client identifier %s" % connack.properties.AssignedClientIdentifier)
       self.assertTrue(connack.properties.AssignedClientIdentifier != "")
+
+    def test_subscribe_identifiers(self):
+      callback.clear()
+
+      aclient.connect(host=host, port=port, cleanstart=True)
+      sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
+      sub_properties.SubscriptionIdentifier = 456789
+      aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
+      self.waitfor(callback.subscribeds, 1, 3)
+
+      aclient.publish(topics[0], b"sub identifier test", 1, retained=False)
+      self.waitfor(callback.messages, 1, 3)
+      self.assertEqual(len(callback.messages), 1, callback.messages)
+      self.assertEqual(callback.messages[0][5].SubscriptionIdentifier, 456789, callback.messages[0][5].SubscriptionIdentifier)
+      aclient.disconnect()
+
+      callback.clear()
 
 
 if __name__ == "__main__":

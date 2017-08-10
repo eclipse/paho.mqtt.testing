@@ -602,13 +602,15 @@ class Properties(object):
       buffer = buffer[valuelen:] # strip the bytes used by the value
       propslenleft -= valuelen
       propname = self.getNameFromIdent(identifier)
+      compressedName = propname.replace(' ', '')
       if propname.endswith('List'):
-        compressedName = propname.replace(' ', '')
         if not hasattr(self, compressedName):
           setattr(self, propname, [value])
         else:
           setattr(self, propname, getattr(self, compressedName) + [value])
       else:
+        if hasattr(self, compressedName):
+          raise MQTTException("Property '%s' must not exist more than once" % property)
         setattr(self, propname, value)
     return self, propslen + MBIlen
 

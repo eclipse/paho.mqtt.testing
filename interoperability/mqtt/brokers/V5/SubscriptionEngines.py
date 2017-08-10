@@ -116,7 +116,7 @@ class SubscriptionEngines:
          chosen = sub.getOptions()
        else:
          logger.info("[MQTT-3.3.5-1] Overlapping subscriptions max QoS")
-         if sub.getQoS() > chosen.QoS:
+         if sub.getQoS() > chosen[0].QoS:
            chosen = sub.getOptions()
        # Omit the following optimization because we want to check for condition [MQTT-3.3.5-1]
        #if chosen == 2:

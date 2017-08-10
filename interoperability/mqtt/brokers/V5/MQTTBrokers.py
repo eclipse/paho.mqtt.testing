@@ -375,7 +375,7 @@ class MQTTBrokers:
           respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, identifier=QoS))
         topics.append(topicFilter)
         subsoption.QoS = respqoss[-1].value # might have been downgraded
-        optionss.append(subsoption)
+        optionss.append((subsoption, packet.properties))
     if len(topics) > 0:
       self.broker.subscribe(self.clients[sock].id, topics, optionss)
     resp = MQTTV5.Subacks()

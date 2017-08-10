@@ -36,7 +36,7 @@ class Subscriptions:
     return self.__topic
 
   def getQoS(self):
-    return self.__options.QoS
+    return self.__options[0].QoS
 
   def getOptions(self):
     return self.__options

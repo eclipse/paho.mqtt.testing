@@ -147,13 +147,15 @@ class Client:
     return response
 
 
-  def subscribe(self, topics, qoss):
+  def subscribe(self, topics, options, properties=None):
     subscribe = MQTTV5.Subscribes()
     subscribe.packetIdentifier = self.__nextMsgid()
     count = 0
     for t in topics:
-      subscribe.data.append((t, qoss[count]))
+      subscribe.data.append((t, options[count]))
       count += 1
+    if properties:
+      subscribe.properties = properties
     sendtosocket(self.sock, subscribe.pack())
     return subscribe.packetIdentifier
 

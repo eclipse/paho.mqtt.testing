@@ -101,15 +101,24 @@ class Brokers:
       if retained:
         logger.info("[MQTT-2.1.2-10] outgoing publish does not have retained flag set")
       if self.overlapping_single:
-        options = self.se.optionsOf(subscriber, topic)
+        options, subsprops = self.se.optionsOf(subscriber, topic)
+        if hasattr(subsprops, "SubscriptionIdentifier"):
+          properties.SubscriptionIdentifier = subsprops.SubscriptionIdentifier
+        elif hasattr(properties, "SubscriptionIdentifier"):
+          delattr(properties, "SubscriptionIdentifier")
         out_qos = min(options.QoS, qos)
         if not options.noLocal or subscriber != aClientid: # noLocal
           outretain = retained if options.retainAsPublished else False
           self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
       else:
         for subscription in self.se.getSubscriptions(topic, subscriber):
-          out_qos = min(subscription.getQoS(), qos)
-          if not subscription.getOptions().noLocal or subscriber != aClientid: # noLocal
+          options, subsprops = subscription.getOptions()
+          if hasattr(subsprops, "SubscriptionIdentifier"):
+            properties.SubscriptionIdentifier = subsprops.SubscriptionIdentifier
+          elif hasattr(properties, "SubscriptionIdentifier"):
+            delattr(properties, "SubscriptionIdentifier")
+          out_qos = min(options.QoS, qos)
+          if not options.noLocal or subscriber != aClientid: # noLocal
             outretain = retained if options.retainAsPublished else False
             self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
 
@@ -134,10 +143,10 @@ class Brokers:
           self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, properties, True)
       i += 1
 
-  def subscribe(self, aClientid, topic, options):
-    rc = self.se.subscribe(aClientid, topic, options)
+  def subscribe(self, aClientid, topic, optionsprops):
+    rc = self.se.subscribe(aClientid, topic, optionsprops)
     resubscribeds = [resubscribed for (x, resubscribed) in rc]
-    self.__doRetained__(aClientid, topic, options, resubscribeds)
+    self.__doRetained__(aClientid, topic, [options for (options, props) in optionsprops], resubscribeds)
     return rc
 
   def unsubscribe(self, aClientid, topic):
