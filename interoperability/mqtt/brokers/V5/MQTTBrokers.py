@@ -68,12 +68,14 @@ class MQTTClients:
     self.will = None
     self.keepalive = keepalive
     self.lastPacket = None
-    self.incomingTopicAliases = {} # string -> int
-    self.incomingTopicNames = {} # int -> string
+    self.topicAliasToNames = {} # int -> string, incoming
+    self.topicAliasMaximum = 0
+    self.outgoingTopicNamesToAliases = []
 
   def clearTopicAliases(self):
-    self.incomingTopicAliases = {} # string -> int
-    self.incomingTopicNames = {} # int -> string
+    self.topicAliasToNames = {} # int -> string, incoming
+    self.topicAliasMaximum = 0
+    self.outgoingTopicNamesToAliases = []
 
   def resend(self):
     logger.debug("resending unfinished publications %s", str(self.outbound))
@@ -105,17 +107,20 @@ class MQTTClients:
 
   def publishArrived(self, topic, msg, qos, properties, receivedTime, retained=False):
     pub = MQTTV5.Publishes()
+    if properties:
+      pub.properties = properties
     logger.info("[MQTT-3.2.3-3] topic name must match the subscription's topic filter")
-    pub.topicName = topic
+    # Topic alias
+    if len(self.outgoingTopicNamesToAliases) < self.broker.topicAliasMaximum:
+      self.outgoingTopicNamesToAliases.append(topic)       # add alias
+    if topic in self.outgoingTopicNamesToAliases:
+      pub.properties.TopicAlias = self.outgoingTopicNamesToAliases.index(topic)
+    else:
+      pub.topicName = topic
     pub.data = msg
     pub.fh.QoS = qos
     pub.fh.RETAIN = retained
     pub.receivedTime = receivedTime
-    if properties: # properties length is 0 if there are no properties
-      pub.properties = properties
-      if hasattr(properties, "TopicAlias"):
-        self.incomingTopicAliases[topic] = properties.TopicAlias
-        self.incomingTopicNames[properties.TopicAlias] = topic
     if retained:
       logger.info("[MQTT-2.1.2-7] Last retained message on matching topics sent on subscribe")
     if pub.fh.RETAIN:
@@ -198,14 +203,16 @@ class MQTTClients:
 
 class MQTTBrokers:
 
-  def __init__(self, publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, zero_length_clientids=True):
+  def __init__(self, publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, zero_length_clientids=True,
+    topicAliasMaximum=0):
 
     # optional behaviours
     self.publish_on_pubrel = publish_on_pubrel
     self.dropQoS0 = dropQoS0                    # don't queue QoS 0 messages for disconnected clients
     self.zero_length_clientids = zero_length_clientids
+    self.topicAliasMaximum = topicAliasMaximum
 
-    self.broker = Brokers(overlapping_single)
+    self.broker = Brokers(overlapping_single, topicAliasMaximum)
     self.clients = {}   # socket -> clients
     self.lock = threading.RLock()
 
@@ -214,7 +221,12 @@ class MQTTBrokers:
     logger.info("Optional behaviour, single publish on overlapping topics: %s", self.broker.overlapping_single)
     logger.info("Optional behaviour, drop QoS 0 publications to disconnected clients: %s", self.dropQoS0)
     logger.info("Optional behaviour, support zero length clientids: %s", self.zero_length_clientids)
+    logger.info("Optional behaviour, number of client topic aliases allowed: %d", self.topicAliasMaximum)
 
+    """
+    Other optional behaviour:
+        - topics which are max QoS 0, QoS 1 or unavailable
+    """
 
   def reinitialize(self):
     logger.info("Reinitializing broker")
@@ -323,6 +335,9 @@ class MQTTBrokers:
       if me:
         logger.info("[MQTT-3.1.3-2] clientid used to retrieve client state")
     resp.sessionPresent = True if me else False
+    # Topic alias
+    if self.topicAliasMaximum > 0:
+      resp.properties.TopicAliasMaximum = self.topicAliasMaximum
     # Session expiry
     if hasattr(packet.properties, "SessionExpiryInterval"):
       sessionExpiryInterval = packet.properties.SessionExpiryInterval
@@ -335,6 +350,7 @@ class MQTTBrokers:
       me.cleanStart = packet.CleanStart
       me.keepalive = packet.KeepAliveTimer
       me.sessionExpiryInterval = sessionExpiryInterval
+    me.topicAliasMaximum = packet.properties.TopicAliasMaximum if hasattr(packet.properties, "TopicAliasMaximum") else 0
     logger.info("[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts")
     self.clients[sock] = me
     me.will = (packet.WillTopic, packet.WillQoS, packet.WillMessage, packet.WillRETAIN) if packet.WillFlag else None

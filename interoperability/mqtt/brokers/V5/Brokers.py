@@ -26,10 +26,11 @@ logger = logging.getLogger('MQTT broker')
 
 class Brokers:
 
-  def __init__(self, overlapping_single=True):
+  def __init__(self, overlapping_single=True, topicAliasMaximum=0):
     self.se = SubscriptionEngines()
     self.__clients = {} # clientid -> client
     self.overlapping_single = overlapping_single
+    self.topicAliasMaximum = topicAliasMaximum
 
   def reinitialize(self):
     self.__clients = {}
@@ -101,12 +102,21 @@ class Brokers:
         self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
 
     # topic alias
-    if len(topic) == 0:
-      if hasattr(properties, "TopicAlias"):
-        if properties.TopicAlias in self.__clients[aClientid].incomingTopicNames.keys():
-          topic = self.__clients[aClientid].incomingTopicNames[properties.TopicAlias]
+    if hasattr(properties, "TopicAlias"):
+      if properties.TopicAlias == 0:
+        raise ProtocolError("Topic alias invalid %d" % properties.TopicAlias)
+      if len(topic) == 0:
+        if properties.TopicAlias in self.__clients[aClientid].topicAliasToNames.keys():
+          topic = self.__clients[aClientid].topicAliasToNames[properties.TopicAlias]
         else:
           raise ProtocolError("Topic alias invalid %d" % properties.TopicAlias)
+      else: # set topic alias
+        if properties.TopicAlias in self.__clients[aClientid].topicAliasToNames.keys() or \
+            properties.TopicAlias <= self.topicAliasMaximum:
+          self.__clients[aClientid].topicAliasToNames[properties.TopicAlias] = topic
+        else:
+          raise ProtocolError("Topic alias maximum %d" %
+                    self.__clients[aClientid].topicAliasMaximum)
     assert len(topic) > 0
 
     if retained:

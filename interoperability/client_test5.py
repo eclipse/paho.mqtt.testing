@@ -25,6 +25,7 @@ class Callbacks(mqtt_client.Callback):
 
   def __init__(self):
     self.messages = []
+    self.messagedicts = []
     self.publisheds = []
     self.subscribeds = []
     self.unsubscribeds = []
@@ -35,7 +36,7 @@ class Callbacks(mqtt_client.Callback):
 
   def disconnected(self, reasoncode, properties):
     logging.info("disconnected %s %s", str(reasoncode), str(properties))
-    self.disconnects.append((reasoncode, properties))
+    self.disconnects.append({"reasonCode" : reasoncode, "properties" : properties})
 
   def connectionLost(self, cause):
     logging.info("connectionLost %s" % str(cause))
@@ -43,6 +44,8 @@ class Callbacks(mqtt_client.Callback):
   def publishArrived(self, topicName, payload, qos, retained, msgid, properties=None):
     logging.info("publishArrived %s %s %d %s %d %s", topicName, payload, qos, retained, msgid, str(properties))
     self.messages.append((topicName, payload, qos, retained, msgid, properties))
+    self.messagedicts.append({"topicname" : topicName, "payload" : payload,
+        "qos" : qos, "retained" : retained, "msgid" : msgid, "properties" : properties})
     return True
 
   def published(self, msgid):
@@ -187,25 +190,18 @@ class Test(unittest.TestCase):
 
     def test_will_message(self):
       # will messages
-      succeeded = True
+      callback.clear()
       callback2.clear()
-      assert len(callback2.messages) == 0, callback2.messages
-      try:
-        aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
-          willTopic=topics[2], willMessage=b"client not disconnected", keepalive=2)
-        bclient.connect(host=host, port=port, cleanstart=False)
-        bclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
-        time.sleep(.1)
-        aclient.terminate()
-        time.sleep(5)
-        bclient.disconnect()
-        assert len(callback2.messages) == 1, callback2.messages  # should have the will message
-      except:
-        traceback.print_exc()
-        succeeded = False
-      logging.info("Will message test %s", "succeeded" if succeeded else "failed")
-      self.assertEqual(succeeded, True)
-      return succeeded
+      self.assertEqual(len(callback2.messages), 0, callback2.messages)
+      aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
+          willTopic=topics[2], willMessage=b"will message", keepalive=2)
+      bclient.connect(host=host, port=port, cleanstart=False)
+      bclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
+      self.waitfor(callback2.subscribeds, 1, 3)
+      aclient.terminate()
+      time.sleep(5)
+      bclient.disconnect()
+      self.assertEqual(len(callback2.messages), 1, callback2.messages)  # should have the will message
 
     # 0 length clientid
     def test_zero_length_clientid(self):
@@ -692,15 +688,39 @@ class Test(unittest.TestCase):
       callback.clear()
       callback2.clear()
 
-    def test_topic_alias(self):
+    def test_client_topic_alias(self):
       callback.clear()
 
-      aclient.connect(host=host, port=port, cleanstart=True)
+      # no server side topic aliases allowed
+      connack = aclient.connect(host=host, port=port, cleanstart=True)
+
+      publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
+      publish_properties.TopicAlias = 0 # topic alias 0 not allowed
+      aclient.publish(topics[0], "topic alias 0", 1, properties=publish_properties)
+
+      # should get back a disconnect with Topic alias invalid
+      self.waitfor(callback.disconnects, 1, 2)
+      self.assertEqual(len(callback.disconnects), 1, callback.disconnects)
+      print("disconnect", str(callback.disconnects[0]["reasonCode"]))
+      #self.assertEqual(callback.disconnects, 1, callback.disconnects)
+
+      connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+      connect_properties.TopicAliasMaximum = 0 # server topic aliases not allowed
+      connack = aclient.connect(host=host, port=port, cleanstart=True,
+                                           properties=connect_properties)
+      clientTopicAliasMaximum = 0
+      if hasattr(connack.properties, "TopicAliasMaximum"):
+        clientTopicAliasMaximum = connack.properties.TopicAliasMaximum
+
+      if clientTopicAliasMaximum == 0:
+        aclient.disconnect()
+        return
+
       aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
       self.waitfor(callback.subscribeds, 1, 3)
 
       publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
-      publish_properties.TopicAlias = 23
+      publish_properties.TopicAlias = 1
       aclient.publish(topics[0], b"topic alias 1", 1, properties=publish_properties)
       self.waitfor(callback.messages, 1, 3)
       self.assertEqual(len(callback.messages), 1, callback.messages)
@@ -711,6 +731,7 @@ class Test(unittest.TestCase):
 
       aclient.disconnect() # should get rid of the topic aliases but not subscriptions
 
+      # check aliases have been deleted
       callback.clear()
       aclient.connect(host=host, port=port, cleanstart=False)
 
@@ -719,13 +740,49 @@ class Test(unittest.TestCase):
       self.assertEqual(len(callback.messages), 1, callback.messages)
 
       publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
-      publish_properties.TopicAlias = 23
+      publish_properties.TopicAlias = 1
       aclient.publish("", b"topic alias 4", 1, properties=publish_properties)
-      self.waitfor(callback.messages, 1, 2) # should not be received
-      self.assertEqual(len(callback.messages), 1, callback.messages)
 
+      # should get back a disconnect with Topic alias invalid
       self.waitfor(callback.disconnects, 1, 2)
       self.assertEqual(len(callback.disconnects), 1, callback.disconnects)
+      print("disconnect", str(callback.disconnects[0]["reasonCode"]))
+      #self.assertEqual(callback.disconnects, 1, callback.disconnects)
+
+    def test_server_topic_alias(self):
+      callback.clear()
+
+      """
+      Use user properties to set expected broker behaviour
+         TopicAliasMaximum for instance
+      """
+
+      connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+      connect_properties.TopicAliasMaximum = 1 # server topic alias allowed
+      connack = aclient.connect(host=host, port=port, cleanstart=True,
+                                       properties=connect_properties)
+
+      serverTopicAliasMaximum = 0
+      if hasattr(connack.properties, "TopicAliasMaximum"):
+        serverTopicAliasMaximum = connack.properties.TopicAliasMaximum
+
+      aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+      self.waitfor(callback.subscribeds, 1, 3)
+
+      for qos in range(3):
+         aclient.publish(topics[0], b"topic alias 1", qos)
+      self.waitfor(callback.messages, 3, 3)
+      self.assertEqual(len(callback.messages), 3, callback.messages)
+      aclient.disconnect()
+
+      if serverTopicAliasMaximum > 0:
+        # first message should set the topic alias
+        self.assertTrue(hasattr(callback.messagedicts[0]["properties"], "TopicAlias"), callback.messagedicts[0]["properties"])
+        topicalias = callback.messagedicts[0]["properties"].TopicAlias
+        self.assertEqual(callback.messagedicts[1]["properties"].TopicAlias, topicalias, topicalias)
+        self.assertEqual(callback.messagedicts[2]["properties"].TopicAlias, topicalias, topicalias)
+      else:
+        print("No server topic aliases to test")
 
 if __name__ == "__main__":
   try:
