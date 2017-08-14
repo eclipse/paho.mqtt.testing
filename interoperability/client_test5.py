@@ -198,8 +198,8 @@ class Test(unittest.TestCase):
       bclient.connect(host=host, port=port, cleanstart=False)
       bclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
       self.waitfor(callback2.subscribeds, 1, 3)
-      aclient.terminate()
-      time.sleep(5)
+      # keep alive timeout ought to be triggered so the will message is received
+      self.waitfor(callback2.messages, 1, 10)
       bclient.disconnect()
       self.assertEqual(len(callback2.messages), 1, callback2.messages)  # should have the will message
 

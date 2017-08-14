@@ -264,7 +264,8 @@ class MQTTBrokers:
         raise MQTTV5.MQTTException("[MQTT-4.8.0-1] 'transient error' reading packet, closing connection")
       if raw_packet == None:
         # will message
-        self.disconnect(sock, None, sendWillMessage=True)
+        if sock in self.clients.keys():
+          self.disconnect(sock, None, sendWillMessage=True)
         terminate = True
       else:
         try:
@@ -297,7 +298,7 @@ class MQTTBrokers:
     else:
       getattr(self, MQTTV5.Packets.Names[packet.fh.PacketType].lower())(sock, packet)
       if sock in self.clients.keys():
-        self.clients[sock].lastPacket = time.time()
+        self.clients[sock].lastPacket = time.monotonic()
     if packet.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT:
       terminate = True
     return terminate
@@ -552,7 +553,7 @@ class MQTTBrokers:
   def keepalive(self, sock):
     if sock in self.clients.keys():
       client = self.clients[sock]
-      if client.keepalive > 0 and time.time() - client.lastPacket > client.keepalive * 1.5:
+      if client.keepalive > 0 and time.monotonic() - client.lastPacket > client.keepalive * 1.5:
         # keep alive timeout
         logger.info("[MQTT-3.1.2-22] keepalive timeout for client %s", client.id)
         self.disconnect(sock, None, sendWillMessage=True)
