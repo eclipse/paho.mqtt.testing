@@ -217,13 +217,18 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn,
   pass
 
 
-def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=1883, zero_length_clientids=True):
+def run(port=1883,
+        publish_on_pubrel=True,
+        overlapping_single=True,
+        dropQoS0=True,
+        zero_length_clientids=True,
+        topicAliasMaximum=2):
   global logger, broker, server
   logger = logging.getLogger('MQTT broker')
   logger.setLevel(logging.INFO)
   logger.addFilter(filter)
   broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0,
-            zero_length_clientids=zero_length_clientids)
+            zero_length_clientids=zero_length_clientids, topicAliasMaximum=topicAliasMaximum)
   logger.info("Starting the MQTT server on port %d", port)
   try:
     server = ThreadingTCPServer(("", port), MyHandler, False)
