@@ -224,7 +224,8 @@ def run(port=1883,
         zero_length_clientids=True,
         topicAliasMaximum=2,
         maximumPacketSize=1000,
-        receiveMaximum=2):
+        receiveMaximum=2,
+        serverKeepAlive=60):
   global logger, broker, server
   logger = logging.getLogger('MQTT broker')
   logger.setLevel(logging.INFO)
@@ -235,7 +236,8 @@ def run(port=1883,
       zero_length_clientids=zero_length_clientids,
       topicAliasMaximum=topicAliasMaximum,
       maximumPacketSize=maximumPacketSize,
-      receiveMaximum=receiveMaximum)
+      receiveMaximum=receiveMaximum,
+      serverKeepAlive=serverKeepAlive)
   logger.info("Starting the MQTT server on port %d", port)
   try:
     server = ThreadingTCPServer(("", port), MyHandler, False)

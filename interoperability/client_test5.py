@@ -776,7 +776,7 @@ class Test(unittest.TestCase):
       # 1. server max packet size
       connack = aclient.connect(host=host, port=port, cleanstart=True)
       serverMaximumPacketSize = 2**28-1
-      if hasattr(connack.properties, "ReceiveMaximum"):
+      if hasattr(connack.properties, "MaximumPacketSize"):
         serverMaximumPacketSize = connack.properties.MaximumPacketSize
 
       if serverMaximumPacketSize < 65535:
@@ -798,7 +798,7 @@ class Test(unittest.TestCase):
       connack = aclient.connect(host=host, port=port, cleanstart=True,
                                              properties=connect_properties)
       serverMaximumPacketSize = 2**28-1
-      if hasattr(connack.properties, "ReceiveMaximum"):
+      if hasattr(connack.properties, "MaximumPacketSize"):
         serverMaximumPacketSize = connack.properties.MaximumPacketSize
 
       aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
@@ -817,6 +817,17 @@ class Test(unittest.TestCase):
       self.assertEqual(len(callback.messages), 1, callback.messages)
 
       aclient.disconnect()
+
+    def test_server_keep_alive(self):
+      callback.clear()
+
+      connack = aclient.connect(host=host, port=port, keepalive=120, cleanstart=True)
+      self.assertTrue(hasattr(connack.properties, "ServerKeepAlive"))
+      self.assertEqual(connack.properties.ServerKeepAlive, 60)
+
+      aclient.disconnect()
+
+
 
 if __name__ == "__main__":
   try:

@@ -216,7 +216,8 @@ class MQTTBrokers:
     zero_length_clientids=True,
     topicAliasMaximum=2,
     maximumPacketSize=32,
-    receiveMaximum=2):
+    receiveMaximum=2,
+    serverKeepAlive=60):
 
     # optional behaviours
     self.publish_on_pubrel = publish_on_pubrel
@@ -226,6 +227,7 @@ class MQTTBrokers:
     self.topicAliasMaximum = topicAliasMaximum
     self.maximumPacketSize = maximumPacketSize
     self.receiveMaximum = receiveMaximum
+    self.serverKeepAlive = serverKeepAlive
 
     self.broker = Brokers(overlapping_single, topicAliasMaximum)
     self.clients = {}   # socket -> clients
@@ -239,6 +241,7 @@ class MQTTBrokers:
     logger.info("Optional behaviour, number of client topic aliases allowed: %d", self.topicAliasMaximum)
     logger.info("Optional behaviour, maximum packet size: %d", self.maximumPacketSize)
     logger.info("Optional behaviour, receive maximum: %d", self.receiveMaximum)
+    logger.info("Optional behaviour, server keep alive: %d", self.serverKeepAlive)
 
     """
     Other optional behaviour:
@@ -359,17 +362,21 @@ class MQTTBrokers:
       resp.properties.MaximumPacketSize = self.maximumPacketSize
     if self.receiveMaximum < MQTTV5.MAX_PACKETID:
       resp.properties.ReceiveMaximum = self.receiveMaximum
+    keepalive = packet.KeepAliveTimer
+    if packet.KeepAliveTimer > 0 and self.serverKeepAlive < packet.KeepAliveTimer:
+      keepalive = self.serverKeepAlive
+      resp.properties.ServerKeepAlive = keepalive
     # Session expiry
     if hasattr(packet.properties, "SessionExpiryInterval"):
       sessionExpiryInterval = packet.properties.SessionExpiryInterval
     else:
       sessionExpiryInterval = -1 # no expiry
     if me == None:
-      me = MQTTClients(packet.ClientIdentifier, packet.CleanStart, sessionExpiryInterval, packet.KeepAliveTimer, sock, self)
+      me = MQTTClients(packet.ClientIdentifier, packet.CleanStart, sessionExpiryInterval, keepalive, sock, self)
     else:
       me.socket = sock # set existing client state to new socket
       me.cleanStart = packet.CleanStart
-      me.keepalive = packet.KeepAliveTimer
+      me.keepalive = keepalive
       me.sessionExpiryInterval = sessionExpiryInterval
     # the topic alias maximum in the connect properties sets the maximum outgoing topic aliases for a client
     me.topicAliasMaximum = packet.properties.TopicAliasMaximum if hasattr(packet.properties, "TopicAliasMaximum") else 0
