@@ -1,18 +1,19 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
- 
+  Copyright (c) 2013, 2017 IBM Corp.
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
+     Ian Craggs - unpack session present in connack
 *******************************************************************
 """
 
@@ -31,7 +32,7 @@ logger = logging.getLogger('MQTT broker')
 
 class MQTTException(Exception):
   pass
-   
+
 
 # Message types
 CONNECT, CONNACK, PUBLISH, PUBACK, PUBREC, PUBREL, \
@@ -185,7 +186,7 @@ def readUTF(buffer, maxlen):
     if zz != -1:
       raise MQTTException("[MQTT-1.5.3-1] D800-DFFF found in UTF data "+buf)
   if buf.find("\uFEFF") != -1:
-    logger.info("[MQTT-1.5.3-3] U+FEFF in UTF string") 
+    logger.info("[MQTT-1.5.3-3] U+FEFF in UTF string")
   return buf
 
 def writeBytes(buffer):
@@ -235,20 +236,20 @@ class Connects(Packets):
     if buffer != None:
       self.unpack(buffer)
 
-  def pack(self):    
+  def pack(self):
     connectFlags = bytes([(self.CleanSession << 1) | (self.WillFlag << 2) | \
                        (self.WillQoS << 3) | (self.WillRETAIN << 5) | \
                        (self.usernameFlag << 6) | (self.passwordFlag << 7)])
     buffer = writeUTF(self.ProtocolName) + bytes([self.ProtocolVersion]) + \
               connectFlags + writeInt16(self.KeepAliveTimer)
-    buffer += writeUTF(self.ClientIdentifier) 
+    buffer += writeUTF(self.ClientIdentifier)
     if self.WillFlag:
-      buffer += writeUTF(self.WillTopic) 
-      buffer += writeBytes(self.WillMessage) 
+      buffer += writeUTF(self.WillTopic)
+      buffer += writeBytes(self.WillMessage)
     if self.usernameFlag:
-      buffer += writeUTF(self.username) 
+      buffer += writeUTF(self.username)
     if self.passwordFlag:
-      buffer += writeBytes(self.password) 
+      buffer += writeBytes(self.password)
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
@@ -388,6 +389,7 @@ class Connacks(Packets):
     self.fh.unpack(buffer)
     assert self.fh.remainingLength == 2, "Connack packet is wrong length %d" % self.fh.remainingLength
     assert buffer[2] in  [0, 1], "Connect Acknowledge Flags"
+    self.flags = buffer[2]
     self.returnCode = buffer[3]
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
@@ -910,11 +912,10 @@ if __name__ == "__main__":
     pass
 
   for packet in classes[1:]:
-    before = str(packet())   
+    before = str(packet())
     after = str(unpackPacket(packet().pack()))
     try:
       assert before == after
     except:
       print("before:", before, "\nafter:", after)
   print("End")
-

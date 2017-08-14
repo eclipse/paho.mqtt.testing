@@ -1,16 +1,16 @@
 """
 *******************************************************************
   Copyright (c) 2013, 2014 IBM Corp.
- 
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
 *******************************************************************
@@ -35,7 +35,7 @@ Do store tests that reach a conformance statement in a different way.
 
 import os, shutil, threading, time, logging, logging.handlers, queue, sys, traceback
 
-import mqtt, MQTTV311_spec
+import mqtt, specifications.MQTTV311 as MQTTV311_spec
 
 class Brokers:
 
@@ -108,10 +108,10 @@ def create():
 		try:
 			while (True):
 				data = mbt_log.get_nowait().getMessage() # throws exception when no message
-				file_lines.append(data + "\n" if data[-1] != "\n" else data) 
+				file_lines.append(data + "\n" if data[-1] != "\n" else data)
 		except:
 			pass
-		try:	
+		try:
 			data = broker_log.get(True, 0).getMessage()
 		except:
 			data = None
@@ -143,14 +143,14 @@ if __name__ == "__main__":
 	test_no = 0
 	logger.info("Generation starting")
 
-	broker = Brokers() 
+	broker = Brokers()
 	#broker.start()
 	last_measures = None
 	stored_tests = 0
 	while stored_tests < 10 and test_no < 30:
 		test_no += 1
 		conformance_statements, file_lines = create()
-		cur_measures = mqtt.broker.coverage.getmeasures()[:2]
+		cur_measures = mqtt.brokers.V311.coverage.getmeasures()[:2]
 
 		filename = "tests/test.log.%d" % (test_no,)
 		if cur_measures != last_measures:
@@ -160,7 +160,7 @@ if __name__ == "__main__":
 			outfile.writelines(list(conformance_statements) + file_lines)
 			outfile.close()
 			last_measures = cur_measures
-	
+
 			#shorten()
 			#store()
 		broker.reinitialize()
@@ -171,7 +171,5 @@ if __name__ == "__main__":
 	logger.info("Generation complete")
 	for curline in final_results:
 		logger.info(curline)
-	
+
 	logger.info("Finished")
-
-

@@ -1,16 +1,16 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
- 
+  Copyright (c) 2013, 2017 IBM Corp.
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
      Ian Craggs - add sessionPresent connack flag
@@ -19,7 +19,7 @@
 
 import traceback, random, sys, string, copy, threading, logging, socket, time, uuid
 
-from ..formats import MQTTV311 as MQTTV3
+from mqtt.formats import MQTTV311 as MQTTV3
 
 from .Brokers import Brokers
 
@@ -42,7 +42,7 @@ class MQTTClients:
     self.cleansession = cleansession
     self.socket = socket
     self.msgid = 1
-    self.outbound = [] # message objects - for ordering 
+    self.outbound = [] # message objects - for ordering
     self.outmsgs = {} # msgids to message objects
     self.broker = broker
     if broker.publish_on_pubrel:
@@ -151,7 +151,7 @@ class MQTTClients:
           logger.error("Pubcomp received for msgid %d, but message in wrong state", msgid)
       else:
         logger.error("Pubcomp received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
-    else:  
+    else:
       logger.error("Pubcomp received for msgid %d, but no message found", msgid)
 
   def pubrel(self, msgid):
@@ -166,8 +166,8 @@ class MQTTClients:
       rc = msgid in self.inbound
     if not rc:
       logger.error("Pubrec received for msgid %d, but no message found", msgid)
-    return rc 
-  
+    return rc
+
 
 class MQTTBrokers:
 
@@ -191,7 +191,7 @@ class MQTTBrokers:
 
   def reinitialize(self):
     logger.info("Reinitializing broker")
-    self.clients = {}   
+    self.clients = {}
     self.broker.reinitialize()
 
   def handleRequest(self, sock):
@@ -301,7 +301,7 @@ class MQTTBrokers:
       else:
         self.broker.disconnect(self.clients[sock].id)
       del self.clients[sock]
-    try:   
+    try:
       sock.shutdown(socket.SHUT_RDWR) # must call shutdown to close socket immediately
     except:
       pass # doesn't matter if the socket has been closed at the other end already
@@ -436,6 +436,3 @@ class MQTTBrokers:
         # keep alive timeout
         logger.info("[MQTT-3.1.2-22] keepalive timeout for client %s", client.id)
         self.disconnect(sock, None, terminate=True)
-
-
-

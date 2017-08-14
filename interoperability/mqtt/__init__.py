@@ -16,11 +16,11 @@
 *******************************************************************
 """
 
-__version__ = "3.1.1"
+__version__ = "5.0"
 
-from . import formats, broker, client
+from . import formats, brokers, clients
 
-__all__ = ["formats", "broker", "client", "proxy"]
+__all__ = ["formats", "brokers", "clients", "proxy"]
 		
 
 

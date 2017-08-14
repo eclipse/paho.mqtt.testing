@@ -1,16 +1,16 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
- 
+  Copyright (c) 2013, 2017 IBM Corp.
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
      Ian Craggs - add websockets support
@@ -20,8 +20,8 @@
 import socketserver, select, sys, traceback, socket, logging, getopt, hashlib, base64
 
 from .MQTTBrokers import MQTTBrokers
-from .coverage import handler, measure
-from ..formats.MQTTV311 import MQTTException
+from .coverage import filter, measure
+from mqtt.formats.MQTTV5.MQTTV5 import MQTTException
 
 broker = None
 server = None
@@ -44,7 +44,7 @@ class BufferedSockets:
         out = self.buffer[:bufsize]
         self.buffer = self.buffer[bufsize:]
         return out
-        
+
       header1 = ord(self.socket.recv(1))
       header2 = ord(self.socket.recv(1))
 
@@ -122,7 +122,7 @@ class MyHandler(socketserver.StreamRequestHandler):
            b"Connection: Upgrade\r\n" +\
            b"Sec-WebSocket-Protocol: mqtt\r\n" +\
            b"Sec-WebSocket-Accept: " + digest +b"\r\n\r\n"
-    return client.send(resp) 
+    return client.send(resp)
 
   def handle(self):
     global server
@@ -164,7 +164,10 @@ class MyHandler(socketserver.StreamRequestHandler):
         if (len(exc.args) > 0):
           logger.error(exc.args[0])
         else:
-          logger.error("")
+          outline = ""
+          for line in traceback.format_tb(exc.__traceback__):
+            outline += line
+          logger.error(outline)
         break
       except:
         logger.exception("MyHandler")
@@ -202,7 +205,7 @@ class TCPHandler(socketserver.StreamRequestHandler):
         if (len(exc.args) > 0):
           logger.error(exc.args[0])
         else:
-          logger.error("")
+          logger.error(str(exc))
         break
       except:
         logger.exception("MyHandler")
@@ -214,13 +217,27 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn,
   pass
 
 
-def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=1883, zero_length_clientids=True):
+def run(port=1883,
+        publish_on_pubrel=True,
+        overlapping_single=True,
+        dropQoS0=True,
+        zero_length_clientids=True,
+        topicAliasMaximum=2,
+        maximumPacketSize=1000,
+        receiveMaximum=2,
+        serverKeepAlive=60):
   global logger, broker, server
   logger = logging.getLogger('MQTT broker')
   logger.setLevel(logging.INFO)
-  logger.addHandler(handler)
-  broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0,
-            zero_length_clientids=zero_length_clientids)
+  logger.addFilter(filter)
+  broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel,
+      overlapping_single=overlapping_single,
+      dropQoS0=dropQoS0,
+      zero_length_clientids=zero_length_clientids,
+      topicAliasMaximum=topicAliasMaximum,
+      maximumPacketSize=maximumPacketSize,
+      receiveMaximum=receiveMaximum,
+      serverKeepAlive=serverKeepAlive)
   logger.info("Starting the MQTT server on port %d", port)
   try:
     server = ThreadingTCPServer(("", port), MyHandler, False)
@@ -230,7 +247,7 @@ def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=188
     server.server_activate()
     server.serve_forever()
   except KeyboardInterrupt:
-    pass 
+    pass
   except:
     logger.exception("startBroker")
   finally:
@@ -241,10 +258,10 @@ def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=188
       pass
   server = None
   logger.info("Stopping the MQTT server on port %d", port)
-  handler.measure()
+  filter.measure()
 
 def measure():
-  return handler.getmeasures()
+  return filter.getmeasures()
 
 def stop():
   global server
@@ -256,7 +273,7 @@ def reinitialize():
 
 def main(argv):
   try:
-    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:", ["help", "publish_on_pubrel=", "overlapping_single=", 
+    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:", ["help", "publish_on_pubrel=", "overlapping_single=",
         "dropQoS0=", "port=", "zero_length_clientids="])
   except getopt.GetoptError as err:
     print(err) # will print something like "option -a not recognized"

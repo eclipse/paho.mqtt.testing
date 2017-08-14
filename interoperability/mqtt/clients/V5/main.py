@@ -1,16 +1,16 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
- 
+  Copyright (c) 2013, 2017 IBM Corp.
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
 *******************************************************************
@@ -21,7 +21,7 @@ import socket, time, _thread, logging
 
 from . import internal
 
-from ..formats import MQTTV311 as MQTTV3
+from mqtt.formats import MQTTV5
 
 
 logger = logging.getLogger("mqtt-client")
@@ -59,6 +59,9 @@ class Callback:
   def unsubscribed(self, msgid):
     logger.debug("default unsubscribed %d", msgid)
 
+  def disconnected(self, reasoncode, properties):
+    logger.debug("default disconnected")
+
 
 
 class Client:
@@ -68,7 +71,8 @@ class Client:
     self.msgid = 1
     self.callback = None
     self.__receiver = None
-    self.cleansession = True
+    self.cleanstart = True
+    self.sessionexpiry = 0
 
 
   def __nextMsgid(self):
@@ -91,16 +95,21 @@ class Client:
     self.callback = callback
 
 
-  def connect(self, host="localhost", port=1883, cleansession=True, keepalive=0, newsocket=True, protocolName=None,
-              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None):
+  def connect(self, host="localhost", port=1883, cleanstart=True, keepalive=0, newsocket=True, protocolName=None,
+              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None,
+              properties=None):
     if newsocket:
+      try:
+        self.sock.close()
+      except:
+        pass
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self.sock.settimeout(.5)
       self.sock.connect((host, port))
 
-    connect = MQTTV3.Connects()
+    connect = MQTTV5.Connects()
     connect.ClientIdentifier = self.clientid
-    connect.CleanSession = cleansession
+    connect.CleanStart = cleanstart
     connect.KeepAliveTimer = keepalive
     if protocolName:
       connect.ProtocolName = protocolName
@@ -120,60 +129,68 @@ class Client:
       connect.passwordFlag = True
       connect.password = password
 
+    if properties:
+      connect.properties = properties
+
     sendtosocket(self.sock, connect.pack())
 
-    response = MQTTV3.unpackPacket(MQTTV3.getPacket(self.sock))
+    response = MQTTV5.unpackPacket(MQTTV5.getPacket(self.sock))
     if not response:
-      raise MQTTV3.MQTTException("connect failed - socket closed, no connack")
-    assert response.fh.MessageType == MQTTV3.CONNACK
+      raise MQTTV5.MQTTException("connect failed - socket closed, no connack")
+    assert response.fh.PacketType == MQTTV5.PacketTypes.CONNACK
 
-    self.cleansession = cleansession
-    assert response.returnCode == 0, "connect was %s" % str(response)
-    if self.cleansession or self.__receiver == None:
+    self.cleanstart = cleanstart
+    assert response.reasonCode.getName() == "Success", "connect was %s" % str(response)
+    if self.cleanstart or self.__receiver == None:
       self.__receiver = internal.Receivers(self.sock)
     else:
       self.__receiver.socket = self.sock
     if self.callback:
       id = _thread.start_new_thread(self.__receiver, (self.callback,))
+    return response
 
 
-  def subscribe(self, topics, qoss):
-    subscribe = MQTTV3.Subscribes()
-    subscribe.messageIdentifier = self.__nextMsgid()
+  def subscribe(self, topics, options, properties=None):
+    subscribe = MQTTV5.Subscribes()
+    subscribe.packetIdentifier = self.__nextMsgid()
     count = 0
     for t in topics:
-      subscribe.data.append((t, qoss[count]))
+      subscribe.data.append((t, options[count]))
       count += 1
+    if properties:
+      subscribe.properties = properties
     sendtosocket(self.sock, subscribe.pack())
-    return subscribe.messageIdentifier
+    return subscribe.packetIdentifier
 
 
   def unsubscribe(self, topics):
-    unsubscribe = MQTTV3.Unsubscribes()
-    unsubscribe.messageIdentifier = self.__nextMsgid()
-    unsubscribe.data = topics
+    unsubscribe = MQTTV5.Unsubscribes()
+    unsubscribe.packetIdentifier = self.__nextMsgid()
+    unsubscribe.topicFilters = topics
     sendtosocket(self.sock, unsubscribe.pack())
-    return unsubscribe.messageIdentifier
+    return unsubscribe.packetIdentifier
 
 
-  def publish(self, topic, payload, qos=0, retained=False):
-    publish = MQTTV3.Publishes()
+  def publish(self, topic, payload, qos=0, retained=False, properties=None):
+    publish = MQTTV5.Publishes()
     publish.fh.QoS = qos
     publish.fh.RETAIN = retained
     if qos == 0:
-      publish.messageIdentifier = 0
+      publish.packetIdentifier = 0
     else:
-      publish.messageIdentifier = self.__nextMsgid()
+      publish.packetIdentifier = self.__nextMsgid()
       if publish.fh.QoS == 2:
-        publish.pubrec_received = False
-      self.__receiver.outMsgs[publish.messageIdentifier] = publish
+        pass #publish.pubrec_received = False
+      self.__receiver.outMsgs[publish.packetIdentifier] = publish
     publish.topicName = topic
-    publish.data = payload
+    if properties:
+      publish.properties = properties
+    publish.data = payload if type(payload) == type(b"") else bytes(payload, "utf8")
     sendtosocket(self.sock, publish.pack())
-    return publish.messageIdentifier
+    return publish.packetIdentifier
 
 
-  def disconnect(self):
+  def disconnect(self, properties=None):
     if self.__receiver:
       self.__receiver.stopping = True
       count = 0
@@ -186,10 +203,12 @@ class Client:
       if self.__receiver and self.__receiver.paused == False:
         assert self.__receiver.inMsgs == {}, self.__receiver.inMsgs
         assert self.__receiver.outMsgs == {}, self.__receiver.outMsgs
-    disconnect = MQTTV3.Disconnects()
+    disconnect = MQTTV5.Disconnects()
+    if properties:
+      disconnect.properties = properties
     sendtosocket(self.sock, disconnect.pack())
-    time.sleep(0.1)
-    if self.cleansession:
+    time.sleep(1.1)
+    if self.sessionexpiry == 0:
       self.__receiver = None
     else:
       self.__receiver.socket = None
@@ -213,7 +232,8 @@ class Client:
     self.__receiver.paused = True
 
   def resume(self):
-    self.__receiver.paused = False
+    if self.__receiver:
+      self.__receiver.paused = False
 
 
 if __name__ == "__main__":
@@ -233,4 +253,3 @@ if __name__ == "__main__":
   aclient.publish("k", "qos 2", 2)
   time.sleep(1.0)
   aclient.disconnect()
-
