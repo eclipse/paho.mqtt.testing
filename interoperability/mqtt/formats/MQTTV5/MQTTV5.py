@@ -39,6 +39,9 @@ class MalformedPacket(MQTTException):
 class ProtocolError(MQTTException):
   pass
 
+MAX_PACKET_SIZE = 2**28-1
+MAX_PACKETID = 2**16-1
+
 class PacketTypes:
 
   indexes = range(1, 16)
@@ -112,7 +115,7 @@ class ReasonCodes:
         if self.packetType in self.names[code][name]:
           identifier = code
         break
-    assert identifier != None
+    assert identifier != None, name
     return identifier
 
   def set(self, name):
@@ -324,7 +327,7 @@ class FixedHeaders(object):
     buffer += MBIs.encode(length)
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     "unpack data from string buffer into separate fields"
     b0 = buffer[0]
     self.PacketType = b0 >> 4
@@ -332,6 +335,8 @@ class FixedHeaders(object):
     self.QoS = (b0 >> 1) & 0x03
     self.RETAIN = (b0 & 0x01) == 1
     (self.remainingLength, bytes) = MBIs.decode(buffer[1:])
+    if self.remainingLength + bytes + 1 > maximumPacketSize:
+       raise ProtocolError("Packet too large")
     return bytes + 1 # length of fixed header
 
 
@@ -672,12 +677,12 @@ class Connects(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.CONNECT
 
     try:
-      fhlen = self.fh.unpack(buffer)
+      fhlen = self.fh.unpack(buffer, maximumPacketSize)
       packlen = fhlen + self.fh.remainingLength
       assert len(buffer) >= packlen, "buffer length %d packet length %d" % (len(buffer), packlen)
       curlen = fhlen # points to after header + remaining length
@@ -815,10 +820,10 @@ class Connacks(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     assert len(buffer) >= 4
     assert PacketType(buffer) == PacketTypes.CONNACK
-    curlen = self.fh.unpack(buffer)
+    curlen = self.fh.unpack(buffer, maximumPacketSize)
     assert buffer[curlen] in [0, 1], "Connect Acknowledge Flags"
     self.sessionPresent = (buffer[curlen] == 0x01)
     curlen += 1
@@ -863,12 +868,12 @@ class Disconnects(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     self.properties.clear()
     self.reasonCode.set("Normal disconnection")
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.DISCONNECT
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
     assert self.fh.DUP == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
@@ -920,10 +925,10 @@ class Publishes(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.PUBLISH
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert self.fh.QoS in [0, 1, 2], "QoS in Publish must be 0, 1, or 2"
     packlen = fhlen + self.fh.remainingLength
     assert len(buffer) >= packlen
@@ -993,12 +998,12 @@ class Acks(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     self.properties.clear()
     self.reasonCode.set("Success")
     assert len(buffer) >= 2
     assert PacketType(buffer) == self.ackType
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert self.fh.remainingLength in [2, 3, 4], \
         "%s packet is wrong length %d" % (self.ackName, self.fh.remainingLength)
     assert len(buffer) >= fhlen + self.fh.remainingLength
@@ -1115,11 +1120,11 @@ class Subscribes(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     self.properties.clear()
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.SUBSCRIBE
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
     logger.info("[MQTT-2.3.1-1] packet indentifier must be in subscribe")
     self.packetIdentifier = readInt16(buffer[fhlen:])
@@ -1178,10 +1183,10 @@ class UnsubSubacks(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     assert len(buffer) >= 2
     assert PacketType(buffer) == self.packetType
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
     self.packetIdentifier = readInt16(buffer[fhlen:])
     leftlen = self.fh.remainingLength - 2
@@ -1238,10 +1243,10 @@ class Unsubscribes(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.UNSUBSCRIBE
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
     logger.info("[MQTT-2.3.1-1] packet indentifier must be in unsubscribe")
     self.packetIdentifier = readInt16(buffer[fhlen:])
@@ -1287,10 +1292,10 @@ class Pingreqs(Packets):
     if buffer != None:
       self.unpack(buffer)
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.PINGREQ
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert self.fh.remainingLength == 0
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
@@ -1312,10 +1317,10 @@ class Pingresps(Packets):
     if buffer != None:
       self.unpack(buffer)
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.PINGRESP
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert self.fh.remainingLength == 0
     assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
@@ -1351,12 +1356,12 @@ class Disconnects(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     self.properties.clear()
     self.reasonCode.set("Normal disconnection")
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.DISCONNECT
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
     assert self.fh.DUP == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
@@ -1402,10 +1407,10 @@ class Auths(Packets):
     buffer = self.fh.pack(len(buffer)) + buffer
     return buffer
 
-  def unpack(self, buffer):
+  def unpack(self, buffer, maximumPacketSize):
     assert len(buffer) >= 2
     assert PacketType(buffer) == PacketTypes.AUTH
-    fhlen = self.fh.unpack(buffer)
+    fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
     assert self.fh.DUP == False, "[MQTT-2.1.2-1] AUTH reserved bits must be 0"
     assert self.fh.QoS == 0, "[MQTT-2.1.2-1] AUTH reserved bits must be 0"
@@ -1430,10 +1435,10 @@ classes = [Connects, Connacks, Publishes, Pubacks, Pubrecs,
            Pubrels, Pubcomps, Subscribes, Subacks, Unsubscribes,
            Unsubacks, Pingreqs, Pingresps, Disconnects, Auths]
 
-def unpackPacket(buffer):
+def unpackPacket(buffer, maximumPacketSize=MAX_PACKET_SIZE):
   if PacketType(buffer) != None:
     packet = classes[PacketType(buffer)-1]()
-    packet.unpack(buffer)
+    packet.unpack(buffer, maximumPacketSize=maximumPacketSize)
   else:
     packet = None
   return packet

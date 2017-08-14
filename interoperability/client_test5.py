@@ -229,35 +229,29 @@ class Test(unittest.TestCase):
       return succeeded
 
     def test_offline_message_queueing(self):
-      succeeded = True
-      try:
-        # message queueing for offline clients
-        callback.clear()
+      # message queueing for offline clients
+      callback.clear()
+      callback2.clear()
 
-        aclient.connect(host=host, port=port, cleanstart=False)
-        aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
-        aclient.disconnect()
+      aclient.connect(host=host, port=port, cleanstart=True)
+      aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
+      aclient.disconnect()
 
-        bclient.connect(host=host, port=port, cleanstart=True)
-        bclient.publish(topics[1], b"qos 0", 0)
-        bclient.publish(topics[2], b"qos 1", 1)
-        bclient.publish(topics[3], b"qos 2", 2)
-        time.sleep(2)
-        bclient.disconnect()
+      bclient.connect(host=host, port=port, cleanstart=True)
+      bclient.publish(topics[1], b"qos 0", 0)
+      bclient.publish(topics[2], b"qos 1", 1)
+      bclient.publish(topics[3], b"qos 2", 2)
+      time.sleep(2)
+      bclient.disconnect()
 
-        aclient.connect(host=host, port=port, cleanstart=False)
-        time.sleep(2)
-        aclient.disconnect()
+      aclient.connect(host=host, port=port, cleanstart=False)
+      time.sleep(2)
+      aclient.disconnect()
 
-        assert len(callback.messages) in [2, 3], callback.messages
-        logging.info("This server %s queueing QoS 0 messages for offline clients" % \
+      self.assertTrue(len(callback.messages) in [2, 3], len(callback.messages))
+      logging.info("This server %s queueing QoS 0 messages for offline clients" % \
             ("is" if len(callback.messages) == 3 else "is not"))
-      except:
-        traceback.print_exc()
-        succeeded = False
-      logging.info("Offline message queueing test %s", "succeeded" if succeeded else "failed")
-      self.assertEqual(succeeded, True)
-      return succeeded
+
 
     def test_overlapping_subscriptions(self):
       # overlapping subscriptions. When there is more than one matching subscription for the same client for a topic,
@@ -775,6 +769,54 @@ class Test(unittest.TestCase):
       topicalias = callback.messagedicts[0]["properties"].TopicAlias
       self.assertEqual(callback.messagedicts[1]["properties"].TopicAlias, topicalias, topicalias)
       self.assertEqual(callback.messagedicts[2]["properties"].TopicAlias, topicalias, topicalias)
+
+    def test_maximum_packet_size(self):
+      callback.clear()
+
+      # 1. server max packet size
+      connack = aclient.connect(host=host, port=port, cleanstart=True)
+      serverMaximumPacketSize = 2**28-1
+      if hasattr(connack.properties, "ReceiveMaximum"):
+        serverMaximumPacketSize = connack.properties.MaximumPacketSize
+
+      if serverMaximumPacketSize < 65535:
+        # publish bigger packet than server can accept
+        payload = b"."*serverMaximumPacketSize
+        aclient.publish(topics[0], payload, 0)
+        # should get back a disconnect with packet size too big
+        self.waitfor(callback.disconnects, 1, 2)
+        self.assertEqual(len(callback.disconnects), 1, callback.disconnects)
+        self.assertEqual(str(callback.disconnects[0]["reasonCode"]),
+          "Packet too large", str(callback.disconnects[0]["reasonCode"]))
+      else:
+        aclient.disconnect()
+
+      # 1. client max packet size
+      maximumPacketSize = 64 # max packet size we want to receive
+      connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+      connect_properties.MaximumPacketSize = maximumPacketSize
+      connack = aclient.connect(host=host, port=port, cleanstart=True,
+                                             properties=connect_properties)
+      serverMaximumPacketSize = 2**28-1
+      if hasattr(connack.properties, "ReceiveMaximum"):
+        serverMaximumPacketSize = connack.properties.MaximumPacketSize
+
+      aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+      self.waitfor(callback.subscribeds, 1, 3)
+
+      # send a small enough packet, should get this one back
+      payload = b"."*(int(maximumPacketSize/2))
+      aclient.publish(topics[0], payload, 0)
+      self.waitfor(callback.messages, 1, 3)
+      self.assertEqual(len(callback.messages), 1, callback.messages)
+
+      # send a packet too big to receive
+      payload = b"."*maximumPacketSize
+      aclient.publish(topics[0], payload, 1)
+      self.waitfor(callback.messages, 2, 3)
+      self.assertEqual(len(callback.messages), 1, callback.messages)
+
+      aclient.disconnect()
 
 if __name__ == "__main__":
   try:

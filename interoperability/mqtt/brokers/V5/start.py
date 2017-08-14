@@ -222,13 +222,20 @@ def run(port=1883,
         overlapping_single=True,
         dropQoS0=True,
         zero_length_clientids=True,
-        topicAliasMaximum=2):
+        topicAliasMaximum=2,
+        maximumPacketSize=1000,
+        receiveMaximum=2):
   global logger, broker, server
   logger = logging.getLogger('MQTT broker')
   logger.setLevel(logging.INFO)
   logger.addFilter(filter)
-  broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0,
-            zero_length_clientids=zero_length_clientids, topicAliasMaximum=topicAliasMaximum)
+  broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel,
+      overlapping_single=overlapping_single,
+      dropQoS0=dropQoS0,
+      zero_length_clientids=zero_length_clientids,
+      topicAliasMaximum=topicAliasMaximum,
+      maximumPacketSize=maximumPacketSize,
+      receiveMaximum=receiveMaximum)
   logger.info("Starting the MQTT server on port %d", port)
   try:
     server = ThreadingTCPServer(("", port), MyHandler, False)

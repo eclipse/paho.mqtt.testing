@@ -104,19 +104,18 @@ class Brokers:
     # topic alias
     if hasattr(properties, "TopicAlias"):
       if properties.TopicAlias == 0:
-        raise ProtocolError("Topic alias invalid %d" % properties.TopicAlias)
+        raise ProtocolError("Topic alias invalid", properties.TopicAlias)
       if len(topic) == 0:
         if properties.TopicAlias in self.__clients[aClientid].topicAliasToNames.keys():
           topic = self.__clients[aClientid].topicAliasToNames[properties.TopicAlias]
         else:
-          raise ProtocolError("Topic alias invalid %d" % properties.TopicAlias)
+          raise ProtocolError("Topic alias invalid", properties.TopicAlias)
       else: # set incoming topic alias
         if properties.TopicAlias in self.__clients[aClientid].topicAliasToNames.keys() or \
             properties.TopicAlias <= self.topicAliasMaximum:
           self.__clients[aClientid].topicAliasToNames[properties.TopicAlias] = topic
         else:
-          raise ProtocolError("Topic alias maximum %d" %
-                    self.__clients[aClientid].topicAliasMaximum)
+          raise ProtocolError("Topic alias invalid", self.__clients[aClientid].topicAliasMaximum)
     assert len(topic) > 0
 
     if retained:

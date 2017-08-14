@@ -25,7 +25,7 @@ from .Brokers import Brokers
 
 logger = logging.getLogger('MQTT broker')
 
-def respond(sock, packet):
+def respond(sock, packet, maximumPacketSize=500):
   # deal with expiry
   if packet.fh.PacketType == MQTTV5.PacketTypes.PUBLISH:
     if hasattr(packet.properties, "PublicationExpiryInterval"):
@@ -39,6 +39,11 @@ def respond(sock, packet):
           packet.properties.PublicationExpiryInterval -= timespent
         except:
           traceback.print_exc()
+  # deal with packet size
+  packlen = len(packet.pack())
+  if packlen > maximumPacketSize:
+    logger.error("Packet too big to send to client packet size %d max packet size %d" % (packlen, maximumPacketSize))
+    return
   logger.info("out: "+str(packet))
   if hasattr(sock, "handlePacket"):
     sock.handlePacket(packet)
@@ -71,6 +76,8 @@ class MQTTClients:
     self.topicAliasToNames = {} # int -> string, incoming
     self.topicAliasMaximum = 0 # for server topic aliases
     self.outgoingTopicNamesToAliases = []
+    self.maximumPacketSize = MQTTV5.MAX_PACKET_SIZE
+    self.receiveMaximum = MQTTV5.MAX_PACKETID
 
   def clearTopicAliases(self):
     self.topicAliasToNames = {} # int -> string, incoming
@@ -85,25 +92,25 @@ class MQTTClients:
       logger.debug("resending", pub)
       logger.info("[MQTT-4.4.0-2] dup flag must be set on in re-publish")
       if pub.fh.QoS == 0:
-        respond(self.socket, pub)
+        respond(self.socket, pub, self.maximumPacketSize)
       elif pub.fh.QoS == 1:
         pub.fh.DUP = 1
         logger.info("[MQTT-2.1.2-3] Dup when resending QoS 1 publish id %d", pub.packetIdentifier)
         logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
         logger.info("[MQTT-4.3.2-1] Resending QoS 1 with DUP flag")
-        respond(self.socket, pub)
+        respond(self.socket, pub, self.maximumPacketSize)
       elif pub.fh.QoS == 2:
         if pub.qos2state == "PUBREC":
           logger.info("[MQTT-2.1.2-3] Dup when resending QoS 2 publish id %d", pub.packetIdentifier)
           pub.fh.DUP = 1
           logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
           logger.info("[MQTT-4.3.3-1] Resending QoS 2 with DUP flag")
-          respond(self.socket, pub)
+          respond(self.socket, pub, self.maximumPacketSize)
         else:
           resp = MQTTV5.Pubrels()
           logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
           resp.packetIdentifier = pub.packetIdentifier
-          respond(self.socket, resp)
+          respond(self.socket, resp, self.maximumPacketSize)
 
   def publishArrived(self, topic, msg, qos, properties, receivedTime, retained=False):
     pub = MQTTV5.Publishes()
@@ -130,7 +137,7 @@ class MQTTClients:
     if qos in [1, 2]:
       pub.packetIdentifier = self.msgid
       logger.debug("client id: %d msgid: %d", self.id, self.msgid)
-      if self.msgid == 65535:
+      if self.msgid == MQTTV5.MAX_PACKETID:
         self.msgid = 1
       else:
         self.msgid += 1
@@ -138,7 +145,7 @@ class MQTTClients:
       self.outmsgs[pub.packetIdentifier] = pub
     logger.info("[MQTT-4.6.0-6] publish packets must be sent in order of receipt from any given client")
     if self.connected:
-      respond(self.socket, pub)
+      respond(self.socket, pub, self.maximumPacketSize)
     else:
       if qos == 0 and not self.broker.dropQoS0:
         self.outbound.append(pub)
@@ -203,8 +210,13 @@ class MQTTClients:
 
 class MQTTBrokers:
 
-  def __init__(self, publish_on_pubrel=True, overlapping_single=True, dropQoS0=True,
-    zero_length_clientids=True, topicAliasMaximum=2):
+  def __init__(self, publish_on_pubrel=True,
+    overlapping_single=True,
+    dropQoS0=True,
+    zero_length_clientids=True,
+    topicAliasMaximum=2,
+    maximumPacketSize=32,
+    receiveMaximum=2):
 
     # optional behaviours
     self.publish_on_pubrel = publish_on_pubrel
@@ -212,6 +224,8 @@ class MQTTBrokers:
     self.zero_length_clientids = zero_length_clientids
     # topic alias maximum for each incoming client connection
     self.topicAliasMaximum = topicAliasMaximum
+    self.maximumPacketSize = maximumPacketSize
+    self.receiveMaximum = receiveMaximum
 
     self.broker = Brokers(overlapping_single, topicAliasMaximum)
     self.clients = {}   # socket -> clients
@@ -223,6 +237,8 @@ class MQTTBrokers:
     logger.info("Optional behaviour, drop QoS 0 publications to disconnected clients: %s", self.dropQoS0)
     logger.info("Optional behaviour, support zero length clientids: %s", self.zero_length_clientids)
     logger.info("Optional behaviour, number of client topic aliases allowed: %d", self.topicAliasMaximum)
+    logger.info("Optional behaviour, maximum packet size: %d", self.maximumPacketSize)
+    logger.info("Optional behaviour, receive maximum: %d", self.receiveMaximum)
 
     """
     Other optional behaviour:
@@ -249,7 +265,7 @@ class MQTTBrokers:
         terminate = True
       else:
         try:
-          packet = MQTTV5.unpackPacket(raw_packet)
+          packet = MQTTV5.unpackPacket(raw_packet, self.maximumPacketSize)
           if packet:
             terminate = self.handlePacket(packet, sock)
           else:
@@ -262,8 +278,8 @@ class MQTTBrokers:
           terminate = True
         except MQTTV5.ProtocolError as error:
           disconnect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
-          disconnect_properties.ReasonString = error.args[0]
-          self.disconnect(sock, reasonCode="Protocol error", properties=disconnect_properties)
+          #disconnect_properties.ReasonString = error.args[0]
+          self.disconnect(sock, reasonCode=error.args[0], properties=disconnect_properties)
           terminate = True
     finally:
       self.lock.release()
@@ -339,6 +355,10 @@ class MQTTBrokers:
     # Connack topic alias maximum for incoming client created topic aliases
     if self.topicAliasMaximum > 0:
       resp.properties.TopicAliasMaximum = self.topicAliasMaximum
+    if self.maximumPacketSize < MQTTV5.MAX_PACKET_SIZE:
+      resp.properties.MaximumPacketSize = self.maximumPacketSize
+    if self.receiveMaximum < MQTTV5.MAX_PACKETID:
+      resp.properties.ReceiveMaximum = self.receiveMaximum
     # Session expiry
     if hasattr(packet.properties, "SessionExpiryInterval"):
       sessionExpiryInterval = packet.properties.SessionExpiryInterval
@@ -353,6 +373,10 @@ class MQTTBrokers:
       me.sessionExpiryInterval = sessionExpiryInterval
     # the topic alias maximum in the connect properties sets the maximum outgoing topic aliases for a client
     me.topicAliasMaximum = packet.properties.TopicAliasMaximum if hasattr(packet.properties, "TopicAliasMaximum") else 0
+    me.maximumPacketSize = packet.properties.MaximumPacketSize if hasattr(packet.properties, "MaximumPacketSize") else MQTTV5.MAX_PACKET_SIZE
+    assert me.maximumPacketSize <= MQTTV5.MAX_PACKET_SIZE # is this the correct value?
+    me.receiveMaximum = packet.properties.receiveMaximum if hasattr(packet.properties, "receveMaximum") else MQTTV5.MAX_PACKETID
+    assert me.receiveMaximum <= MQTTV5.MAX_PACKETID
     logger.info("[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts")
     self.clients[sock] = me
     me.will = (packet.WillTopic, packet.WillQoS, packet.WillMessage, packet.WillRETAIN) if packet.WillFlag else None
