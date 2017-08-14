@@ -110,7 +110,7 @@ class Brokers:
           topic = self.__clients[aClientid].topicAliasToNames[properties.TopicAlias]
         else:
           raise ProtocolError("Topic alias invalid %d" % properties.TopicAlias)
-      else: # set topic alias
+      else: # set incoming topic alias
         if properties.TopicAlias in self.__clients[aClientid].topicAliasToNames.keys() or \
             properties.TopicAlias <= self.topicAliasMaximum:
           self.__clients[aClientid].topicAliasToNames[properties.TopicAlias] = topic

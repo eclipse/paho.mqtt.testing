@@ -69,7 +69,7 @@ class MQTTClients:
     self.keepalive = keepalive
     self.lastPacket = None
     self.topicAliasToNames = {} # int -> string, incoming
-    self.topicAliasMaximum = 0
+    self.topicAliasMaximum = 0 # for server topic aliases
     self.outgoingTopicNamesToAliases = []
 
   def clearTopicAliases(self):
@@ -111,7 +111,7 @@ class MQTTClients:
       pub.properties = properties
     logger.info("[MQTT-3.2.3-3] topic name must match the subscription's topic filter")
     # Topic alias
-    if len(self.outgoingTopicNamesToAliases) < self.broker.topicAliasMaximum:
+    if len(self.outgoingTopicNamesToAliases) < self.topicAliasMaximum:
       self.outgoingTopicNamesToAliases.append(topic)       # add alias
     if topic in self.outgoingTopicNamesToAliases:
       pub.properties.TopicAlias = self.outgoingTopicNamesToAliases.index(topic)
@@ -203,13 +203,14 @@ class MQTTClients:
 
 class MQTTBrokers:
 
-  def __init__(self, publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, zero_length_clientids=True,
-    topicAliasMaximum=0):
+  def __init__(self, publish_on_pubrel=True, overlapping_single=True, dropQoS0=True,
+    zero_length_clientids=True, topicAliasMaximum=2):
 
     # optional behaviours
     self.publish_on_pubrel = publish_on_pubrel
     self.dropQoS0 = dropQoS0                    # don't queue QoS 0 messages for disconnected clients
     self.zero_length_clientids = zero_length_clientids
+    # topic alias maximum for each incoming client connection
     self.topicAliasMaximum = topicAliasMaximum
 
     self.broker = Brokers(overlapping_single, topicAliasMaximum)
@@ -335,7 +336,7 @@ class MQTTBrokers:
       if me:
         logger.info("[MQTT-3.1.3-2] clientid used to retrieve client state")
     resp.sessionPresent = True if me else False
-    # Topic alias
+    # Connack topic alias maximum for incoming client created topic aliases
     if self.topicAliasMaximum > 0:
       resp.properties.TopicAliasMaximum = self.topicAliasMaximum
     # Session expiry
@@ -350,6 +351,7 @@ class MQTTBrokers:
       me.cleanStart = packet.CleanStart
       me.keepalive = packet.KeepAliveTimer
       me.sessionExpiryInterval = sessionExpiryInterval
+    # the topic alias maximum in the connect properties sets the maximum outgoing topic aliases for a client
     me.topicAliasMaximum = packet.properties.TopicAliasMaximum if hasattr(packet.properties, "TopicAliasMaximum") else 0
     logger.info("[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts")
     self.clients[sock] = me

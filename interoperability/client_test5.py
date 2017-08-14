@@ -701,7 +701,7 @@ class Test(unittest.TestCase):
       # should get back a disconnect with Topic alias invalid
       self.waitfor(callback.disconnects, 1, 2)
       self.assertEqual(len(callback.disconnects), 1, callback.disconnects)
-      print("disconnect", str(callback.disconnects[0]["reasonCode"]))
+      #print("disconnect", str(callback.disconnects[0]["reasonCode"]))
       #self.assertEqual(callback.disconnects, 1, callback.disconnects)
 
       connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
@@ -746,25 +746,20 @@ class Test(unittest.TestCase):
       # should get back a disconnect with Topic alias invalid
       self.waitfor(callback.disconnects, 1, 2)
       self.assertEqual(len(callback.disconnects), 1, callback.disconnects)
-      print("disconnect", str(callback.disconnects[0]["reasonCode"]))
+      #print("disconnect", str(callback.disconnects[0]["reasonCode"]))
       #self.assertEqual(callback.disconnects, 1, callback.disconnects)
 
     def test_server_topic_alias(self):
       callback.clear()
 
-      """
-      Use user properties to set expected broker behaviour
-         TopicAliasMaximum for instance
-      """
-
+      serverTopicAliasMaximum = 1 # server topic alias allowed
       connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
-      connect_properties.TopicAliasMaximum = 1 # server topic alias allowed
+      connect_properties.TopicAliasMaximum = serverTopicAliasMaximum
       connack = aclient.connect(host=host, port=port, cleanstart=True,
                                        properties=connect_properties)
-
-      serverTopicAliasMaximum = 0
+      clientTopicAliasMaximum = 0
       if hasattr(connack.properties, "TopicAliasMaximum"):
-        serverTopicAliasMaximum = connack.properties.TopicAliasMaximum
+        clientTopicAliasMaximum = connack.properties.TopicAliasMaximum
 
       aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
       self.waitfor(callback.subscribeds, 1, 3)
@@ -775,14 +770,11 @@ class Test(unittest.TestCase):
       self.assertEqual(len(callback.messages), 3, callback.messages)
       aclient.disconnect()
 
-      if serverTopicAliasMaximum > 0:
-        # first message should set the topic alias
-        self.assertTrue(hasattr(callback.messagedicts[0]["properties"], "TopicAlias"), callback.messagedicts[0]["properties"])
-        topicalias = callback.messagedicts[0]["properties"].TopicAlias
-        self.assertEqual(callback.messagedicts[1]["properties"].TopicAlias, topicalias, topicalias)
-        self.assertEqual(callback.messagedicts[2]["properties"].TopicAlias, topicalias, topicalias)
-      else:
-        print("No server topic aliases to test")
+      # first message should set the topic alias
+      self.assertTrue(hasattr(callback.messagedicts[0]["properties"], "TopicAlias"), callback.messagedicts[0]["properties"])
+      topicalias = callback.messagedicts[0]["properties"].TopicAlias
+      self.assertEqual(callback.messagedicts[1]["properties"].TopicAlias, topicalias, topicalias)
+      self.assertEqual(callback.messagedicts[2]["properties"].TopicAlias, topicalias, topicalias)
 
 if __name__ == "__main__":
   try:
