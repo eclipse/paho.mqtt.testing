@@ -1046,7 +1046,7 @@ class Pubrecs(Acks):
 
 class Pubrels(Acks):
 
-  def __init__(self, buffer=None, DUP=False, QoS=2, RETAIN=False, PacketId=1):
+  def __init__(self, buffer=None, DUP=False, QoS=1, RETAIN=False, PacketId=1):
     Acks.__init__(self, PacketTypes.PUBREL, buffer, DUP, QoS, RETAIN, PacketId)
 
 class Pubcomps(Acks):
