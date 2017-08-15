@@ -66,6 +66,9 @@ class Callback:
 
 class Client:
 
+  def getReceiver(self):
+    return self.__receiver
+
   def __init__(self, clientid):
     self.clientid = clientid
     self.msgid = 1

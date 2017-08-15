@@ -119,42 +119,25 @@ class Test(unittest.TestCase):
       bclient.registerCallback(callback2)
 
     def test_basic(self):
-      logging.info("Basic test starting")
-      global aclient
-      succeeded = True
-      try:
-        aclient.connect(host=host, port=port)
-        aclient.disconnect()
+      aclient.connect(host=host, port=port)
+      aclient.disconnect()
 
-        rc = aclient.connect(host=host, port=port)
-        self.assertEqual(rc.reasonCode.getName(), "Success")
-        aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-        aclient.publish(topics[0], b"qos 0")
-        aclient.publish(topics[0], b"qos 1", 1)
-        aclient.publish(topics[0], b"qos 2", 2)
-        time.sleep(2)
-        aclient.disconnect()
-        assert len(callback.messages) == 3
-      except:
-        traceback.print_exc()
-        succeeded = False
+      rc = aclient.connect(host=host, port=port)
+      self.assertEqual(rc.reasonCode.getName(), "Success")
+      aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+      aclient.publish(topics[0], b"qos 0")
+      aclient.publish(topics[0], b"qos 1", 1)
+      aclient.publish(topics[0], b"qos 2", 2)
+      time.sleep(2)
+      aclient.disconnect()
+      self.assertEqual(len(callback.messages), 3)
 
-      try:
+      with self.assertRaises(Exception):
         aclient.connect(host=host, port=port)
         aclient.connect(host=host, port=port, newsocket=False) # should fail - second connect on socket
-        succeeded = False
-      except Exception as exc:
-        pass # exception expected
 
-      try:
+      with self.assertRaises(Exception):
         aclient.connect(host=host, port=port, protocolName="hj") # should fail - wrong protocol name
-        succeeded = False
-      except Exception as exc:
-        pass # exception expected
-
-      logging.info("Basic test %s", "succeeded" if succeeded else "failed")
-      self.assertEqual(succeeded, True)
-      return succeeded
 
     def test_retained_message(self):
       qos0topic="fromb/qos 0"
@@ -827,6 +810,86 @@ class Test(unittest.TestCase):
 
       aclient.disconnect()
 
+
+    def test_flow_control(self):
+      testcallback = Callbacks()
+      # no callback means no background thread, to control receiving
+      testclient = mqtt_client.Client("myclientid".encode("utf-8"))
+
+      # set receive maximum - the number of concurrent QoS 1 and 2 messages
+      clientReceiveMaximum = 2 # set to low number so we can test
+      connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+      connect_properties.ReceiveMaximum = clientReceiveMaximum
+      connect_properties.SessionExpiryInterval = 0
+      connack = testclient.connect(host=host, port=port, cleanstart=True,
+                   properties=connect_properties)
+
+      serverReceiveMaximum = 2**16-1 # the default
+      if hasattr(connack.properties, "ReceiveMaximum"):
+        serverReceiveMaximum = connack.properties.ReceiveMaximum
+
+      receiver = testclient.getReceiver()
+
+      testclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+      receiver.receive(testcallback)
+      self.waitfor(testcallback.subscribeds, 1, 3)
+
+      pubs = 0
+      for i in range(1, clientReceiveMaximum + 2):
+        testclient.publish(topics[0], "message %d" % i, 1)
+        pubs += 1
+
+      # get two publishes
+      acks = 0
+      while True:
+        response1 = MQTTV5.unpackPacket(MQTTV5.getPacket(testclient.sock))
+        if response1.fh.PacketType == MQTTV5.PacketTypes.PUBLISH:
+          break
+        self.assertEqual(response1.fh.PacketType, MQTTV5.PacketTypes.PUBACK)
+        acks += 1
+        del receiver.outMsgs[response1.packetIdentifier]
+      self.assertEqual(response1.fh.PacketType, MQTTV5.PacketTypes.PUBLISH)
+      self.assertEqual(response1.fh.QoS, 1, response1.fh.QoS)
+
+      while True:
+        response2 = MQTTV5.unpackPacket(MQTTV5.getPacket(testclient.sock))
+        if response2.fh.PacketType == MQTTV5.PacketTypes.PUBLISH:
+          break
+        self.assertEqual(response2.fh.PacketType, MQTTV5.PacketTypes.PUBACK)
+        acks += 1
+        del receiver.outMsgs[response2.packetIdentifier]
+      self.assertEqual(response2.fh.PacketType, MQTTV5.PacketTypes.PUBLISH)
+      self.assertEqual(response2.fh.QoS, 1, response1.fh.QoS)
+
+      while acks < pubs:
+        ack = MQTTV5.unpackPacket(MQTTV5.getPacket(testclient.sock))
+        self.assertEqual(ack.fh.PacketType, MQTTV5.PacketTypes.PUBACK)
+        acks += 1
+        del receiver.outMsgs[ack.packetIdentifier]
+
+      with self.assertRaises(socket.timeout):
+        # this should time out because we haven't acknowledged the first one
+        response3 = MQTTV5.unpackPacket(MQTTV5.getPacket(testclient.sock))
+
+      # ack the first one
+      puback = MQTTV5.Pubacks()
+      puback.packetIdentifier = response1.packetIdentifier
+      testclient.sock.send(puback.pack())
+
+      # now get the next packet
+      response3 = MQTTV5.unpackPacket(MQTTV5.getPacket(testclient.sock))
+      self.assertEqual(response3.fh.PacketType, MQTTV5.PacketTypes.PUBLISH)
+      self.assertEqual(response3.fh.QoS, 1, response1.fh.QoS)
+
+      # ack the second one
+      puback.packetIdentifier = response2.packetIdentifier
+      testclient.sock.send(puback.pack())
+
+      # ack the third one
+      puback.packetIdentifier = response3.packetIdentifier
+      testclient.sock.send(puback.pack())
+
+      testclient.disconnect()
 
 
 if __name__ == "__main__":
