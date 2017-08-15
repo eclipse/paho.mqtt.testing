@@ -1012,7 +1012,7 @@ class Acks(Packets):
     assert self.fh.DUP == False, "[MQTT-2.1.2-1] %s reserved bits must be 0" %\
       self.ackName
     if self.ackType == PacketTypes.PUBREL:
-      assert self.fh.QoS == 2, "[MQTT-3.6.1-1] %s reserved bits must be 0010" %\
+      assert self.fh.QoS == 1, "[MQTT-3.6.1-1] %s reserved bits must be 0010" %\
         self.ackName
     else:
       assert self.fh.QoS == 0, "[MQTT-2.1.2-1] %s reserved bits must be 0" %\
