@@ -329,7 +329,7 @@ class MQTTBrokers:
       raise MQTTV5.MQTTException("[MQTT-3.1.2-1] Wrong protocol name %s" % packet.ProtocolName)
     if packet.ProtocolVersion != 5:
       logger.error("[MQTT-3.1.2-2] Wrong protocol version %d", packet.ProtocolVersion)
-      resp.returnCode = 1
+      resp.reasonCode = "Unsupported protocol version"
       respond(sock, resp)
       logger.info("[MQTT-3.2.2-5] must close connection after non-zero connack")
       self.disconnect(sock, None)
@@ -344,7 +344,7 @@ class MQTTBrokers:
         if self.zero_length_clientids:
           logger.info("[MQTT-3.1.3-8] Reject 0-length clientid with cleansession false")
         logger.info("[MQTT-3.1.3-9] if clientid is rejected, must send connack 2 and close connection")
-        resp.returnCode = 2
+        resp.reasonCode = "Client identifier not valid"
         respond(sock, resp)
         logger.info("[MQTT-3.2.2-5] must close connection after non-zero connack")
         self.disconnect(sock, None)
