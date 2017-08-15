@@ -273,13 +273,25 @@ def reinitialize():
 
 def main(argv):
   try:
-    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:", ["help", "publish_on_pubrel=", "overlapping_single=",
-        "dropQoS0=", "port=", "zero_length_clientids="])
+    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:t:m:r:s:",
+       ["help", "port="
+        "publish_on_pubrel=",
+        "overlapping_single=",
+        "dropQoS0=",
+        "zero_length_clientids="
+        "topicAliasMaximum=",
+        "maximumPacketSize=",
+        "receiveMaximum=",
+        "serverKeepAlive="])
   except getopt.GetoptError as err:
     print(err) # will print something like "option -a not recognized"
     usage()
     sys.exit(2)
   publish_on_pubrel = overlapping_single = dropQoS0 = zero_length_clientids = True
+  topicAliasMaximum = 2
+  maximumPacketSize = 1000
+  receiveMaximum = 20
+  serverKeepAlive = 60
   port = 1883
   for o, a in opts:
     if o in ("-h", "--help"):
@@ -293,13 +305,32 @@ def main(argv):
       dropQoS0 = False if a in ["off", "false", "0"] else True
     elif o in ("-z", "--zero_length_clientids"):
       zero_length_clientids = False if a in ["off", "false", "0"] else True
+    elif o in ("-t", "--topicAliasMaximum"):
+      if a.isnumeric():
+        topicAliasMaximum = a
+    elif o in ("-m", "--maximumPacketSize"):
+      if a.isnumeric():
+        maximumPacketSize = a
+    elif o in ("-r", "--receiveMaximum"):
+      if a.isnumeric():
+        receiveMaximum = a
+    elif o in ("-s", "--serverKeepAlive"):
+      if a.isnumeric():
+        serverKeepAlive = a
     elif o in ("--port"):
       port = int(a)
     else:
       assert False, "unhandled option"
 
-  run(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0, port=port,
-     zero_length_clientids=zero_length_clientids)
+  run(publish_on_pubrel=publish_on_pubrel,
+     overlapping_single=overlapping_single,
+     dropQoS0=dropQoS0,
+     port=port,
+     zero_length_clientids=zero_length_clientids,
+     topicAliasMaximum=topicAliasMaximum,
+     maximumPacketSize=maximumPacketSize,
+     receiveMaximum=receiveMaximum,
+     serverKeepAlive=serverKeepAlive)
 
 def usage():
   print(

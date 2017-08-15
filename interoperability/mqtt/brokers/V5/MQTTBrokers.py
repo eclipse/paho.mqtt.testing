@@ -60,57 +60,84 @@ class MQTTClients:
     self.cleanStart = cleanStart
     self.sessionExpiryInterval = sessionExpiryInterval
     self.sessionEndedTime = 0
+    self.maximumPacketSize = MQTTV5.MAX_PACKET_SIZE
+    self.receiveMaximum = MQTTV5.MAX_PACKETID
+    self.connected = False
+    self.will = None
     self.socket = socket
-    self.msgid = 1
+    self.broker = broker
+    # outbound messages
+    self.msgid = 1 # outbound message ids
+    self.queued = [] # queued message objects
     self.outbound = [] # message objects - for ordering
     self.outmsgs = {} # msgids to message objects
-    self.broker = broker
+    # inbound messages
     if broker.publish_on_pubrel:
       self.inbound = {} # stored inbound QoS 2 publications
     else:
       self.inbound = []
-    self.connected = False
-    self.will = None
+    # Keep alive
     self.keepalive = keepalive
-    self.lastPacket = None
-    self.topicAliasToNames = {} # int -> string, incoming
-    self.topicAliasMaximum = 0 # for server topic aliases
-    self.outgoingTopicNamesToAliases = []
-    self.maximumPacketSize = MQTTV5.MAX_PACKET_SIZE
-    self.receiveMaximum = MQTTV5.MAX_PACKETID
+    self.lastPacket = None # time of last packet
+    # Topic aliases
+    self.clearTopicAliases()
 
   def clearTopicAliases(self):
     self.topicAliasToNames = {} # int -> string, incoming
-    self.topicAliasMaximum = 0
+    self.topicAliasMaximum = 0 # for server topic aliases
     self.outgoingTopicNamesToAliases = []
+
+  def resendPub(self, pub):
+    logger.debug("resending", pub)
+    logger.info("[MQTT-4.4.0-2] dup flag must be set on in re-publish")
+    if pub.fh.QoS == 0:
+      respond(self.socket, pub, self.maximumPacketSize)
+    elif pub.fh.QoS == 1:
+      logger.info("[MQTT-2.1.2-3] Dup when resending QoS 1 publish id %d", pub.packetIdentifier)
+      logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
+      logger.info("[MQTT-4.3.2-1] Resending QoS 1 with DUP flag")
+      respond(self.socket, pub, self.maximumPacketSize)
+      pub.fh.DUP = 1
+    elif pub.fh.QoS == 2:
+      if pub.qos2state == "PUBREC":
+        logger.info("[MQTT-2.1.2-3] Dup when resending QoS 2 publish id %d", pub.packetIdentifier)
+        logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
+        logger.info("[MQTT-4.3.3-1] Resending QoS 2 with DUP flag")
+        respond(self.socket, pub, self.maximumPacketSize)
+        pub.fh.DUP = 1
+      else:
+        resp = MQTTV5.Pubrels()
+        logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
+        resp.packetIdentifier = pub.packetIdentifier
+        respond(self.socket, resp, self.maximumPacketSize)
 
   def resend(self):
     logger.debug("resending unfinished publications %s", str(self.outbound))
     if len(self.outbound) > 0:
       logger.info("[MQTT-4.4.0-1] resending inflight QoS 1 and 2 messages")
     for pub in self.outbound:
-      logger.debug("resending", pub)
-      logger.info("[MQTT-4.4.0-2] dup flag must be set on in re-publish")
-      if pub.fh.QoS == 0:
-        respond(self.socket, pub, self.maximumPacketSize)
-      elif pub.fh.QoS == 1:
-        pub.fh.DUP = 1
-        logger.info("[MQTT-2.1.2-3] Dup when resending QoS 1 publish id %d", pub.packetIdentifier)
-        logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
-        logger.info("[MQTT-4.3.2-1] Resending QoS 1 with DUP flag")
-        respond(self.socket, pub, self.maximumPacketSize)
-      elif pub.fh.QoS == 2:
-        if pub.qos2state == "PUBREC":
-          logger.info("[MQTT-2.1.2-3] Dup when resending QoS 2 publish id %d", pub.packetIdentifier)
-          pub.fh.DUP = 1
-          logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
-          logger.info("[MQTT-4.3.3-1] Resending QoS 2 with DUP flag")
-          respond(self.socket, pub, self.maximumPacketSize)
-        else:
-          resp = MQTTV5.Pubrels()
-          logger.info("[MQTT-2.3.1-4] Message id same as original publish on resend")
-          resp.packetIdentifier = pub.packetIdentifier
-          respond(self.socket, resp, self.maximumPacketSize)
+      self.resendPub(pub)
+    self.sendQueued()
+
+  def sendFirst(self, pub):
+    if pub.fh.QoS in [1, 2]:
+      pub.packetIdentifier = self.msgid
+      logger.debug("client id: %d msgid: %d", self.id, self.msgid)
+      if self.msgid == MQTTV5.MAX_PACKETID:
+        self.msgid = 1
+      else:
+        self.msgid += 1
+      self.outbound.append(pub)
+      self.outmsgs[pub.packetIdentifier] = pub
+      logger.info("[MQTT-4.6.0-6] publish packets must be sent in order of receipt from any given client")
+    respond(self.socket, pub, self.maximumPacketSize)
+    if pub.fh.QoS > 0:
+      pub.fh.DUP = 1
+
+  def sendQueued(self):
+    while len(self.queued) > 0 and len(self.outbound) < self.receiveMaximum:
+      self.outbound.append(self.queued.pop(0))
+      self.sendFirst(self.outbound[-1])
 
   def publishArrived(self, topic, msg, qos, properties, receivedTime, retained=False):
     pub = MQTTV5.Publishes()
@@ -134,23 +161,13 @@ class MQTTClients:
       logger.info("[MQTT-2.1.2-9] Set retained flag on retained messages")
     if qos == 2:
       pub.qos2state = "PUBREC"
-    if qos in [1, 2]:
-      pub.packetIdentifier = self.msgid
-      logger.debug("client id: %d msgid: %d", self.id, self.msgid)
-      if self.msgid == MQTTV5.MAX_PACKETID:
-        self.msgid = 1
-      else:
-        self.msgid += 1
-      self.outbound.append(pub)
-      self.outmsgs[pub.packetIdentifier] = pub
-    logger.info("[MQTT-4.6.0-6] publish packets must be sent in order of receipt from any given client")
-    if self.connected:
-      respond(self.socket, pub, self.maximumPacketSize)
-    else:
-      if qos == 0 and not self.broker.dropQoS0:
-        self.outbound.append(pub)
-      if qos in [1, 2]:
+    if len(self.outbound) >= self.receiveMaximum or not self.connected:
+      if qos > 0 or not self.broker.dropQoS0:
+        self.queued.append(pub) # this should never be infinite in reality
+      if qos > 0 and not self.connected:
         logger.info("[MQTT-3.1.2-5] storing of QoS 1 and 2 messages for disconnected client %s", self.id)
+    else:
+      self.sendFirst(pub)
 
   def puback(self, msgid):
     if msgid in self.outmsgs.keys():
@@ -158,6 +175,7 @@ class MQTTClients:
       if pub.fh.QoS == 1:
         self.outbound.remove(pub)
         del self.outmsgs[msgid]
+        self.sendQueued()
       else:
         logger.error("%s: Puback received for msgid %d, but QoS is %d", self.id, msgid, pub.fh.QoS)
     else:
@@ -186,6 +204,7 @@ class MQTTClients:
         if pub.qos2state == "PUBCOMP":
           self.outbound.remove(pub)
           del self.outmsgs[msgid]
+          self.sendQueued()
         else:
           logger.error("Pubcomp received for msgid %d, but message in wrong state", msgid)
       else:
@@ -383,7 +402,7 @@ class MQTTBrokers:
     me.topicAliasMaximum = packet.properties.TopicAliasMaximum if hasattr(packet.properties, "TopicAliasMaximum") else 0
     me.maximumPacketSize = packet.properties.MaximumPacketSize if hasattr(packet.properties, "MaximumPacketSize") else MQTTV5.MAX_PACKET_SIZE
     assert me.maximumPacketSize <= MQTTV5.MAX_PACKET_SIZE # is this the correct value?
-    me.receiveMaximum = packet.properties.receiveMaximum if hasattr(packet.properties, "receveMaximum") else MQTTV5.MAX_PACKETID
+    me.receiveMaximum = packet.properties.ReceiveMaximum if hasattr(packet.properties, "ReceiveMaximum") else MQTTV5.MAX_PACKETID
     assert me.receiveMaximum <= MQTTV5.MAX_PACKETID
     logger.info("[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts")
     self.clients[sock] = me
