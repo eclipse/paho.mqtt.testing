@@ -541,13 +541,20 @@ class MQTTBrokers:
     """Handle behaviour packet.
 
     Options:
-    Topic: 'cmd/disconnectWithRC', Payload: A Disconnect Return code as an Integer
-            - Disconnects with the specified return code as well as sample properties.
+    Topic: 'cmd/disconnectWithRC', Payload: A Disconnect Return code
+            - Disconnects with the specified return code and sample properties.
     """
     logger.info("Command Mode: Topic: %s, Payload: %s" % (topic, int(data)))
     if topic == "cmd/disconnectWithRC":
         returnCode = int(data)
-        self.disconnect(sock, None, sendWillMessage=False,reasonCode=returnCode, properties=None)
+        props = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
+        props.ReasonString = "This is a custom Reason String"
+        props.ServerReference = "tcp://localhost:1883"
+        self.disconnect(sock,
+                        None,
+                        sendWillMessage=False,
+                        reasonCode=returnCode,
+                        properties=props)
 
 
   def pubrel(self, sock, packet):
