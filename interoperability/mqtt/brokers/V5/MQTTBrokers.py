@@ -148,7 +148,7 @@ class MQTTClients:
     if len(self.outgoingTopicNamesToAliases) < self.topicAliasMaximum:
       self.outgoingTopicNamesToAliases.append(topic)       # add alias
     if topic in self.outgoingTopicNamesToAliases:
-      pub.properties.TopicAlias = self.outgoingTopicNamesToAliases.index(topic)
+      pub.properties.TopicAlias = self.outgoingTopicNamesToAliases.index(topic) + 1 # Topic aliases start at 1
     else:
       pub.topicName = topic
     pub.data = msg
@@ -550,6 +550,7 @@ class MQTTBrokers:
         props = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
         props.ReasonString = "This is a custom Reason String"
         props.ServerReference = "tcp://localhost:1883"
+        props.UserPropertyList = [("key", "value")]
         self.disconnect(sock,
                         None,
                         sendWillMessage=False,
