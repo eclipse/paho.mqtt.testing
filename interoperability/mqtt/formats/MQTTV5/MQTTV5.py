@@ -1342,7 +1342,7 @@ class Disconnects(Packets):
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
     # variable header
-    self.reasonCode = ReasonCodes(PacketTypes.DISCONNECT, identifier=reasonCode)
+    self.reasonCode = ReasonCodes(PacketTypes.DISCONNECT, aName=reasonCode)
     self.properties = Properties(PacketTypes.DISCONNECT)
     if buffer != None:
       self.unpack(buffer)

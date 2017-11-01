@@ -301,7 +301,7 @@ class MQTTBrokers:
           terminate = True
         except MQTTV5.ProtocolError as error:
           disconnect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
-          #disconnect_properties.ReasonString = error.args[0]
+          disconnect_properties.ReasonString = error.args[0]
           self.disconnect(sock, reasonCode=error.args[0], properties=disconnect_properties)
           terminate = True
     finally:

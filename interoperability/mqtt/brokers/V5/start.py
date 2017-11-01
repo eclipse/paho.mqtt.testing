@@ -274,7 +274,7 @@ def reinitialize():
 def main(argv):
   try:
     opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:t:m:r:s:",
-       ["help", "port="
+       ["help", "port=",
         "publish_on_pubrel=",
         "overlapping_single=",
         "dropQoS0=",
