@@ -105,6 +105,7 @@ class Test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+      setData()
       global callback, callback2, aclient, bclient
       cleanup()
 
@@ -357,8 +358,9 @@ class Test(unittest.TestCase):
       bclient.subscribe([topics[1]], [MQTTV5.SubscribeOptions(2)])
       bclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
       time.sleep(1) # wait for any retained messages, hopefully
-      # Unsubscribed from one topic
+      # Unsubscribe from one topic
       bclient.unsubscribe([topics[0]])
+      callback2.clear() # if there were any retained messsages
 
       aclient.connect(host=host, port=port, cleanstart=True)
       aclient.publish(topics[0], b"topic 0 - unsubscribed", 1, retained=False)
@@ -891,10 +893,16 @@ class Test(unittest.TestCase):
 
       testclient.disconnect()
 
+def setData():
+  global topics, wildtopics, nosubscribe_topics, host, port
+  topics =  ("TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA")
+  wildtopics = ("TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#")
+  nosubscribe_topics = ("test/nosubscribe",)
+
 
 if __name__ == "__main__":
   try:
-    opts, args = getopt.gnu_getopt(sys.argv[1:], "h:p:zdsn:",
+    opts, args = getopt.gnu_getopt(sys.argv[1:], "h:p:vzdsn:",
       ["help", "hostname=", "port=", "iterations="])
   except getopt.GetoptError as err:
     logging.info(err) # will print something like "option -a not recognized"
@@ -903,7 +911,7 @@ if __name__ == "__main__":
 
   iterations = 1
 
-  global topics, wildtopics, nosubscribe_topics
+  global topics, wildtopics, nosubscribe_topics, host
   topics =  ("TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA")
   wildtopics = ("TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#")
   nosubscribe_topics = ("test/nosubscribe",)
@@ -920,15 +928,15 @@ if __name__ == "__main__":
       host = a
     elif o in ("-p", "--port"):
       port = int(a)
+      sys.argv.remove("-p") if "-p" in sys.argv else sys.argv.remove("--port")
+      sys.argv.remove(a)
     elif o in ("--iterations"):
       iterations = int(a)
-    else:
-      assert False, "unhandled option"
 
   root = logging.getLogger()
   root.setLevel(logging.ERROR)
 
   logging.info("hostname %s port %d", host, port)
-
+  print("argv", sys.argv)
   for i in range(iterations):
     unittest.main()

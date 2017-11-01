@@ -148,7 +148,7 @@ class MQTTClients:
     if len(self.outgoingTopicNamesToAliases) < self.topicAliasMaximum:
       self.outgoingTopicNamesToAliases.append(topic)       # add alias
     if topic in self.outgoingTopicNamesToAliases:
-      pub.properties.TopicAlias = self.outgoingTopicNamesToAliases.index(topic)
+      pub.properties.TopicAlias = self.outgoingTopicNamesToAliases.index(topic) + 1 # Topic aliases start at 1
     else:
       pub.topicName = topic
     pub.data = msg
@@ -301,7 +301,7 @@ class MQTTBrokers:
           terminate = True
         except MQTTV5.ProtocolError as error:
           disconnect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
-          #disconnect_properties.ReasonString = error.args[0]
+          disconnect_properties.ReasonString = error.args[0]
           self.disconnect(sock, reasonCode=error.args[0], properties=disconnect_properties)
           terminate = True
     finally:
@@ -490,47 +490,73 @@ class MQTTBrokers:
     packet.receivedTime = time.monotonic()
     if packet.topicName.find("+") != -1 or packet.topicName.find("#") != -1:
       raise ProtocolError("Topic name invalid %s" % packet.topicName)
-    if packet.fh.QoS == 0:
-      self.broker.publish(self.clients[sock].id, packet.topicName,
-             packet.data, packet.fh.QoS, packet.properties,
-             packet.receivedTime, packet.fh.RETAIN)
-    elif packet.fh.QoS == 1:
-      if packet.fh.DUP:
-        logger.info("[MQTT-3.3.1-3] Incoming publish DUP 1 ==> outgoing publish with DUP 0")
-        logger.info("[MQTT-4.3.2-2] server must store message in accordance with QoS 1")
-      self.broker.publish(self.clients[sock].id, packet.topicName,
-            packet.data, packet.fh.QoS, packet.properties,
-            packet.receivedTime, packet.fh.RETAIN)
-      resp = MQTTV5.Pubacks()
-      logger.info("[MQTT-2.3.1-6] puback messge id same as publish")
-      resp.packetIdentifier = packet.packetIdentifier
-      respond(sock, resp)
-    elif packet.fh.QoS == 2:
-      myclient = self.clients[sock]
-      if self.publish_on_pubrel:
-        if packet.packetIdentifier in myclient.inbound.keys():
-          if packet.fh.DUP == 0:
-            logger.error("[MQTT-3.3.1-2] duplicate QoS 2 message id %d found with DUP 0", packet.packetIdentifier)
+    # Test Topic to disconnect the client
+    if packet.topicName.startswith("cmd/"):
+        self.handleBehaviourPublish(sock, packet.topicName, packet.data)
+        pass
+    else:
+        if packet.fh.QoS == 0:
+          self.broker.publish(self.clients[sock].id, packet.topicName,
+                 packet.data, packet.fh.QoS, packet.properties,
+                 packet.receivedTime, packet.fh.RETAIN)
+        elif packet.fh.QoS == 1:
+          if packet.fh.DUP:
+            logger.info("[MQTT-3.3.1-3] Incoming publish DUP 1 ==> outgoing publish with DUP 0")
+            logger.info("[MQTT-4.3.2-2] server must store message in accordance with QoS 1")
+          self.broker.publish(self.clients[sock].id, packet.topicName,
+                packet.data, packet.fh.QoS, packet.properties,
+                packet.receivedTime, packet.fh.RETAIN)
+          resp = MQTTV5.Pubacks()
+          logger.info("[MQTT-2.3.1-6] puback messge id same as publish")
+          resp.packetIdentifier = packet.packetIdentifier
+          respond(sock, resp)
+        elif packet.fh.QoS == 2:
+          myclient = self.clients[sock]
+          if self.publish_on_pubrel:
+            if packet.packetIdentifier in myclient.inbound.keys():
+              if packet.fh.DUP == 0:
+                logger.error("[MQTT-3.3.1-2] duplicate QoS 2 message id %d found with DUP 0", packet.packetIdentifier)
+              else:
+                logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
+            else:
+              myclient.inbound[packet.packetIdentifier] = packet
           else:
-            logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
-        else:
-          myclient.inbound[packet.packetIdentifier] = packet
-      else:
-        if packet.packetIdentifier in myclient.inbound:
-          if packet.fh.DUP == 0:
-            logger.error("[MQTT-3.3.1-2] duplicate QoS 2 message id %d found with DUP 0", packet.packetIdentifier)
-          else:
-            logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
-        else:
-          myclient.inbound.append(packet.packetIdentifier)
-          logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")
-          self.broker.publish(myclient, packet.topicName,
-               packet.data, packet.fh.QoS, packet.properties,
-               packet.receivedTime, packet.fh.RETAIN)
-      resp = MQTTV5.Pubrecs()
-      logger.info("[MQTT-2.3.1-6] pubrec messge id same as publish")
-      resp.packetIdentifier = packet.packetIdentifier
-      respond(sock, resp)
+            if packet.packetIdentifier in myclient.inbound:
+              if packet.fh.DUP == 0:
+                logger.error("[MQTT-3.3.1-2] duplicate QoS 2 message id %d found with DUP 0", packet.packetIdentifier)
+              else:
+                logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
+            else:
+              myclient.inbound.append(packet.packetIdentifier)
+              logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")
+              self.broker.publish(myclient, packet.topicName,
+                   packet.data, packet.fh.QoS, packet.properties,
+                   packet.receivedTime, packet.fh.RETAIN)
+          resp = MQTTV5.Pubrecs()
+          logger.info("[MQTT-2.3.1-6] pubrec messge id same as publish")
+          resp.packetIdentifier = packet.packetIdentifier
+          respond(sock, resp)
+
+  def handleBehaviourPublish(self,sock, topic, data):
+    """Handle behaviour packet.
+
+    Options:
+    Topic: 'cmd/disconnectWithRC', Payload: A Disconnect Return code
+            - Disconnects with the specified return code and sample properties.
+    """
+    logger.info("Command Mode: Topic: %s, Payload: %s" % (topic, int(data)))
+    if topic == "cmd/disconnectWithRC":
+        returnCode = int(data)
+        props = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
+        props.ReasonString = "This is a custom Reason String"
+        props.ServerReference = "tcp://localhost:1883"
+        props.UserPropertyList = [("key", "value")]
+        self.disconnect(sock,
+                        None,
+                        sendWillMessage=False,
+                        reasonCode=returnCode,
+                        properties=props)
+
 
   def pubrel(self, sock, packet):
     myclient = self.clients[sock]
