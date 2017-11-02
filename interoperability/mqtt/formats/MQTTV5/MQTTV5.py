@@ -440,7 +440,7 @@ class Properties(object):
       11 : (self.types.index("Variable Byte Integer"),
            [PacketTypes.PUBLISH, PacketTypes.SUBSCRIBE]),
       17 : (self.types.index("Four Byte Integer"),
-           [PacketTypes.CONNECT, PacketTypes.DISCONNECT]),
+           [PacketTypes.CONNECT, PacketTypes.CONNACK, PacketTypes.DISCONNECT]),
       18 : (self.types.index("UTF-8 Encoded String"), [PacketTypes.CONNACK]),
       19 : (self.types.index("Two Byte Integer"), [PacketTypes.CONNACK]),
       21 : (self.types.index("UTF-8 Encoded String"),
@@ -466,9 +466,11 @@ class Properties(object):
       36 : (self.types.index("Byte"), [PacketTypes.CONNACK]),
       37 : (self.types.index("Byte"), [PacketTypes.CONNACK]),
       38 : (self.types.index("UTF-8 String Pair"),
-           [PacketTypes.CONNECT, PacketTypes.CONNACK, PacketTypes.PUBLISH,
-           PacketTypes.PUBACK, PacketTypes.PUBREC, PacketTypes.PUBREL,
-           PacketTypes.PUBCOMP, PacketTypes.SUBACK, PacketTypes.UNSUBACK,
+           [PacketTypes.CONNECT, PacketTypes.CONNACK,
+           PacketTypes.PUBLISH, PacketTypes.PUBACK,
+           PacketTypes.PUBREC, PacketTypes.PUBREL, PacketTypes.PUBCOMP,
+           PacketTypes.SUBSCRIBE, PacketTypes.SUBACK,
+           PacketTypes.UNSUBSCRIBE, PacketTypes.UNSUBACK,
            PacketTypes.DISCONNECT, PacketTypes.AUTH, PacketTypes.WILLMESSAGE]),
       39 : (self.types.index("Four Byte Integer"),
            [PacketTypes.CONNECT, PacketTypes.CONNACK]),
@@ -1191,10 +1193,11 @@ class UnsubSubacks(Packets):
     for reasonCode in self.reasonCodes:
       buffer += reasonCode.pack()
     buffer = self.fh.pack(len(buffer)) + buffer
+    assert len(buffer) >= 3 # must have property field, even if empty
     return buffer
 
   def unpack(self, buffer, maximumPacketSize):
-    assert len(buffer) >= 2
+    assert len(buffer) >= 3
     assert PacketType(buffer) == self.packetType
     fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
