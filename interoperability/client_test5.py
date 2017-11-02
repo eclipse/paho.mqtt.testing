@@ -177,8 +177,14 @@ class Test(unittest.TestCase):
       callback.clear()
       callback2.clear()
       self.assertEqual(len(callback2.messages), 0, callback2.messages)
+
+      will_properties = MQTTV5.Properties(MQTTV5.PacketTypes.WILLMESSAGE)
+      will_properties.WillDelayInterval = 0 # this is the default anyway
+      will_properties.UserPropertyList = [("a", "2"), ("c", "3")]
+
       aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
-          willTopic=topics[2], willMessage=b"will message", keepalive=2)
+          willTopic=topics[2], willMessage=b"will message", keepalive=2,
+          willProperties=will_properties)
       bclient.connect(host=host, port=port, cleanstart=False)
       bclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
       self.waitfor(callback2.subscribeds, 1, 3)
@@ -492,10 +498,10 @@ class Test(unittest.TestCase):
 
       aclient.connect(host=host, port=port, cleanstart=True)
       publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
-      publish_properties.PublicationExpiryInterval = 1
+      publish_properties.MessageExpiryInterval = 1
       aclient.publish(topics[0], b"qos 1 - expire", 1, retained=False, properties=publish_properties)
       aclient.publish(topics[0], b"qos 2 - expire", 2, retained=False, properties=publish_properties)
-      publish_properties.PublicationExpiryInterval = 6
+      publish_properties.MessageExpiryInterval = 6
       aclient.publish(topics[0], b"qos 1 - don't expire", 1, retained=False, properties=publish_properties)
       aclient.publish(topics[0], b"qos 2 - don't expire", 2, retained=False, properties=publish_properties)
 
@@ -504,10 +510,10 @@ class Test(unittest.TestCase):
       self.waitfor(callback2.messages, 1, 3)
       time.sleep(1)
       self.assertEqual(len(callback2.messages), 2, callback2.messages)
-      self.assertTrue(callback2.messages[0][5].PublicationExpiryInterval < 6,
-                             callback2.messages[0][5].PublicationExpiryInterval)
-      self.assertTrue(callback2.messages[1][5].PublicationExpiryInterval < 6,
-                                   callback2.messages[1][5].PublicationExpiryInterval)
+      self.assertTrue(callback2.messages[0][5].MessageExpiryInterval < 6,
+                             callback2.messages[0][5].MessageExpiryInterval)
+      self.assertTrue(callback2.messages[1][5].MessageExpiryInterval < 6,
+                                   callback2.messages[1][5].MessageExpiryInterval)
       aclient.disconnect()
 
     def waitfor(self, queue, depth, limit):

@@ -28,15 +28,15 @@ logger = logging.getLogger('MQTT broker')
 def respond(sock, packet, maximumPacketSize=500):
   # deal with expiry
   if packet.fh.PacketType == MQTTV5.PacketTypes.PUBLISH:
-    if hasattr(packet.properties, "PublicationExpiryInterval"):
+    if hasattr(packet.properties, "MessageExpiryInterval"):
       timespent = int(time.monotonic() - packet.receivedTime)
-      if timespent >= packet.properties.PublicationExpiryInterval:
+      if timespent >= packet.properties.MessageExpiryInterval:
         logger.info("[MQTT-3.3.2-5] Delete expired message")
         return
       else:
         try:
-          logger.info("[MQTT-3.3.2-6] Publication Expiry Interval set to received value minus time waiting in the server")
-          packet.properties.PublicationExpiryInterval -= timespent
+          logger.info("[MQTT-3.3.2-6] Message Expiry Interval set to received value minus time waiting in the server")
+          packet.properties.MessageExpiryInterval -= timespent
         except:
           traceback.print_exc()
   # deal with packet size

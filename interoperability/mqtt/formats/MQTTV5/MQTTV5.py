@@ -51,6 +51,9 @@ class PacketTypes:
   PUBCOMP, SUBSCRIBE, SUBACK, UNSUBSCRIBE, UNSUBACK, \
   PINGREQ, PINGRESP, DISCONNECT, AUTH = indexes
 
+  # Dummy packet type for properties use - will delay only applies to will
+  WILLMESSAGE = 99
+
 
 class Packets(object):
 
@@ -399,7 +402,7 @@ class Properties(object):
 
     self.names = {
       "Payload Format Indicator" : 1,
-      "Publication Expiry Interval" : 2,
+      "Message Expiry Interval" : 2,
       "Content Type" : 3,
       "Response Topic" : 8,
       "Correlation Data" : 9,
@@ -429,11 +432,11 @@ class Properties(object):
 
     self.properties = {
     # id:  type, packets
-      1  : (self.types.index("Byte"), [PacketTypes.PUBLISH]), # payload format indicator
-      2  : (self.types.index("Four Byte Integer"), [PacketTypes.PUBLISH]),
-      3  : (self.types.index("UTF-8 Encoded String"), [PacketTypes.PUBLISH]),
-      8  : (self.types.index("UTF-8 Encoded String"), [PacketTypes.PUBLISH]),
-      9  : (self.types.index("Binary Data"), [PacketTypes.PUBLISH]),
+      1  : (self.types.index("Byte"), [PacketTypes.PUBLISH, PacketTypes.WILLMESSAGE]), # payload format indicator
+      2  : (self.types.index("Four Byte Integer"), [PacketTypes.PUBLISH, PacketTypes.WILLMESSAGE]),
+      3  : (self.types.index("UTF-8 Encoded String"), [PacketTypes.PUBLISH, PacketTypes.WILLMESSAGE]),
+      8  : (self.types.index("UTF-8 Encoded String"), [PacketTypes.PUBLISH, PacketTypes.WILLMESSAGE]),
+      9  : (self.types.index("Binary Data"), [PacketTypes.PUBLISH, PacketTypes.WILLMESSAGE]),
       11 : (self.types.index("Variable Byte Integer"),
            [PacketTypes.PUBLISH, PacketTypes.SUBSCRIBE]),
       17 : (self.types.index("Four Byte Integer"),
@@ -446,7 +449,7 @@ class Properties(object):
            [PacketTypes.CONNECT, PacketTypes.CONNACK, PacketTypes.AUTH]),
       23 : (self.types.index("Byte"),
            [PacketTypes.CONNECT]),
-      24 : (self.types.index("Four Byte Integer"), [PacketTypes.CONNECT]),
+      24 : (self.types.index("Four Byte Integer"), [PacketTypes.WILLMESSAGE]),
       25 : (self.types.index("Byte"), [PacketTypes.CONNECT]),
       26 : (self.types.index("UTF-8 Encoded String"), [PacketTypes.CONNACK]),
       28 : (self.types.index("UTF-8 Encoded String"),
@@ -466,7 +469,7 @@ class Properties(object):
            [PacketTypes.CONNECT, PacketTypes.CONNACK, PacketTypes.PUBLISH,
            PacketTypes.PUBACK, PacketTypes.PUBREC, PacketTypes.PUBREL,
            PacketTypes.PUBCOMP, PacketTypes.SUBACK, PacketTypes.UNSUBACK,
-           PacketTypes.DISCONNECT, PacketTypes.AUTH]),
+           PacketTypes.DISCONNECT, PacketTypes.AUTH, PacketTypes.WILLMESSAGE]),
       39 : (self.types.index("Four Byte Integer"),
            [PacketTypes.CONNECT, PacketTypes.CONNACK]),
       40 : (self.types.index("Byte"), [PacketTypes.CONNACK]),
@@ -627,7 +630,7 @@ class Connects(Packets):
 
   def __init__(self, buffer = None):
     object.__setattr__(self, "names",
-         ["fh", "properties", "ProtocolName", "ProtocolVersion",
+         ["fh", "properties", "willProperties", "ProtocolName", "ProtocolVersion",
           "ClientIdentifier", "CleanStart", "KeepAliveTimer",
           "WillFlag", "WillQoS", "WillRETAIN", "WillTopic", "WillMessage",
           "usernameFlag", "passwordFlag", "username", "password"])
@@ -646,6 +649,7 @@ class Connects(Packets):
     self.passwordFlag = False
 
     self.properties = Properties(PacketTypes.CONNECT)
+    self.willProperties = Properties(PacketTypes.WILLMESSAGE)
 
     # Payload
     self.ClientIdentifier = ""   # UTF-8
@@ -666,6 +670,10 @@ class Connects(Packets):
               connectFlags + writeInt16(self.KeepAliveTimer)
     tempbuffer = self.properties.pack()
     buffer += tempbuffer
+    if self.WillFlag:
+      assert self.willProperties.packetType == PacketTypes.WILLMESSAGE
+      tempbuffer = self.willProperties.pack()
+      buffer += tempbuffer
     buffer += writeUTF(self.ClientIdentifier)
     if self.WillFlag:
       buffer += writeUTF(self.WillTopic)
@@ -708,7 +716,7 @@ class Connects(Packets):
       self.WillRETAIN = (connectFlags >> 5) & 0x01
       self.passwordFlag = ((connectFlags >> 6) & 0x01) == 1
       self.usernameFlag = ((connectFlags >> 7) & 0x01) == 1
-      curlen +=1
+      curlen += 1
 
       if self.WillFlag:
         assert self.WillQoS in [0, 1, 2], "[MQTT-3.1.2-12] will qos must not be 3"
@@ -720,6 +728,8 @@ class Connects(Packets):
       curlen += 2
 
       curlen += self.properties.unpack(buffer[curlen:])[1]
+      if self.WillFlag:
+        curlen += self.willProperties.unpack(buffer[curlen:])[1]
 
       logger.info("[MQTT-3.1.3-3] Clientid must be present, and first field")
       logger.info("[MQTT-3.1.3-4] Clientid must be Unicode, and between 0 and 65535 bytes long")

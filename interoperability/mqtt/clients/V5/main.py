@@ -100,7 +100,7 @@ class Client:
 
   def connect(self, host="localhost", port=1883, cleanstart=True, keepalive=0, newsocket=True, protocolName=None,
               willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None,
-              properties=None):
+              properties=None, willProperties=None):
     if newsocket:
       try:
         self.sock.close()
@@ -123,6 +123,8 @@ class Client:
       connect.WillMessage = willMessage
       connect.WillQoS = willQoS
       connect.WillRETAIN = willRetain
+      if willProperties:
+        connect.willProperties = willProperties
 
     if username:
       connect.usernameFlag = True
