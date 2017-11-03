@@ -292,17 +292,18 @@ class MQTTBrokers:
           if packet:
             terminate = self.handlePacket(packet, sock)
           else:
-            self.disconnect(sock, reasonCode="Malformed packet")
+            self.disconnect(sock, reasonCode="Malformed packet", sendWillMessage=True)
             terminate = True
         except MQTTV5.MalformedPacket as error:
           disconnect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
           disconnect_properties.ReasonString = error.args[0]
-          self.disconnect(sock, reasonCode="Malformed packet")
+          self.disconnect(sock, reasonCode="Malformed packet", sendWillMessage=True)
           terminate = True
         except MQTTV5.ProtocolError as error:
           disconnect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
           disconnect_properties.ReasonString = error.args[0]
-          self.disconnect(sock, reasonCode=error.args[0], properties=disconnect_properties)
+          self.disconnect(sock, reasonCode=error.args[0], properties=disconnect_properties,
+                          sendWillMessage=True)
           terminate = True
     finally:
       self.lock.release()
@@ -357,10 +358,10 @@ class MQTTBrokers:
         resp.properties.AssignedClientIdentifier = packet.ClientIdentifier
     logger.info("[MQTT-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed")
     if packet.ClientIdentifier in [client.id for client in self.clients.values()]: # is this client already connected on a different socket?
-      for s in self.clients.keys():
-        if self.clients[s].id == packet.ClientIdentifier:
+      for cursock in self.clients.keys():
+        if self.clients[cursock].id == packet.ClientIdentifier:
           logger.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
-          self.disconnect(s, None)
+          self.disconnect(cursock, None)
           break
     me = None
     clean = False
@@ -493,9 +494,10 @@ class MQTTBrokers:
     # Test Topic to disconnect the client
     if packet.topicName.startswith("cmd/"):
         self.handleBehaviourPublish(sock, packet.topicName, packet.data)
-        pass
     else:
-        if packet.fh.QoS == 0:
+        if len(self.clients[sock].inbound) >= self.receiveMaximum:
+          self.disconnect(sock, reasonCode="Receive maximum exceeded", sendWillMessage=True)
+        elif packet.fh.QoS == 0:
           self.broker.publish(self.clients[sock].id, packet.topicName,
                  packet.data, packet.fh.QoS, packet.properties,
                  packet.receivedTime, packet.fh.RETAIN)

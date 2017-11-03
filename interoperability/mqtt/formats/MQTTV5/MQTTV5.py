@@ -670,14 +670,11 @@ class Connects(Packets):
                        (self.usernameFlag << 6) | (self.passwordFlag << 7)])
     buffer = writeUTF(self.ProtocolName) + bytes([self.ProtocolVersion]) + \
               connectFlags + writeInt16(self.KeepAliveTimer)
-    tempbuffer = self.properties.pack()
-    buffer += tempbuffer
-    if self.WillFlag:
-      assert self.willProperties.packetType == PacketTypes.WILLMESSAGE
-      tempbuffer = self.willProperties.pack()
-      buffer += tempbuffer
+    buffer += self.properties.pack()
     buffer += writeUTF(self.ClientIdentifier)
     if self.WillFlag:
+      assert self.willProperties.packetType == PacketTypes.WILLMESSAGE
+      buffer += self.willProperties.pack()
       buffer += writeUTF(self.WillTopic)
       buffer += writeBytes(self.WillMessage)
     if self.usernameFlag:
@@ -730,8 +727,6 @@ class Connects(Packets):
       curlen += 2
 
       curlen += self.properties.unpack(buffer[curlen:])[1]
-      if self.WillFlag:
-        curlen += self.willProperties.unpack(buffer[curlen:])[1]
 
       logger.info("[MQTT-3.1.3-3] Clientid must be present, and first field")
       logger.info("[MQTT-3.1.3-4] Clientid must be Unicode, and between 0 and 65535 bytes long")
@@ -739,6 +734,7 @@ class Connects(Packets):
       curlen += valuelen
 
       if self.WillFlag:
+        curlen += self.willProperties.unpack(buffer[curlen:])[1]
         self.WillTopic, valuelen = readUTF(buffer[curlen:], packlen - curlen)
         curlen += valuelen
         self.WillMessage, valuelen = readBytes(buffer[curlen:])
