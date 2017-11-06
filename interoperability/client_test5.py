@@ -31,6 +31,10 @@ class Callbacks(mqtt_client.Callback):
     self.unsubscribeds = []
     self.disconnects = []
 
+  def __str__(self):
+     return str(self.messages) + str(self.messagedicts) + str(self.publisheds) + \
+        str(self.subscribeds) + str(self.unsubscribeds) + str(self.disconnects)
+
   def clear(self):
     self.__init__()
 
@@ -819,7 +823,7 @@ class Test(unittest.TestCase):
       aclient.disconnect()
 
 
-    def test_flow_control(self):
+    def test_flow_control1(self):
       testcallback = Callbacks()
       # no callback means no background thread, to control receiving
       testclient = mqtt_client.Client("myclientid".encode("utf-8"))
@@ -898,6 +902,38 @@ class Test(unittest.TestCase):
       testclient.sock.send(puback.pack())
 
       testclient.disconnect()
+
+    def test_flow_control2(self):
+      testcallback = Callbacks()
+      # no callback means no background thread, to control receiving
+      testclient = mqtt_client.Client("myclientid".encode("utf-8"))
+
+      # get receive maximum - the number of concurrent QoS 1 and 2 messages
+      connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+      connect_properties.SessionExpiryInterval = 0
+      connack = testclient.connect(host=host, port=port, cleanstart=True)
+
+      serverReceiveMaximum = 2**16-1 # the default
+      if hasattr(connack.properties, "ReceiveMaximum"):
+        serverReceiveMaximum = connack.properties.ReceiveMaximum
+
+      receiver = testclient.getReceiver()
+
+      # send number of messages to exceed receive maximum
+      qos = 2
+      pubs = 0
+      for i in range(1, serverReceiveMaximum + 2):
+        testclient.publish(topics[0], "message %d" % i, qos)
+        pubs += 1
+
+      # should get disconnected...
+      while (testcallback.disconnects == []):
+        receiver.receive(testcallback)
+      self.waitfor(testcallback.disconnects, 1, 1)
+      self.assertEqual(len(testcallback.disconnects), 1, len(testcallback.disconnects))
+      self.assertEqual(testcallback.disconnects[0]["reasonCode"].value, 147,
+                       testcallback.disconnects[0]["reasonCode"].value)
+
 
 def setData():
   global topics, wildtopics, nosubscribe_topics, host, port
