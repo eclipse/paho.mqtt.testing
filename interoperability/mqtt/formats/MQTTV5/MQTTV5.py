@@ -151,7 +151,7 @@ class ReasonCodes:
     4 : { "Disconnect with will message" : [PacketTypes.DISCONNECT] },
     16 : { "No matching subscribers" :
       [PacketTypes.PUBACK, PacketTypes.PUBREC] },
-    17 : { "No subscription existed" : [PacketTypes.UNSUBACK] },
+    17 : { "No subscription found" : [PacketTypes.UNSUBACK] },
     24 : { "Continue authentication" : [PacketTypes.AUTH] },
     25 : { "Re-authenticate" : [PacketTypes.AUTH] },
     128 : { "Unspecified error" : [PacketTypes.CONNACK, PacketTypes.PUBACK,
@@ -763,7 +763,7 @@ class Connects(Packets):
       if self.WillFlag and self.usernameFlag and self.passwordFlag:
         logger.info("[MQTT-3.1.3-1] clientid, will topic, will message, username and password all present")
 
-      assert curlen == packlen, "Packet is wrong length curlen %d != packlen %d"
+      assert curlen == packlen, "Packet is wrong length curlen %d != packlen %d" % (curlen, packlen)
     except:
       logger.exception("[MQTT-3.1.4-1] server must validate connect packet and close connection without connack if it does not conform")
       raise
@@ -1035,7 +1035,7 @@ class Acks(Packets):
     return fhlen + self.fh.remainingLength
 
   def __str__(self):
-    return str(self.fh)+", PacketId "+str(self.packetIdentifier)
+    return str(self.fh)+", PacketId "+str(self.packetIdentifier) +")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -1202,7 +1202,10 @@ class UnsubSubacks(Packets):
     leftlen -= self.properties.unpack(buffer[-leftlen:])[1]
     self.reasonCodes = []
     while leftlen > 0:
-      reasonCode = ReasonCodes(self.packetType, "Granted QoS 0")
+      if self.packetType == PacketTypes.SUBACK:
+        reasonCode = ReasonCodes(self.packetType, "Granted QoS 0")
+      else:
+        reasonCode = ReasonCodes(self.packetType, "Success")
       reasonCode.unpack(buffer[-leftlen:])
       assert reasonCode.value in [0, 1, 2, 0x80], "[MQTT-3.9.3-2] return code in QoS must be 0, 1, 2 or 0x80"
       leftlen -= 1
@@ -1233,13 +1236,14 @@ class Unsubscribes(Packets):
 
   def __init__(self, buffer=None, DUP=False, QoS=1, RETAIN=False, PacketId=1, TopicFilters=[]):
     object.__setattr__(self, "names",
-       ["fh", "DUP", "QoS", "RETAIN", "packetIdentifier", "topicFilters"])
+       ["fh", "DUP", "QoS", "RETAIN", "packetIdentifier", "properties", "topicFilters"])
     self.fh = FixedHeaders(PacketTypes.UNSUBSCRIBE)
     self.fh.DUP = DUP
     self.fh.QoS = QoS
     self.fh.RETAIN = RETAIN
     # variable header
     self.packetIdentifier = PacketId
+    self.properties = Properties(PacketTypes.UNSUBSCRIBE)
     # payload - list of topics
     self.topicFilters = TopicFilters[:]
     if buffer != None:
@@ -1247,6 +1251,7 @@ class Unsubscribes(Packets):
 
   def pack(self):
     buffer = writeInt16(self.packetIdentifier)
+    buffer += self.properties.pack()
     for topicFilter in self.topicFilters:
       buffer += writeUTF(topicFilter)
     buffer = self.fh.pack(len(buffer)) + buffer
@@ -1261,6 +1266,7 @@ class Unsubscribes(Packets):
     self.packetIdentifier = readInt16(buffer[fhlen:])
     assert self.packetIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
     leftlen = self.fh.remainingLength - 2
+    leftlen -= self.properties.unpack(buffer[-leftlen:])[1]
     self.topicFilters = []
     while leftlen > 0:
       topic, topiclen = readUTF(buffer[-leftlen:], leftlen)

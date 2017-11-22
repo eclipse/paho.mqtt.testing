@@ -477,7 +477,7 @@ class MQTTBrokers:
     respond(sock, resp)
 
   def unsubscribe(self, sock, packet):
-    self.broker.unsubscribe(self.clients[sock].id, packet.topicFilters)
+    reasonCodes = self.broker.unsubscribe(self.clients[sock].id, packet.topicFilters)
     resp = MQTTV5.Unsubacks()
     logger.info("[MQTT-2.3.1-7] Unsuback has same message id as unsubscribe")
     logger.info("[MQTT-3.10.4-4] Unsuback must be sent - same message id as unsubscribe")
@@ -485,6 +485,7 @@ class MQTTBrokers:
     if len(me.outbound) > 0:
       logger.info("[MQTT-3.10.4-3] sending unsuback has no effect on outward inflight messages")
     resp.packetIdentifier = packet.packetIdentifier
+    resp.reasonCodes = reasonCodes
     respond(sock, resp)
 
   def publish(self, sock, packet):

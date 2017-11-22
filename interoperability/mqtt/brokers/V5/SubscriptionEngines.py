@@ -19,6 +19,7 @@
 import types, logging
 
 from . import Topics, Subscriptions
+import mqtt.formats.MQTTV5 as MQTTV5
 
 from .Subscriptions import *
 
@@ -65,17 +66,23 @@ class SubscriptionEngines:
      return rc, resubscribed
 
    def unsubscribe(self, aClientid, aTopic):
-     matched = False
+     rc = []
+     matchedAny = False
      if type(aTopic) == type([]):
        if len(aTopic) > 1:
          logger.info("[MQTT-3.10.4-6] each topic must be processed in sequence")
        for t in aTopic:
-         if not matched:
-           matched = self.__unsubscribe(aClientid, t)
+         matched = self.__unsubscribe(aClientid, t)
+         rc.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.UNSUBACK, "Success") if matched else
+                   MQTTV5.ReasonCodes(MQTTV5.PacketTypes.UNSUBACK, "No subscription found"))
+         if not matchedAny:
+           matchedAny = matched
      else:
-       matched = self.__unsubscribe(aClientid, aTopic)
-     if not matched:
+       matchedAny = self.__unsubscribe(aClientid, aTopic)
+       rc.append(ReasonCodes(UNSUBACK, "Success") if matched else ReasonCodes(UNSUBACK, "No subscription found"))
+     if not matchedAny:
        logger.info("[MQTT-3.10.4-5] Unsuback must be sent even if no topics are matched")
+     return rc
 
    def __unsubscribe(self, aClientid, aTopic):
      "unsubscribe to one topic"

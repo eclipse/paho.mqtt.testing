@@ -166,7 +166,7 @@ class Brokers:
     return rc
 
   def unsubscribe(self, aClientid, topic):
-    self.se.unsubscribe(aClientid, topic)
+    return self.se.unsubscribe(aClientid, topic)
 
   def getSubscriptions(self, aClientid=None):
     return self.se.getSubscriptions(aClientid)
