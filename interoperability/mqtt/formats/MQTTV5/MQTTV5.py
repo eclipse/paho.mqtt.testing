@@ -964,7 +964,7 @@ class Publishes(Packets):
   def __str__(self):
     rc = str(self.fh)
     if self.fh.QoS != 0:
-      rc += ", MsgId="+str(self.packetIdentifier)
+      rc += ", PacketId="+str(self.packetIdentifier)
     rc += ", Properties: "+str(self.properties)
     rc += ", TopicName="+str(self.topicName)+", Payload="+str(self.data)+")"
     return rc
@@ -1035,7 +1035,7 @@ class Acks(Packets):
     return fhlen + self.fh.remainingLength
 
   def __str__(self):
-    return str(self.fh)+", PacketId "+str(self.packetIdentifier) +")"
+    return str(self.fh)+", PacketId="+str(self.packetIdentifier)+")"
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -1155,7 +1155,7 @@ class Subscribes(Packets):
     return fhlen + self.fh.remainingLength
 
   def __str__(self):
-    return str(self.fh)+", MsgId="+str(self.packetIdentifier)+\
+    return str(self.fh)+", PacketId="+str(self.packetIdentifier)+\
            ", Data="+str( [(x, str(y)) for (x, y) in self.data] ) +")"
 
   def __eq__(self, packet):
@@ -1280,7 +1280,7 @@ class Unsubscribes(Packets):
     return fhlen + self.fh.remainingLength
 
   def __str__(self):
-    return str(self.fh)+", MsgId="+str(self.packetIdentifier)+\
+    return str(self.fh)+", PacketId="+str(self.packetIdentifier)+\
            ", Data="+str(self.topicFilters)+")"
 
   def __eq__(self, packet):
