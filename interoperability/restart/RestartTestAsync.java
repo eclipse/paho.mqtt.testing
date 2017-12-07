@@ -1,17 +1,3 @@
-/*
- * IBM Confidential
- * OCO Source Materials
- *  
- * 5724-H72
- *  
- * (c) Copyright IBM  Corp. 2011, 2013
- * The source code for this program is not published or other-
- * wise divested of its trade secrets, irrespective of what has
- * been deposited with the U.S. Copyright Office.
- * <END_COPYRIGHT>
- * 
- * Version: %Z% %W% %I% %E% %U%
- */
 
 package com.ibm.mqst.mqxr.restart;
 
@@ -42,7 +28,7 @@ public class RestartTestAsync extends Thread implements MqttCallback {
 	int last_completion_time = -1;
 	boolean connected = false;
 	boolean subscribed = false;
-	
+
 	IMqttActionListener clientCon = new IMqttActionListener() {
 		public void onSuccess(IMqttToken aToken) {
 			loga.logaLine(loga.LOGA_ALWAYS, "Client " + clientid + " connected");
@@ -60,7 +46,7 @@ public class RestartTestAsync extends Thread implements MqttCallback {
 			try {
 				loga.logaLine(loga.LOGA_ALWAYS, "Subscribe options: " + topic + " " + Integer.parseInt(options.get("qos")));
 				client.subscribe(topic, Integer.parseInt(options.get("qos")), null, clientSub);
-			} 
+			}
 			catch (MqttException ex) {
 				//throw(ex);
 			}
@@ -198,7 +184,7 @@ public class RestartTestAsync extends Thread implements MqttCallback {
 				}
 				public void onFailure(IMqttToken aToken, Throwable exception) {
 					loga.logaLine(loga.LOGA_ALWAYS, "Control connect failed"+exception);
-					
+
 					//throw(exception);
 				}
 			});
@@ -326,11 +312,11 @@ public class RestartTestAsync extends Thread implements MqttCallback {
 				sleep(1);
 			}
 			sendAndReceive();
-		} 
+		}
 		catch (MqttException ex) {
 		}
 		catch (Exception e) {
-		} 
+		}
 		if (control != null)
 			control.finish();
 		loga.logaLine(Loga.LOGA_INFO, "Ending restart test Java client thread "
@@ -391,12 +377,12 @@ public class RestartTestAsync extends Thread implements MqttCallback {
 
 		connectOptions = new MqttConnectOptions();
 		connectOptions.setCleanSession(false);
-		
+
 		if (options.get("haconnection") != "")
 		{
 			connectOptions.setServerURIs(options.get("haconnection").split(" "));
 		}
-		
+
 
 		loga.logaLine(Loga.LOGA_ALWAYS, "Async Java client topic workload using QoS "
 				+ options.get("qos"));
@@ -413,7 +399,7 @@ public class RestartTestAsync extends Thread implements MqttCallback {
 		control.wait("who is ready?");
 
 		client.connect(connectOptions, null, clientCon);
-		
+
 		while (!connected && !subscribed) {
 			loga.logaLine(Loga.LOGA_ALWAYS, "connected: " + connected + " subscribed" + subscribed);
 			sleep(1);
@@ -449,7 +435,7 @@ public class RestartTestAsync extends Thread implements MqttCallback {
 		int test_interval = 30;
 		int last_expected_count = expectedCount;
 		IMqttDeliveryToken lastMsg = null;
-		
+
 		control.wait("start_measuring");
 
 		/* find the time for "test_count" round-trip messages */
@@ -508,7 +494,7 @@ public class RestartTestAsync extends Thread implements MqttCallback {
 			lastMsg = null;
 
 			loga.logaLine(Loga.LOGA_INFO, "Messages sent... waiting for echoes");
-			
+
 			while (arrivedCount < test_count) {
 				if (stopping)
 					return;
@@ -559,7 +545,7 @@ public class RestartTestAsync extends Thread implements MqttCallback {
 								public void onFailure(IMqttToken aToken,
 										Throwable exception) {
 									loga.logaLine(loga.LOGA_ALWAYS,
-											"Test message send onFailure " + (Integer) aToken.getUserContext() 
+											"Test message send onFailure " + (Integer) aToken.getUserContext()
 													+ exception);
 									exception.printStackTrace();
 								}

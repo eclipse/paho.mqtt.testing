@@ -1,17 +1,3 @@
-/*
- * IBM Confidential
- * OCO Source Materials
- *  
- * 5724-H72
- *  
- * (c) Copyright IBM  Corp. 2011, 2013
- * The source code for this program is not published or other-
- * wise divested of its trade secrets, irrespective of what has
- * been deposited with the U.S. Copyright Office.
- * <END_COPYRIGHT>
- * 
- * Version: %Z% %W% %I% %E% %U%
- */
 
 package com.ibm.mqst.mqxr.restart;
 
@@ -26,7 +12,7 @@ import java.lang.System;
 public class RestartTest extends Thread implements MqttCallback
 {
 	static HashMap<String, String> options = new HashMap<String, String>();
-	
+
   volatile boolean stopping = false;
   Loga loga = null;
   String wait_message = null, wait_message2 = null;
@@ -42,7 +28,7 @@ public class RestartTest extends Thread implements MqttCallback
   int myindex = -1;
   String topic = null, clientid = null;
   int last_completion_time = -1;
-  
+
   public RestartTest(int i)
   {
 	i++;
@@ -50,12 +36,12 @@ public class RestartTest extends Thread implements MqttCallback
     int loglevel = options.get("verbose").equals("1") ? Loga.LOGA_ALWAYS : Loga.LOGA_INFO;
   	loga = new Loga("Loga", this.getClass().getName() + "_" + myindex, loglevel);
   }
-  
+
   static void getopts(String[] argv)
   {
   	int count = 0;
   	int argc = argv.length;
-  	
+
   	while (count < argc)
   	{
   		if (argv[count].startsWith("--"))
@@ -74,15 +60,15 @@ public class RestartTest extends Thread implements MqttCallback
   		count++;
   	}
   }
-  
-	
+
+
   static void usage()
   {
   	System.out.print("Options should be one of "+options.keySet()+"\n");
   	System.exit(99);
   }
-  
-  
+
+
   public static void main(String[] args)
   {
   	options.put("connection", "tcp://localhost:1884");
@@ -97,18 +83,18 @@ public class RestartTest extends Thread implements MqttCallback
 		options.put("password", "");
 		options.put("verbose", "0");
 		options.put("threads", "1");
-	  
+
     getopts(args);
-    
+
     int no_clients = new Integer(options.get("threads"));
 	  RestartTest[] threads = new RestartTest[no_clients];
-    
+
     for (int i = 0; i < no_clients; ++i)
     {
     	threads[i] = new RestartTest(i);
     	threads[i].start();
     }
-    
+
     boolean finished = false;
     while (finished)
     {
@@ -123,20 +109,20 @@ public class RestartTest extends Thread implements MqttCallback
       	}
       }
     }
-    
+
   }
-  
-  
+
+
   long start_clock()
   {
   	return System.currentTimeMillis();
   }
-  
+
   int elapsed(long start)
   {
   	return (int)(System.currentTimeMillis() - start);
   }
-  
+
 	static void sleep(int seconds)
  	{
  		try
@@ -145,16 +131,16 @@ public class RestartTest extends Thread implements MqttCallback
  		}
  		catch (Exception e)
  		{
- 			
+
  		}
  	}
-  
+
   public class ControlConnection implements MqttCallback
   {
     MqttTopic pubTopic = null;
     MqttClient client = null;
     MqttConnectOptions connectOptions = new MqttConnectOptions();
-    
+
     ControlConnection() throws Exception
     {
    		client = new MqttClient(options.get("control_connection"), clientid, null);
@@ -163,7 +149,7 @@ public class RestartTest extends Thread implements MqttCallback
     	pubTopic = client.getTopic(options.get("controltopic")+"/receive");
     	client.subscribe(options.get("controltopic")+"/send");
     }
-    
+
     void finish()
     {
     	try
@@ -172,10 +158,10 @@ public class RestartTest extends Thread implements MqttCallback
     	}
     	catch (Exception e)
     	{
-    		
+
     	}
     }
-    
+
    	public void connectionLost(java.lang.Throwable cause)
    	{
    		loga.logaLine(Loga.LOGA_ALWAYS, "Control connection lost - stopping");
@@ -185,9 +171,9 @@ public class RestartTest extends Thread implements MqttCallback
 
    	public void deliveryComplete(MqttDeliveryToken token)
    	{
-   		
+
    	}
-   	
+
   	public void messageArrived(MqttTopic topic, MqttMessage message)
   			throws Exception
   	{
@@ -195,7 +181,7 @@ public class RestartTest extends Thread implements MqttCallback
   		{
   			String str = new String(message.getPayload());
  	 			loga.logaLine(Loga.LOGA_ALWAYS, "Control message arrived "+str+" "+wait_message);
-  		
+
  	 			if (str.equals("stop"))
  	 				stopping = true;
  	 			else if (wait_message != null && wait_message.equals(str))
@@ -211,11 +197,11 @@ public class RestartTest extends Thread implements MqttCallback
   		}
   		catch (Exception e)
   		{
-  			
+
   		}
   	}
-  	
- 	
+
+
   	/* wait for a specific message on the control topic. */
   	int which(String message1, String message2)
   	{
@@ -232,7 +218,7 @@ public class RestartTest extends Thread implements MqttCallback
   		}
   		return control_found;
   	}
-  	
+
 
   	void send(String msg)
   	{
@@ -248,7 +234,7 @@ public class RestartTest extends Thread implements MqttCallback
    			e.printStackTrace();
    		}
   	}
-  	
+
   	/* wait for a specific message on the control topic. */
   	void wait(String message) throws MqttException
   	{
@@ -258,7 +244,7 @@ public class RestartTest extends Thread implements MqttCallback
   		wait_message = message;
 
   		send("waiting for: " + message);
-  		
+
   		while (control_found == 0)
   		{
   			if (stopping)
@@ -271,10 +257,10 @@ public class RestartTest extends Thread implements MqttCallback
   			}
   			sleep(1);
   		}
-  	}  	
+  	}
   }
-  
- 
+
+
   public void run()
   {
   	loga.logaLine(Loga.LOGA_INFO, "Starting restart test Java client program with options "+options.toString());
@@ -282,7 +268,7 @@ public class RestartTest extends Thread implements MqttCallback
   	clientid = options.get("clientid")+"_"+options.get("slot_no")+"_"+myindex;
 
   	loga.logaLine(Loga.LOGA_INFO, "Starting with clientid "+clientid);
-  	
+
   	try
   	{
   		control = new ControlConnection();
@@ -290,17 +276,17 @@ public class RestartTest extends Thread implements MqttCallback
   	}
   	catch (Exception e)
   	{
-  		
+
   	}
   	if (control != null)
   		control.finish();
   	loga.logaLine(Loga.LOGA_INFO, "Ending restart test Java client thread "+myindex);
   }
-  
+
 
  	public void connectionLost(java.lang.Throwable cause)
  	{
- 		loga.logaLine(Loga.LOGA_ALWAYS, "Connection lost when " + arrivedCount + " messages arrived out of " + 
+ 		loga.logaLine(Loga.LOGA_ALWAYS, "Connection lost when " + arrivedCount + " messages arrived out of " +
  				expectedCount + " expected");
  		do
  		{
@@ -325,9 +311,9 @@ public class RestartTest extends Thread implements MqttCallback
 
  	public void deliveryComplete(MqttDeliveryToken token)
  	{
- 		
+
  	}
- 	
+
 	public void messageArrived(MqttTopic topic, MqttMessage message)
 			throws Exception
 	{
@@ -357,27 +343,27 @@ public class RestartTest extends Thread implements MqttCallback
 		if (measuring && arrivedCount == 100)
 			roundtrip_time = elapsed(global_start_time);
 	}
-	
-	
+
+
 	int sendAndReceive() throws Exception
 	{
 		int rc = 0;
-		
+
 		connectOptions = new MqttConnectOptions();
 		connectOptions.setCleanSession(false);
-		
+
 		loga.logaLine(Loga.LOGA_ALWAYS, "Java client topic workload using QoS " + options.get("qos"));
 		loga.logaLine(Loga.LOGA_ALWAYS, "Connecting to " + options.get("connection"));
-		
+
  		client = new MqttClient(options.get("connection"), clientid, null);
  		client.setCallback(this);
 
 		/* wait to know that the controlling process is running before connecting to the SUT */
 		control.wait("who is ready?");
-		
+
 		client.connect(connectOptions);
 		MqttTopic pubTopic = client.getTopic(topic);
-		client.subscribe(pubTopic.getName(), new Integer(options.get("qos")));	
+		client.subscribe(pubTopic.getName(), new Integer(options.get("qos")));
 
 		while (true)
 		{
@@ -398,13 +384,13 @@ public class RestartTest extends Thread implements MqttCallback
 				stopping = true;
 			}
 		}
-		
+
 		loga.logaLine(Loga.LOGA_ALWAYS, "Ending Java client topic workload using QoS " + options.get("qos"));
 		client.disconnect(10000);
 		return rc;
 	}
-	
-	
+
+
 	void one_iteration(MqttClient client) throws Exception
 	{
 		int i = 0;
@@ -421,11 +407,11 @@ public class RestartTest extends Thread implements MqttCallback
 		expectedCount = arrivedCount = 0;
 		measuring = true;
 		global_start_time = start_clock();
-		
+
 		MqttTopic pubtopic = client.getTopic(topic);
 		loga.logaLine(Loga.LOGA_DEBUG, "Topic Set - Going in to loop");
 		for (i = 1; i <= test_count; ++i)
-		{	
+		{
 			String payload = "message number " + i;
 			boolean published = false;
 			do
@@ -433,7 +419,7 @@ public class RestartTest extends Thread implements MqttCallback
 				try
 				{
 					loga.logaLine(Loga.LOGA_DEBUG, "Publishing test message");
-					pubtopic.publish(payload.getBytes(), new Integer(options.get("qos")), 
+					pubtopic.publish(payload.getBytes(), new Integer(options.get("qos")),
 							new Boolean(options.get("retained")));
 					loga.logaLine(Loga.LOGA_DEBUG, "Test message published");
 					published = true;
@@ -447,7 +433,7 @@ public class RestartTest extends Thread implements MqttCallback
 			}
 			while (!published);
 		}
-				
+
 		loga.logaLine(Loga.LOGA_INFO, "Messages sent... waiting for echoes");
 		while (arrivedCount < test_count)
 		{
@@ -456,7 +442,7 @@ public class RestartTest extends Thread implements MqttCallback
 			sleep(1);
 		}
 		measuring = false;
-		
+
 		if (last_completion_time == -1)
 		{
 			loga.logaLine(Loga.LOGA_ALWAYS, "Round trip time for "+test_count+" messages is "
@@ -470,10 +456,10 @@ public class RestartTest extends Thread implements MqttCallback
                   + last_completion_time + " s.");
 			expectedCount = last_expected_count * test_interval / last_completion_time;
 		}
-		loga.logaLine(Loga.LOGA_ALWAYS, "Therefore " + expectedCount + 
+		loga.logaLine(Loga.LOGA_ALWAYS, "Therefore " + expectedCount +
   	           " messages needed for "+ test_interval +" seconds");
 
-		
+
 		control.wait("start_test"); /* now synchronize the test interval */
 
 		loga.logaLine(Loga.LOGA_ALWAYS, "Starting "+test_interval+" second test run with "
@@ -481,7 +467,7 @@ public class RestartTest extends Thread implements MqttCallback
 		arrivedCount = 0;
 		start_time = start_clock();
 		while (seqno < expectedCount)
-		{	
+		{
 			seqno++;
 			String payload = "message number " + seqno;
 			boolean published = false;
@@ -490,7 +476,7 @@ public class RestartTest extends Thread implements MqttCallback
 				try
 				{
 					loga.logaLine(Loga.LOGA_DEBUG, "Publishing message " + seqno);
-					pubtopic.publish(payload.getBytes(), new Integer(options.get("qos")), 
+					pubtopic.publish(payload.getBytes(), new Integer(options.get("qos")),
 							new Boolean(options.get("retained")));
 					loga.logaLine(Loga.LOGA_DEBUG, "Message " +seqno + " published");
 					published = true;
@@ -506,26 +492,26 @@ public class RestartTest extends Thread implements MqttCallback
 			}
 			while (!published);
 		}
-		
+
 		loga.logaLine(Loga.LOGA_ALWAYS, expectedCount + " messages sent in " + elapsed(start_time) / 1000 + " seconds");
-	 
+
 		waitForCompletion(start_time, expectedCount);
 		control.wait("test finished");
 	}
-	
-	
+
+
 	int waitForCompletion(long start_time, int expectedCount)
 	{
 		int lastreport = 0;
 		int wait_count = 0;
 		int limit = 120;
-		
+
 		sleep(1);
 		while (arrivedCount < expectedCount)
 		{
 			if (arrivedCount > lastreport)
 			{
-				loga.logaLine(Loga.LOGA_ALWAYS, arrivedCount + " messages arrived out of " + expectedCount + 
+				loga.logaLine(Loga.LOGA_ALWAYS, arrivedCount + " messages arrived out of " + expectedCount +
 						" expected, in " + elapsed(start_time) / 1000 + " seconds");
 				lastreport = arrivedCount;
 			}
@@ -536,16 +522,16 @@ public class RestartTest extends Thread implements MqttCallback
 		last_completion_time = elapsed(start_time) / 1000;
 		loga.logaLine(Loga.LOGA_ALWAYS, "Extra wait to see if any duplicates arrive");
 		sleep(10);            /* check if any duplicate messages arrive */
-		loga.logaLine(Loga.LOGA_ALWAYS, arrivedCount + " messages arrived out of " + expectedCount + 
+		loga.logaLine(Loga.LOGA_ALWAYS, arrivedCount + " messages arrived out of " + expectedCount +
 				" expected, in " + elapsed(start_time) / 1000 + " seconds");
 		return success(expectedCount);
 	}
-	
-	
+
+
 	int success(int count)
 	{
 		int rc = 1;
-		
+
 		if (errors > 0)
 		{
 			loga.logaLine(Loga.LOGA_ALWAYS, "Workload test failed because the callback had errors");
