@@ -18,8 +18,9 @@
 
 # Trace MQTT traffic
 
-#from ..formats import MQTTV311 as MQTTV3
-import MQTTV311 as MQTTV3
+from mqtt.formats import MQTTV311 as MQTTV3
+from mqtt.formats import MQTTV5
+
 import paho.mqtt.client as mqtt
 
 import socket, sys, select, socketserver, traceback, datetime, os, threading, time, logging
@@ -158,7 +159,7 @@ def run():
   else:
     myport = 1883
 
-  print("MQTT proxy listening on port", str(myport)+", broker on port", brokerport)
+  print("MQTT restart netowrk proxy listening on port", str(myport)+", broker on port", brokerport)
   MQTT_proxy = ThreadingTCPServer(("", myport), MQTTHandler)
 
   control_broker = ControlBrokers(options)

@@ -166,7 +166,7 @@ class TestControllers:
     self.wait_for("waiting for: start_measuring")  # wait for all clients to be ready
     self.broker.send_control_message("start_measuring")
 
-    interval = random.randint(1, 4)     
+    interval = random.randint(1, 4)
     logger.info("Interval until restart is %d seconds" % interval)
 
     self.wait_for("waiting for: start_test")
@@ -184,8 +184,10 @@ class TestControllers:
     self.broker.send_control_message("stop")
 
   def restart_operation(self, stop_type):
-    logger.info("stopping... type %d" % stop_type)
-    if stop_type == 1:
+    if stop_type == 0:
+      logger.info("no auto stopping... your own if you want to")
+    elif stop_type == 1:
+      logger.info("stopping... sending break to proxy")
       self.broker.send_proxy_message("break")
 
 def run(options):
