@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2017 IBM Corp.
  
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -14,10 +14,12 @@
   Contributors:
      Ian Craggs - initial implementation and/or documentation
      Ian Craggs - add websockets support
+     Ian Craggs - add TLS support
 *******************************************************************
 """
 
 import socketserver, select, sys, traceback, socket, logging, getopt, hashlib, base64
+import threading, ssl
 
 from .MQTTBrokers import MQTTBrokers
 from .coverage import filter, measure
@@ -213,6 +215,24 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn,
                            socketserver.TCPServer):
   pass
 
+def create_server(port, TLS=False, serve_forever=False, cert_reqs=ssl.CERT_REQUIRED, ca_certs=None, certfile=None, keyfile=None):
+  global server
+  logger.info("Starting MQTT server on port %d %s", port, "with TLS support" if TLS else "")
+  server = ThreadingTCPServer(("", port), MyHandler, False)
+  if TLS:
+    server.socket = ssl.wrap_socket(server.socket, 
+      ca_certs=ca_certs, certfile=certfile, keyfile=keyfile,
+      cert_reqs=cert_reqs, server_side=True)
+  server.terminate = False
+  server.allow_reuse_address = True
+  server.server_bind()
+  server.server_activate()
+  if serve_forever:
+    server.serve_forever()
+  else:
+    thread = threading.Thread(target = server.serve_forever)
+    thread.daemon = True
+    thread.start()
 
 def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=1883, zero_length_clientids=True):
   global logger, broker, server
@@ -221,14 +241,25 @@ def run(publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, port=188
   logger.addFilter(filter)
   broker = MQTTBrokers(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0,
             zero_length_clientids=zero_length_clientids)
-  logger.info("Starting the MQTT server on port %d", port)
   try:
-    server = ThreadingTCPServer(("", port), MyHandler, False)
-    server.terminate = False
-    server.allow_reuse_address = True
-    server.server_bind()
-    server.server_activate()
-    server.serve_forever()
+    create_server(port)
+    create_server(18883)
+    create_server(18884, TLS=True, 
+      ca_certs='tls_testing/keys/all-ca.crt',
+      certfile='tls_testing/keys/server/server.crt',
+      keyfile='tls_testing/keys/server/server.key')
+    create_server(18885, TLS=True, cert_reqs=ssl.CERT_OPTIONAL,
+      ca_certs='tls_testing/keys/all-ca.crt',
+      certfile='tls_testing/keys/server/server.crt',
+      keyfile='tls_testing/keys/server/server.key')
+    create_server(18886, TLS=True, cert_reqs=ssl.CERT_OPTIONAL,
+      ca_certs='tls_testing/keys/all-ca.crt',
+      certfile='tls_testing/keys/server/server.crt',
+      keyfile='tls_testing/keys/server/server.key')
+    create_server(18887, TLS=True, serve_forever=True, 
+      ca_certs='tls_testing/keys/server/server.crt',
+      certfile='tls_testing/keys/server/server-mitm.crt',
+      keyfile='tls_testing/keys/server/server-mitm.key')
   except KeyboardInterrupt:
     pass 
   except:
