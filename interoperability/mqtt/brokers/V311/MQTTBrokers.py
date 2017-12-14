@@ -157,6 +157,7 @@ class MQTTClients:
   def pubrel(self, msgid):
     rc = None
     if self.broker.publish_on_pubrel:
+      if msgid in self.inbound.keys():
         pub = self.inbound[msgid]
         if pub.fh.QoS == 2:
           rc = pub
