@@ -171,7 +171,8 @@ class WebSocketTCPHandler(socketserver.StreamRequestHandler):
           keptalive = False
           first = False
         elif (i, o, e) == ([], [], []):
-          broker.keepalive(sock)
+          broker3.keepalive(sock)
+          broker5.keepalive(sock)
           keptalive = True
         else:
           break
