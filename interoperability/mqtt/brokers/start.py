@@ -23,7 +23,7 @@ import threading, ssl
 
 from .V311 import MQTTBrokers as MQTTV3Brokers
 from .V5 import MQTTBrokers as MQTTV5Brokers
-from .V311.coverage import filter, measure
+from .coverage import filter, measure
 from mqtt.formats.MQTTV311 import MQTTException as MQTTV3Exception
 from mqtt.formats.MQTTV5 import MQTTException as MQTTV5Exception
 
@@ -232,10 +232,16 @@ def run(port=1883,
   logger = logging.getLogger('MQTT broker')
   logger.setLevel(logging.INFO)
   logger.addFilter(filter)
+
+  lock = threading.RLock() # shared lock
+  sharedData = {} # location for data shared between brokers - subscriptions for example
+
   broker3 = MQTTV3Brokers(publish_on_pubrel=publish_on_pubrel,
       overlapping_single=overlapping_single,
       dropQoS0=dropQoS0,
-      zero_length_clientids=zero_length_clientids)
+      zero_length_clientids=zero_length_clientids,
+      lock=lock,
+      sharedData=sharedData)
 
   broker5 = MQTTV5Brokers(publish_on_pubrel=publish_on_pubrel,
       overlapping_single=overlapping_single,
@@ -244,7 +250,9 @@ def run(port=1883,
       topicAliasMaximum=topicAliasMaximum,
       maximumPacketSize=maximumPacketSize,
       receiveMaximum=receiveMaximum,
-      serverKeepAlive=serverKeepAlive)
+      serverKeepAlive=serverKeepAlive,
+      lock=lock,
+      sharedData=sharedData)
   try:
     create_server(port)
     create_server(18883)
@@ -322,6 +330,8 @@ def main(argv):
 def usage():
   print(
 """
+Eclipse Paho combined MQTT V311 and MQTT V5 broker
+
  -h --help: print this message
  -p: --publish_on_pubrel=0/1 unset/set publish on pubrel, publish on publish otherwise
  -o: --overlapping_single=0/1

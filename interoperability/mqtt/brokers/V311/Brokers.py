@@ -25,8 +25,9 @@ logger = logging.getLogger('MQTT broker')
  
 class Brokers:
 
-  def __init__(self, overlapping_single=True):
-    self.se = SubscriptionEngines()
+  def __init__(self, overlapping_single=True, sharedData={}):
+    self.sharedData = sharedData
+    self.se = SubscriptionEngines(self.sharedData)
     self.__clients = {} # clientid -> client
     self.overlapping_single = overlapping_single
 

@@ -172,16 +172,24 @@ class MQTTClients:
 
 class MQTTBrokers:
 
-  def __init__(self, publish_on_pubrel=True, overlapping_single=True, dropQoS0=True, zero_length_clientids=True):
+  def __init__(self, publish_on_pubrel=True, 
+    overlapping_single=True, 
+    dropQoS0=True, 
+    zero_length_clientids=True,
+    lock=None, sharedData={}):
 
     # optional behaviours
     self.publish_on_pubrel = publish_on_pubrel
     self.dropQoS0 = dropQoS0                    # don't queue QoS 0 messages for disconnected clients
     self.zero_length_clientids = zero_length_clientids
 
-    self.broker = Brokers(overlapping_single)
+    self.broker = Brokers(overlapping_single, sharedData=sharedData)
     self.clients = {}   # socket -> clients
-    self.lock = threading.RLock()
+    if lock:
+      logger.info("Using shared lock %d", id(lock))
+      self.lock = lock
+    else:
+      self.lock = threading.RLock()
 
     logger.info("MQTT 3.1.1 Paho Test Broker")
     logger.info("Optional behaviour, publish on pubrel: %s", self.publish_on_pubrel)

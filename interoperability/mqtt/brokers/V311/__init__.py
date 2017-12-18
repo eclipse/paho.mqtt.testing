@@ -16,6 +16,7 @@
 *******************************************************************
 """
 
-from .start import run, main, stop, server, reinitialize, measure
-from . import coverage
+#from .start import run, main, stop, server, reinitialize, measure
+from .. import coverage
+from .start import main
 from .MQTTBrokers import MQTTBrokers

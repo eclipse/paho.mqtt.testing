@@ -27,9 +27,16 @@ logger = logging.getLogger('MQTT broker')
 
 class SubscriptionEngines:
 
-   def __init__(self):
-     self.__subscriptions = [] # list of subscriptions
-     self.__retained = {}      # map of topics to retained msg+qos
+   def __init__(self, sharedData={}):
+     self.sharedData = sharedData
+     if "subscriptions" not in self.sharedData:
+       self.sharedData["subscriptions"] = []  # list of subscriptions
+     else:
+       logger.info("Sharing subscription data")
+     self.__subscriptions = self.sharedData["subscriptions"] 
+     if "retained" not in self.sharedData:
+       self.sharedData["retained"] = {}  # map of topics to retained msg+qos
+     self.__retained = self.sharedData["retained"]  
 
      self.__dollar_subscriptions = []
      self.__dollar_retained = {}

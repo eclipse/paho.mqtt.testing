@@ -22,7 +22,7 @@ import socketserver, select, sys, traceback, socket, logging, getopt, hashlib, b
 import threading, ssl
 
 from .MQTTBrokers import MQTTBrokers
-from .coverage import filter, measure
+from ..coverage import filter, measure
 from mqtt.formats.MQTTV311 import MQTTException
 
 broker = None
@@ -173,7 +173,7 @@ class MyHandler(socketserver.StreamRequestHandler):
         break
     logger.info("Finishing communications for socket %d", sock_no)
 
-
+"""
 class TCPHandler(socketserver.StreamRequestHandler):
 
   def handle(self):
@@ -210,6 +210,7 @@ class TCPHandler(socketserver.StreamRequestHandler):
         logger.exception("MyHandler")
         break
     logger.info("Finishing communications for socket %d", sock_no)
+"""
 
 class ThreadingTCPServer(socketserver.ThreadingMixIn,
                            socketserver.TCPServer):

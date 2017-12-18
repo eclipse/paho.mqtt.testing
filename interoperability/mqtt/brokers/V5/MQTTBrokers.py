@@ -236,7 +236,8 @@ class MQTTBrokers:
     topicAliasMaximum=2,
     maximumPacketSize=32,
     receiveMaximum=2,
-    serverKeepAlive=60):
+    serverKeepAlive=60,
+    lock=None, sharedData={}):
 
     # optional behaviours
     self.publish_on_pubrel = publish_on_pubrel
@@ -248,9 +249,13 @@ class MQTTBrokers:
     self.receiveMaximum = receiveMaximum
     self.serverKeepAlive = serverKeepAlive
 
-    self.broker = Brokers(overlapping_single, topicAliasMaximum)
+    self.broker = Brokers(overlapping_single, topicAliasMaximum, sharedData=sharedData)
     self.clients = {}   # socket -> clients
-    self.lock = threading.RLock()
+    if lock:
+      logger.info("Using shared lock %d", id(lock))
+      self.lock = lock
+    else:
+      self.lock = threading.RLock()
 
     logger.info("MQTT 5.0 Paho Test Broker")
     logger.info("Optional behaviour, publish on pubrel: %s", self.publish_on_pubrel)
