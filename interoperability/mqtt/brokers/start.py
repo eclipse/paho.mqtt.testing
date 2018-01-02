@@ -1,16 +1,16 @@
 """
 *******************************************************************
   Copyright (c) 2013, 2017 IBM Corp.
- 
+
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
-  and Eclipse Distribution License v1.0 which accompany this distribution. 
- 
-  The Eclipse Public License is available at 
+  and Eclipse Distribution License v1.0 which accompany this distribution.
+
+  The Eclipse Public License is available at
      http://www.eclipse.org/legal/epl-v10.html
-  and the Eclipse Distribution License is available at 
+  and the Eclipse Distribution License is available at
     http://www.eclipse.org/org/documents/edl-v10.php.
- 
+
   Contributors:
      Ian Craggs - initial implementation and/or documentation
      Ian Craggs - add websockets support
@@ -23,203 +23,35 @@ import threading, ssl
 
 from .V311 import MQTTBrokers as MQTTV3Brokers
 from .V5 import MQTTBrokers as MQTTV5Brokers
+from .SN import MQTTSNBrokers
 from .coverage import filter, measure
 from mqtt.formats.MQTTV311 import MQTTException as MQTTV3Exception
 from mqtt.formats.MQTTV5 import MQTTException as MQTTV5Exception
+from mqtt.formats.MQTTSN import MQTTSNException
+from mqtt.brokers import TCPListeners, UDPListeners
 
-broker = None
-server = None
 
 logger = None
 
-class BufferedSockets:
+def setup_persistence(persistence_filename):
+  import ZODB, ZODB.FileStorage, BTrees.OOBTree, transaction, persistent
+  storage = ZODB.FileStorage.FileStorage(persistence_filename)
+  db = ZODB.DB(storage)
+  connection = db.open()
+  root = connection.root
 
-  def __init__(self, socket):
-    self.socket = socket
-    self.buffer = bytearray()
-    self.websockets = False
+  if not hasattr(root, 'mqtt'):
+    root.mqtt = BTrees.OOBTree.BTree()
+    transaction.commit()
 
-  def rebuffer(self, data):
-    self.buffer += data
+  if not root.mqtt.has_key("sharedData"):
+    root.mqtt["sharedData"] = persistent.mapping.PersistentMapping()
+    transaction.commit()
 
-  def recv(self, bufsize):
-    if self.websockets:
-      if bufsize <= len(self.buffer):
-        out = self.buffer[:bufsize]
-        self.buffer = self.buffer[bufsize:]
-        return out
-        
-      header1 = ord(self.socket.recv(1))
-      header2 = ord(self.socket.recv(1))
+  sharedData = root.mqtt["sharedData"]
+  return connection, sharedData
 
-      opcode = (header1 & 0x0f)
-      maskbit = (header2 & 0x80) == 0x80
-      length = (header2 & 0x7f)
-      if length == 126:
-        lb1 = ord(self.socket.recv(1))
-        lb2 = ord(self.socket.recv(1))
-        length = lb1*256+lb2
-      elif length == 127:
-        length = 0
-        for i in range(0, 8):
-          length += ord(self.socket.recv(1))
-          length = (leng << 8)
-      if maskbit:
-        mask = self.socket.recv(4)
-      mpayload = bytearray()
-      while len(mpayload) < length:
-        mpayload += self.socket.recv(length - len(mpayload))
-      buffer = bytearray()
-      if maskbit:
-        mi = 0
-        for i in mpayload:
-          buffer.append(i ^ mask[mi])
-          mi = (mi+1)%4
-      else:
-        buffer = mplayload
-      self.buffer += buffer
-      if bufsize <= len(self.buffer):
-        out = self.buffer[:bufsize]
-        self.buffer = self.buffer[bufsize:]
-        return out
-    else:
-      if bufsize <= len(self.buffer):
-        out = self.buffer[:bufsize]
-        self.buffer = self.buffer[bufsize:]
-      else:
-        out = self.buffer + self.socket.recv(bufsize - len(self.buffer))
-        self.buffer = bytes()
-    return out
-
-  def __getattr__(self, name):
-    return getattr(self.socket, name)
-
-  def send(self, data):
-    header = bytearray()
-    if self.websockets:
-      header.append(0x82) # opcode
-      l = len(data)
-      if l < 126:
-        header.append(l)
-      elif 125 < l <= 32767:
-        header += bytearray([126, l // 256, l % 256])
-      elif l > 32767:
-        logger("TODO: payload longer than 32767 bytes")
-        return
-    return self.socket.send(header + data)
-
-
-class WebSocketTCPHandler(socketserver.StreamRequestHandler):
-
-  def getheaders(self, data):
-    headers = {}
-    lines = data.splitlines()
-    for curline in lines[1:]:
-      if curline.find(":") != -1:
-        key, value = curline.split(": ", 1)
-        headers[key] = value
-    return headers
-
-  def handshake(self, client):
-    GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-    data = client.recv(1024).decode('utf-8')
-    headers = self.getheaders(data)
-    digest = base64.b64encode(hashlib.sha1((headers['Sec-WebSocket-Key'] + GUID).encode("utf-8")).digest())
-    resp = b"HTTP/1.1 101 Switching Protocols\r\n" +\
-           b"Upgrade: websocket\r\n" +\
-           b"Connection: Upgrade\r\n" +\
-           b"Sec-WebSocket-Protocol: mqtt\r\n" +\
-           b"Sec-WebSocket-Accept: " + digest +b"\r\n\r\n"
-    return client.send(resp) 
-
-  def handle(self):
-    global server
-    first = True
-    broker = None
-    sock = BufferedSockets(self.request)
-    sock_no = sock.fileno()
-    terminate = keptalive = False
-    logger.info("Starting communications for socket %d", sock_no)
-    while not terminate and server and not server.terminate:
-      try:
-        if not keptalive:
-          logger.info("Waiting for request")
-        (i, o, e) = select.select([sock], [], [], 1)
-        if i == [sock]:
-          if first:
-            char = sock.recv(1)
-            sock.rebuffer(char)
-            if char == b"G":    # should be websocket connection
-              self.handshake(sock)
-              sock.websockets = True
-          if sock.websockets and first:
-            pass
-          else:
-            if broker == None:
-              connbuf = sock.recv(1)
-              if connbuf == b'\x10': # connect packet
-                while connbuf[-4:] != b"MQTT" and len(connbuf) < 10:
-                  connbuf += sock.recv(1)
-                connbuf += sock.recv(1)
-                version = connbuf[-1]
-                if version == 4:
-                  broker = broker3
-                elif version == 5:
-                  broker = broker5
-              sock.rebuffer(connbuf)
-            terminate = broker.handleRequest(sock)
-          keptalive = False
-          first = False
-        elif (i, o, e) == ([], [], []):
-          broker3.keepalive(sock)
-          broker5.keepalive(sock)
-          keptalive = True
-        else:
-          break
-      except UnicodeDecodeError:
-        logger.error("[MQTT-1.4.0-1] Unicode field encoding error")
-        break
-      except MQTTV3Exception as exc:
-        logger.error(exc.args[0])
-        break
-      except MQTTV5Exception as exc:
-        logger.error(exc.args[0])
-        break
-      except AssertionError as exc:
-        if (len(exc.args) > 0):
-          logger.error(exc.args[0])
-        else:
-          logger.error("")
-        break
-      except:
-        logger.exception("WebSocketTCPHandler")
-        break
-    logger.info("Finishing communications for socket %d", sock_no)
-
-class ThreadingTCPServer(socketserver.ThreadingMixIn,
-                           socketserver.TCPServer):
-  pass
-
-def create_server(port, TLS=False, serve_forever=False, cert_reqs=ssl.CERT_REQUIRED, ca_certs=None, certfile=None, keyfile=None):
-  global server
-  logger.info("Starting MQTT server on port %d %s", port, "with TLS support" if TLS else "")
-  server = ThreadingTCPServer(("", port), WebSocketTCPHandler, False)
-  if TLS:
-    server.socket = ssl.wrap_socket(server.socket, 
-      ca_certs=ca_certs, certfile=certfile, keyfile=keyfile,
-      cert_reqs=cert_reqs, server_side=True)
-  server.terminate = False
-  server.allow_reuse_address = True
-  server.server_bind()
-  server.server_activate()
-  if serve_forever:
-    server.serve_forever()
-  else:
-    thread = threading.Thread(target = server.serve_forever)
-    thread.daemon = True
-    thread.start()
-
-def run(port=1883,
+def run(port=1883, config=None,
         publish_on_pubrel=True,
         overlapping_single=True,
         dropQoS0=True,
@@ -228,13 +60,17 @@ def run(port=1883,
         maximumPacketSize=1000,
         receiveMaximum=2,
         serverKeepAlive=60):
-  global logger, broker3, broker5, server
+  global logger, broker3, broker5, brokerSN, server
   logger = logging.getLogger('MQTT broker')
   logger.setLevel(logging.INFO)
   logger.addFilter(filter)
 
   lock = threading.RLock() # shared lock
-  sharedData = {} # location for data shared between brokers - subscriptions for example
+  persistence = False
+  if persistence:
+    connection, sharedData = setup_persistence("sharedData") # location for data shared between brokers - subscriptions for example
+  else:
+    sharedData = {}
 
   broker3 = MQTTV3Brokers(publish_on_pubrel=publish_on_pubrel,
       overlapping_single=overlapping_single,
@@ -253,38 +89,90 @@ def run(port=1883,
       serverKeepAlive=serverKeepAlive,
       lock=lock,
       sharedData=sharedData)
+
+  brokerSN = MQTTSNBrokers(lock=lock,
+      sharedData=sharedData)
+
+  broker3.setBroker5(broker5)
+  broker5.setBroker3(broker3)
+
+  brokerSN.setBroker3(broker3)
+  brokerSN.setBroker5(broker5)
+
+  servers = []
+
   try:
-    create_server(port)
-    create_server(18883)
-    create_server(18884, TLS=True, 
-      ca_certs='tls_testing/keys/all-ca.crt',
-      certfile='tls_testing/keys/server/server.crt',
-      keyfile='tls_testing/keys/server/server.key')
-    create_server(18885, TLS=True, cert_reqs=ssl.CERT_OPTIONAL,
-      ca_certs='tls_testing/keys/all-ca.crt',
-      certfile='tls_testing/keys/server/server.crt',
-      keyfile='tls_testing/keys/server/server.key')
-    create_server(18886, TLS=True, cert_reqs=ssl.CERT_OPTIONAL,
-      ca_certs='tls_testing/keys/all-ca.crt',
-      certfile='tls_testing/keys/server/server.crt',
-      keyfile='tls_testing/keys/server/server.key')
-    create_server(18887, TLS=True, serve_forever=True, 
-      ca_certs='tls_testing/keys/server/server.crt',
-      certfile='tls_testing/keys/server/server-mitm.crt',
-      keyfile='tls_testing/keys/server/server-mitm.key')
+    if config == None:
+      servers.append(TCPListeners.create(1883, serve_forever=True))
+    else:
+      servers_to_create = []
+      UDPListeners.setBroker(brokerSN)
+      TCPListeners.setBrokers(broker3, broker5)
+      lineno = 0
+      while lineno < len(config):
+        curline = config[lineno].strip()
+        lineno += 1
+        if curline.startswith('#') or len(curline) == 0:
+          continue
+        words = curline.split()
+        if words[0] == "listener":
+          ca_certs = certfile = keyfile = None
+          cert_reqs=ssl.CERT_REQUIRED
+          port = 1883; TLS=False
+          if len(words) > 1:
+            port = int(words[1])
+          protocol = "mqtt"
+          if len(words) >= 4 and words[3] == "mqttsn":
+            bind_address = words[2]
+            protocol = "mqttsn"
+          while lineno < len(config) and not config[lineno].strip().startswith("listener"):
+            curline = config[lineno].strip()
+            lineno += 1
+            if curline.startswith('#') or len(curline) == 0:
+              continue
+            words = curline.split()
+            if words[0] == "require_certificate":
+              if words[1] == "false":
+                cert_reqs=ssl.CERT_OPTIONAL
+            elif words[0] == "cafile":
+              ca_certs = words[1]; TLS=True
+            elif words[0] == "certfile":
+              certfile = words[1]; TLS=True
+            elif words[0] == "keyfile":
+              keyfile = words[1]; TLS=True
+          if protocol == "mqtt":
+            servers_to_create.append((TCPListeners, {"port": port, "TLS":TLS, "cert_reqs":cert_reqs,
+                        "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
+          elif protocol == "mqttsn":
+            servers_to_create.append((UDPListeners, {"port":port}))
+      servers_to_create[-1][1]["serve_forever"] = True    
+      for server in servers_to_create:
+        servers.append(server[0].create(**server[1]))
+
   except KeyboardInterrupt:
-    pass 
+    pass
   except:
     logger.exception("startBroker")
-  finally:
+
+  # Stop incoming communications
+  for server in servers:
     try:
+      logger.info("Stopping the MQTT server %s", str(server))
       server.socket.shutdown(socket.SHUT_RDWR)
       server.socket.close()
     except:
-      pass
-  server = None
-  logger.info("Stopping the MQTT server on port %d", port)
+      pass #traceback.print_exc()
+  
+  # Disconnect any still connected clients
+  broker3.disconnectAll()
   filter.measure()
+
+  logger.debug("Ending sharedData %s", sharedData)
+  if persistence:
+    sharedData._p_changed = True
+    import transaction
+    transaction.commit()
+    connection.close()
 
 def measure():
   return filter.getmeasures()
@@ -294,19 +182,28 @@ def stop():
   server.shutdown()
 
 def reinitialize():
-  global broker
-  broker.reinitialize()
+  global broker3, broker5, brokerSN
+  broker3.reinitialize()
+  broker5.reinitialize()
+  brokerSN.reinitialize()
+
+def read_config(filename):
+  infile = open(filename)
+  lines = infile.readlines()
+  infile.close()
+  return lines
 
 def main(argv):
   try:
-    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:", ["help", "publish_on_pubrel=", "overlapping_single=", 
-        "dropQoS0=", "port=", "zero_length_clientids="])
+    opts, args = getopt.gnu_getopt(argv[1:], "hp:o:d:z:c:", ["help", "publish_on_pubrel=", "overlapping_single=",
+        "dropQoS0=", "port=", "zero_length_clientids=", "config-file="])
   except getopt.GetoptError as err:
     print(err) # will print something like "option -a not recognized"
     usage()
     sys.exit(2)
   publish_on_pubrel = overlapping_single = dropQoS0 = zero_length_clientids = True
   port = 1883
+  cfg = None
   for o, a in opts:
     if o in ("-h", "--help"):
       usage()
@@ -321,11 +218,13 @@ def main(argv):
       zero_length_clientids = False if a in ["off", "false", "0"] else True
     elif o in ("--port"):
       port = int(a)
+    elif o in ("-c", "--config-file"):
+      cfg = read_config(a)
     else:
       assert False, "unhandled option"
 
   run(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0, port=port,
-     zero_length_clientids=zero_length_clientids)
+     zero_length_clientids=zero_length_clientids, config=cfg)
 
 def usage():
   print(

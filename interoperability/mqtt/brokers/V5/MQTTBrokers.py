@@ -272,6 +272,9 @@ class MQTTBrokers:
         - topics which are max QoS 0, QoS 1 or unavailable
     """
 
+  def setBroker3(self, broker3):
+    self.broker.setBroker3(broker3.broker)
+
   def reinitialize(self):
     logger.info("Reinitializing broker")
     self.clients = {}

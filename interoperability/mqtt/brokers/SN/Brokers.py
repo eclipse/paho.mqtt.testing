@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2017 IBM Corp.
  
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -18,10 +18,10 @@
 
 import types, time, logging
 
-from . import Topics
-from .SubscriptionEngines import SubscriptionEngines
+from ..V311 import Topics
+from ..V311.SubscriptionEngines import SubscriptionEngines
 
-logger = logging.getLogger('MQTT broker')
+logger = logging.getLogger('MQTT-SN broker')
  
 class Brokers:
 
@@ -30,7 +30,11 @@ class Brokers:
     self.se = SubscriptionEngines(self.sharedData)
     self.__clients = {} # clientid -> client
     self.overlapping_single = overlapping_single
+    self.__broker3 = None
     self.__broker5 = None
+
+  def setBroker3(self, broker3):
+    self.__broker3 = broker3
 
   def setBroker5(self, broker5):
     self.__broker5 = broker5
@@ -107,14 +111,18 @@ class Brokers:
         out_qos = min(self.se.qosOf(subscriber, topic), qos)
         if subscriber in self.__clients.keys(): 
           self.__clients[subscriber].publishArrived(topic, message, out_qos)
-        else:
+        elif self.__broker3.getClient(subscriber):
+          self.__broker3.getClient(subscriber).publishArrived(topic, message, out_qos)
+        elif self.__broker5.getClient(subscriber):
           self.__broker5.getClient(subscriber).publishArrived(topic, message, out_qos, None, None)
       else:
         for subscription in self.se.getSubscriptions(topic, subscriber):
           out_qos = min(subscription.getQoS(), qos)
           if subscriber in self.__clients.keys():         
             self.__clients[subscriber].publishArrived(topic, message, out_qos)
-          else:
+          elif self.__broker3.getClient(subscriber):
+            self.__broker3.getClient(subscriber).publishArrived(topic, message, out_qos)
+          elif self.__broker5.getClient(subscriber):
             self.__broker5.getClient(subscriber).publishArrived(topic, message, out_qos, None, None)
 
   def __doRetained__(self, aClientid, topic, qos):

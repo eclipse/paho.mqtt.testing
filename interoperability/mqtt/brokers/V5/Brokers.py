@@ -32,6 +32,11 @@ class Brokers:
     self.__clients = {} # clientid -> client
     self.overlapping_single = overlapping_single
     self.topicAliasMaximum = topicAliasMaximum
+    self.__broker3 = None
+
+  def setBroker3(self, broker3):
+    print("setting broker3", broker3)
+    self.__broker3 = broker3
 
   def reinitialize(self):
     self.__clients = {}
@@ -132,12 +137,22 @@ class Brokers:
       if retained:
         logger.info("[MQTT-2.1.2-10] outgoing publish does not have retained flag set")
       if self.overlapping_single:
-        options, subsprops = self.se.optionsOf(subscriber, topic)
-        publishAction()
+        if subscriber in self.__clients.keys():
+          options, subsprops = self.se.optionsOf(subscriber, topic)
+          publishAction()
+        else:
+          # MQTT V3 subscription
+          out_qos = min(self.__broker3.se.qosOf(subscriber, topic), qos)
+          self.__broker3.getClient(subscriber).publishArrived(topic, message, out_qos)
       else:
         for subscription in self.se.getSubscriptions(topic, subscriber):
-          options, subsprops = subscription.getOptions()
-          publishAction()
+          if subscriber in self.__clients.keys():
+            options, subsprops = subscription.getOptions()
+            publishAction()
+          else:
+            # MQTT V3 subscription
+            out_qos = min(self.__broker3.se.qosOf(subscriber, topic), qos)
+            self.__broker3.getClient(subscriber).publishArrived(topic, message, out_qos)
 
   def __doRetained__(self, aClientid, topic, subsoptions, resubscribeds):
     # topic can be single, or a list
