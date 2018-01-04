@@ -5,7 +5,7 @@ MQTT Version 5
 
 Start a broker:
 
-  python3 startbroker5.py
+  python3 startbroker.py
 
 Run client tests:
 
@@ -35,3 +35,19 @@ Start a broker:
 Run client tests:
 
   python3 client_test.py
+
+TLS
+---
+
+A configuration file similar to that of Eclipse Mosquitto can be passed to startbroker:
+
+  python3 startbroker.py -c client_testing.conf
+
+so for example, a TCP listener with TLS support can be configured like this:
+
+  listener 18884
+  cafile tls_testing/keys/all-ca.crt
+  certfile tls_testing/keys/server/server.crt
+  keyfile tls_testing/keys/server/server.key
+  require_certificate true
+

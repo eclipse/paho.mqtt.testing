@@ -204,12 +204,15 @@ def setBrokers(aBroker3, aBroker5):
   broker3 = aBroker3
   broker5 = aBroker5
 
-def create(port, TLS=False, serve_forever=False,
+def create(port, host="", TLS=False, serve_forever=False,
     cert_reqs=ssl.CERT_REQUIRED,
     ca_certs=None, certfile=None, keyfile=None):
   global server
-  logger.info("Starting MQTT server on port %d %s", port, "with TLS support" if TLS else "")
-  server = ThreadingTCPServer(("", port), WebSocketTCPHandler, False)
+  logger.info("Starting MQTT server on address '%s' port %d %s", host, port, "with TLS support" if TLS else "")
+  bind_address = ""
+  if host not in ["", "INADDR_ANY"]:
+    bind_address = host
+  server = ThreadingTCPServer((bind_address, port), WebSocketTCPHandler, False)
   if TLS:
     server.socket = ssl.wrap_socket(server.socket,
       ca_certs=ca_certs, certfile=certfile, keyfile=keyfile,

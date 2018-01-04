@@ -51,9 +51,12 @@ def setBroker(aBrokerSN):
   global brokerSN
   brokerSN = aBrokerSN
 
-def create(port, serve_forever=False):
-  logger.info("Starting MQTT-SN server on port %d", port)
-  server = ThreadingUDPServer(("", port), UDPHandler, False)
+def create(port, host="", serve_forever=False):
+  logger.info("Starting MQTT-SN server on address '%s' port %d", host, port)
+  bind_address = ""
+  if host not in ["", "INADDR_ANY"]:
+    bind_address = host
+  server = ThreadingUDPServer((bind_address, port), UDPHandler, False)
   server.terminate = False
   server.allow_reuse_address = True
   server.server_bind()

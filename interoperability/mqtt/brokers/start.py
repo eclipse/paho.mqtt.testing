@@ -100,14 +100,14 @@ def run(port=1883, config=None,
   brokerSN.setBroker5(broker5)
 
   servers = []
+  UDPListeners.setBroker(brokerSN)
+  TCPListeners.setBrokers(broker3, broker5)
 
   try:
     if config == None:
       servers.append(TCPListeners.create(1883, serve_forever=True))
     else:
       servers_to_create = []
-      UDPListeners.setBroker(brokerSN)
-      TCPListeners.setBrokers(broker3, broker5)
       lineno = 0
       while lineno < len(config):
         curline = config[lineno].strip()
@@ -118,6 +118,7 @@ def run(port=1883, config=None,
         if words[0] == "listener":
           ca_certs = certfile = keyfile = None
           cert_reqs=ssl.CERT_REQUIRED
+          bind_address = ""
           port = 1883; TLS=False
           if len(words) > 1:
             port = int(words[1])
@@ -141,10 +142,10 @@ def run(port=1883, config=None,
             elif words[0] == "keyfile":
               keyfile = words[1]; TLS=True
           if protocol == "mqtt":
-            servers_to_create.append((TCPListeners, {"port": port, "TLS":TLS, "cert_reqs":cert_reqs,
+            servers_to_create.append((TCPListeners, {"host":bind_address, "port":port, "TLS":TLS, "cert_reqs":cert_reqs,
                         "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
           elif protocol == "mqttsn":
-            servers_to_create.append((UDPListeners, {"port":port}))
+            servers_to_create.append((UDPListeners, {"host":bind_address, "port":port}))
       servers_to_create[-1][1]["serve_forever"] = True    
       for server in servers_to_create:
         servers.append(server[0].create(**server[1]))
