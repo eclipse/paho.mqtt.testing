@@ -43,6 +43,9 @@ class Brokers:
     self.__clients = {}
     self.se.reinitialize()
 
+  def getClients(self):
+    return list(self.__clients.keys())
+
   def getClient(self, clientid):
     return self.__clients[clientid] if (clientid in self.__clients.keys()) else None
 

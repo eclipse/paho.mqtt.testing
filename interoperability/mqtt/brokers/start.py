@@ -18,8 +18,7 @@
 *******************************************************************
 """
 
-import socketserver, select, sys, traceback, socket, logging, getopt, hashlib, base64
-import threading, ssl
+import sys, traceback, logging, getopt, threading, ssl
 
 from .V311 import MQTTBrokers as MQTTV3Brokers
 from .V5 import MQTTBrokers as MQTTV5Brokers
@@ -28,8 +27,7 @@ from .coverage import filter, measure
 from mqtt.formats.MQTTV311 import MQTTException as MQTTV3Exception
 from mqtt.formats.MQTTV5 import MQTTException as MQTTV5Exception
 from mqtt.formats.MQTTSN import MQTTSNException
-from mqtt.brokers import TCPListeners, UDPListeners
-
+from mqtt.brokers.listeners import TCPListeners, UDPListeners, HTTPListeners
 
 logger = None
 
@@ -102,6 +100,8 @@ def run(port=1883, config=None,
   servers = []
   UDPListeners.setBroker(brokerSN)
   TCPListeners.setBrokers(broker3, broker5)
+  HTTPListeners.setBrokers(broker3, broker5, brokerSN)
+  HTTPListeners.setSharedData(lock, sharedData)
 
   try:
     if config == None:
@@ -123,9 +123,11 @@ def run(port=1883, config=None,
           if len(words) > 1:
             port = int(words[1])
           protocol = "mqtt"
-          if len(words) >= 4 and words[3] == "mqttsn":
+          if len(words) >= 3:
             bind_address = words[2]
-            protocol = "mqttsn"
+          if len(words) >= 4:
+            if words[3] in ["mqttsn", "http"]:
+              protocol = words[3]
           while lineno < len(config) and not config[lineno].strip().startswith("listener"):
             curline = config[lineno].strip()
             lineno += 1
@@ -146,6 +148,9 @@ def run(port=1883, config=None,
                         "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
           elif protocol == "mqttsn":
             servers_to_create.append((UDPListeners, {"host":bind_address, "port":port}))
+          elif protocol == "http":
+            servers_to_create.append((HTTPListeners, {"host":bind_address, "port":port, "TLS":TLS, "cert_reqs":cert_reqs,
+                "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
       servers_to_create[-1][1]["serve_forever"] = True    
       for server in servers_to_create:
         servers.append(server[0].create(**server[1]))

@@ -21,8 +21,8 @@
 import socketserver, select, sys, traceback, socket, logging, getopt, hashlib, base64
 import threading, ssl
 
-from .V311 import MQTTBrokers as MQTTV3Brokers
-from .V5 import MQTTBrokers as MQTTV5Brokers
+from mqtt.brokers.V311 import MQTTBrokers as MQTTV3Brokers
+from mqtt.brokers.V5 import MQTTBrokers as MQTTV5Brokers
 from mqtt.formats.MQTTV311 import MQTTException as MQTTV3Exception
 from mqtt.formats.MQTTV5 import MQTTException as MQTTV5Exception
 

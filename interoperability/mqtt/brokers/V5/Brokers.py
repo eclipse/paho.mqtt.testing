@@ -35,13 +35,15 @@ class Brokers:
     self.__broker3 = None
 
   def setBroker3(self, broker3):
-    print("setting broker3", broker3)
     self.__broker3 = broker3
 
   def reinitialize(self):
     self.__clients = {}
     self.se.reinitialize()
 
+  def getClients(self):
+    return self.__clients
+  
   def getClient(self, clientid):
     return self.__clients[clientid] if (clientid in self.__clients.keys()) else None
 

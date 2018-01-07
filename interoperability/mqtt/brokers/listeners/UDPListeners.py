@@ -21,7 +21,7 @@
 import socketserver, select, sys, traceback, socket, logging, getopt, hashlib, base64
 import threading, ssl
 
-from .SN import MQTTSNBrokers
+from mqtt.brokers.SN import MQTTSNBrokers
 from mqtt.formats.MQTTSN import MQTTSNException
 
 logger = logging.getLogger('MQTT broker')
