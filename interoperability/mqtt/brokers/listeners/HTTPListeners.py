@@ -248,7 +248,7 @@ def setSharedData(aLock, aSharedData):
 def create(port, host="", TLS=False, serve_forever=False,
     cert_reqs=ssl.CERT_REQUIRED,
     ca_certs=None, certfile=None, keyfile=None):
-  logger.info("Starting HTTP server on address '%s' port %d %s", host, port, "with TLS support" if TLS else "")
+  logger.info("Starting HTTP listener on address '%s' port %d %s", host, port, "with TLS support" if TLS else "")
   bind_address = ""
   if host not in ["", "INADDR_ANY"]:
     bind_address = host

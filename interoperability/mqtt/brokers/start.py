@@ -28,6 +28,7 @@ from mqtt.formats.MQTTV311 import MQTTException as MQTTV3Exception
 from mqtt.formats.MQTTV5 import MQTTException as MQTTV5Exception
 from mqtt.formats.MQTTSN import MQTTSNException
 from mqtt.brokers.listeners import TCPListeners, UDPListeners, HTTPListeners
+from mqtt.brokers.bridges import TCPBridges
 
 logger = None
 
@@ -91,6 +92,8 @@ def run(port=1883, config=None,
   brokerSN = MQTTSNBrokers(lock=lock,
       sharedData=sharedData)
 
+  brokers = [broker3, broker5, brokerSN]
+
   broker3.setBroker5(broker5)
   broker5.setBroker3(broker3)
 
@@ -105,6 +108,8 @@ def run(port=1883, config=None,
 
   try:
     if config == None:
+      TCPBridges.setBroker5(broker5)
+      TCPBridges.create(1886)
       servers.append(TCPListeners.create(1883, serve_forever=True))
     else:
       servers_to_create = []
@@ -161,16 +166,21 @@ def run(port=1883, config=None,
     logger.exception("startBroker")
 
   # Stop incoming communications
+  import socket
   for server in servers:
     try:
-      logger.info("Stopping the MQTT server %s", str(server))
-      server.socket.shutdown(socket.SHUT_RDWR)
-      server.socket.close()
+      logger.info("Stopping listener %s", str(server))
+      server.shutdown()
     except:
-      pass #traceback.print_exc()
+      traceback.print_exc()
   
-  # Disconnect any still connected clients
-  broker3.disconnectAll()
+  logger.info("Shutdown brokers")
+  for broker in brokers:
+    try:
+      logger.info("Stopping broker %s", str(broker))
+      broker.shutdown()
+    except:
+      traceback.print_exc()
   filter.measure()
 
   logger.debug("Ending sharedData %s", sharedData)

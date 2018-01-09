@@ -52,7 +52,7 @@ def setBroker(aBrokerSN):
   brokerSN = aBrokerSN
 
 def create(port, host="", serve_forever=False):
-  logger.info("Starting MQTT-SN server on address '%s' port %d", host, port)
+  logger.info("Starting UDP listener on address '%s' port %d", host, port)
   bind_address = ""
   if host not in ["", "INADDR_ANY"]:
     bind_address = host

@@ -55,7 +55,7 @@ def respond(sock, packet, maximumPacketSize=500):
 
 class MQTTClients:
 
-  def __init__(self, anId, cleanStart, sessionExpiryInterval, keepalive, socket, broker):
+  def __init__(self, anId, cleanStart, sessionExpiryInterval, willDelayInterval, keepalive, socket, broker):
     self.id = anId # required
     self.cleanStart = cleanStart
     self.sessionExpiryInterval = sessionExpiryInterval
@@ -64,6 +64,8 @@ class MQTTClients:
     self.receiveMaximum = MQTTV5.MAX_PACKETID
     self.connected = False
     self.will = None
+    self.willDelayInterval = willDelayInterval
+    self.delayedWillTime = None
     self.socket = socket
     self.broker = broker
     # outbound messages
@@ -226,6 +228,33 @@ class MQTTClients:
       logger.error("Pubrec received for msgid %d, but no message found", msgid)
     return rc
 
+class cleanupThreads(threading.Thread):
+  """
+  Most of the actions of the broker can be taken when provoked by an external stimulus,
+  which is generally a client taking some action.  A few actions need to be assessed
+  asynchronously, such as the will delay.
+  """
+
+  def __init__(self, broker, lock=None):
+    threading.Thread.__init__(self)
+    self.broker = broker
+    self.lock = lock
+    self.running = False
+    self.start()
+
+  def run(self):
+    self.running = True
+    while self.running:
+      time.sleep(1)
+      # will delay 
+      for clientid in self.broker.willMessageClients.copy():
+        client = self.broker.getClient(clientid)
+        if client and time.monotonic() >= client.delayedWillTime:
+          self.broker.sendWillMessage(clientid)
+
+  def stop(self):
+    self.running = False
+
 
 class MQTTBrokers:
 
@@ -257,6 +286,8 @@ class MQTTBrokers:
     else:
       self.lock = threading.RLock()
 
+    self.cleanupThread = cleanupThreads(self.broker)
+
     logger.info("MQTT 5.0 Paho Test Broker")
     logger.info("Optional behaviour, publish on pubrel: %s", self.publish_on_pubrel)
     logger.info("Optional behaviour, single publish on overlapping topics: %s", self.broker.overlapping_single)
@@ -271,6 +302,10 @@ class MQTTBrokers:
     Other optional behaviour:
         - topics which are max QoS 0, QoS 1 or unavailable
     """
+
+  def shutdown(self):
+    self.disconnectAll()
+    self.cleanupThread.stop()
 
   def setBroker3(self, broker3):
     self.broker.setBroker3(broker3.broker)
@@ -400,13 +435,20 @@ class MQTTBrokers:
       sessionExpiryInterval = packet.properties.SessionExpiryInterval
     else:
       sessionExpiryInterval = -1 # no expiry
+    # will delay
+    willDelayInterval = 0
+    if hasattr(packet.willProperties, "WillDelayInterval"):
+      willDelayInterval = packet.willProperties.WillDelayInterval
+    if willDelayInterval > sessionExpiryInterval:
+      willDelayInterval = sessionExpiryInterval
     if me == None:
-      me = MQTTClients(packet.ClientIdentifier, packet.CleanStart, sessionExpiryInterval, keepalive, sock, self)
+      me = MQTTClients(packet.ClientIdentifier, packet.CleanStart, sessionExpiryInterval, willDelayInterval, keepalive, sock, self)
     else:
       me.socket = sock # set existing client state to new socket
       me.cleanStart = packet.CleanStart
       me.keepalive = keepalive
       me.sessionExpiryInterval = sessionExpiryInterval
+      me.willDelayInterval = willDelayInterval
     # the topic alias maximum in the connect properties sets the maximum outgoing topic aliases for a client
     me.topicAliasMaximum = packet.properties.TopicAliasMaximum if hasattr(packet.properties, "TopicAliasMaximum") else 0
     me.maximumPacketSize = packet.properties.MaximumPacketSize if hasattr(packet.properties, "MaximumPacketSize") else MQTTV5.MAX_PACKET_SIZE
@@ -426,7 +468,7 @@ class MQTTBrokers:
     logger.info("[MQTT-3.14.4-2] Client must not send any more packets after disconnect")
     me = self.clients[sock]
     me.clearTopicAliases()
-    # Session expiry
+    # Session expiry 
     if packet and hasattr(packet.properties, "SessionExpiryInterval"):
       if me.sessionExpiryInterval == 0 and packet.properties.SessionExpiryInterval > 0:
         raise MQTTV5.ProtocolError("[MQTT-3.1.0-2] Can't reset SessionExpiryInterval from 0")
@@ -450,7 +492,7 @@ class MQTTBrokers:
     except:
       pass # doesn't matter if the socket has been closed at the other end already
 
-  def disconnectAll(self, sock):
+  def disconnectAll(self):
     for sock in self.clients.keys():
       self.disconnect(sock, None)
 

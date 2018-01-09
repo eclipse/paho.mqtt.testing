@@ -38,8 +38,12 @@ def sendtosocket(mysocket, data):
   logger.debug("out: %s", str(data))
   sent = 0
   length = len(data)
-  while sent < length:
-    sent += mysocket.send(data)
+  try:
+    while sent < length:
+      sent += mysocket.send(data)
+  except:
+    pass # could be socket error
+  return sent
 
 class Callback:
 

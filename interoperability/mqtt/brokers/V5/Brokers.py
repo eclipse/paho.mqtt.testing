@@ -33,6 +33,7 @@ class Brokers:
     self.overlapping_single = overlapping_single
     self.topicAliasMaximum = topicAliasMaximum
     self.__broker3 = None
+    self.willMessageClients = set() # set of clients for which will delay calculations are needed
 
   def setBroker3(self, broker3):
     self.__broker3 = broker3
@@ -62,19 +63,35 @@ class Brokers:
 
   def sendWillMessage(self, aClientid):
     "Sends the will message, if any, for a client"
+    self.__clients[aClientid].delayedWillTime = None
+    if aClientid in self.willMessageClients:
+      self.willMessageClients.remove(aClientid)
+    print("sendWillMessage", self.__clients[aClientid].will)
+    logger.info("[MQTT-3.1.2-8] sending will message for client %s", aClientid)
+    willtopic, willQoS, willmsg, willRetain = self.__clients[aClientid].will
+    if willRetain:
+      logger.info("[MQTT-3.1.2-17] sending will message retained for client %s", aClientid)
+    else:
+      logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
+    self.publish(aClientid, willtopic, willmsg, willQoS, None, time.monotonic(), willRetain)
+    logger.info("[MQTT-3.1.2-10] will message is deleted after use or disconnect, for client %s", aClientid)
+    logger.info("[MQTT-3.14.4-3] on receipt of disconnect, will message is deleted")
+    self.__clients[aClientid].will = None
+
+  def setupWillMessage(self, aClientid):
+    "Sends the will message, if any, for a client"
     if aClientid in self.__clients.keys() and self.__clients[aClientid].connected:
       if self.__clients[aClientid].will != None:
-        logger.info("[MQTT-3.1.2-8] sending will message for client %s", aClientid)
-        willtopic, willQoS, willmsg, willRetain = self.__clients[aClientid].will
-        if willRetain:
-          logger.info("[MQTT-3.1.2-17] sending will message retained for client %s", aClientid)
+        if self.__clients[aClientid].willDelayInterval > 0:
+          self.__clients[aClientid].delayedWillTime = time.monotonic() + self.__clients[aClientid].willDelayInterval
+          self.__clients[aClientid].willDelayInterval = 0 # will be changed on next connect
+          self.willMessageClients.add(aClientid)
         else:
-          logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
-        self.publish(aClientid, willtopic, willmsg, willQoS, None, time.monotonic(), willRetain)
+          self.sendWillMessage(aClientid)
 
   def disconnect(self, aClientid, willMessage=False, sessionExpiryInterval=-1):
     if willMessage:
-      self.sendWillMessage(aClientid)
+      self.setupWillMessage(aClientid)
     if aClientid in self.__clients.keys():
       self.__clients[aClientid].connected = False
       if sessionExpiryInterval == 0:
@@ -83,12 +100,8 @@ class Brokers:
         del self.__clients[aClientid]
       else:
         logger.info("[MQTT-3.1.2-4] broker must store the session data for client %s", aClientid)
-        #self.__clients[aClientid].timestamp = time.clock()
         self.__clients[aClientid].sessionEndedTime = time.monotonic()
         self.__clients[aClientid].connected = False
-        logger.info("[MQTT-3.1.2-10] will message is deleted after use or disconnect, for client %s", aClientid)
-        logger.info("[MQTT-3.14.4-3] on receipt of disconnect, will message is deleted")
-        self.__clients[aClientid].will = None
 
   def disconnectAll(self):
     for c in self.__clients.keys()[:]: # copy the array because disconnect will remove an element

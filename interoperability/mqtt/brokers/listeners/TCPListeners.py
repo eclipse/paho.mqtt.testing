@@ -208,7 +208,7 @@ def create(port, host="", TLS=False, serve_forever=False,
     cert_reqs=ssl.CERT_REQUIRED,
     ca_certs=None, certfile=None, keyfile=None):
   global server
-  logger.info("Starting MQTT server on address '%s' port %d %s", host, port, "with TLS support" if TLS else "")
+  logger.info("Starting TCP listener on address '%s' port %d %s", host, port, "with TLS support" if TLS else "")
   bind_address = ""
   if host not in ["", "INADDR_ANY"]:
     bind_address = host
@@ -225,7 +225,7 @@ def create(port, host="", TLS=False, serve_forever=False,
     server.serve_forever()
   else:
     thread = threading.Thread(target = server.serve_forever)
-    thread.daemon = True
+    #thread.daemon = True
     thread.start()
   return server
 

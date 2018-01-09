@@ -197,6 +197,9 @@ class MQTTBrokers:
     logger.info("Optional behaviour, drop QoS 0 publications to disconnected clients: %s", self.dropQoS0)
     logger.info("Optional behaviour, support zero length clientids: %s", self.zero_length_clientids)
 
+  def shutdown(self):
+    self.disconnectAll()
+  
   def setBroker5(self, broker5):
     self.broker.setBroker5(broker5.broker)
 
