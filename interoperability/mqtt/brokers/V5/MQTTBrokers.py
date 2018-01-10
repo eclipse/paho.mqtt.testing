@@ -493,7 +493,7 @@ class MQTTBrokers:
       pass # doesn't matter if the socket has been closed at the other end already
 
   def disconnectAll(self):
-    for sock in self.clients.keys():
+    for sock in list(self.clients.keys())[:]:
       self.disconnect(sock, None)
 
   def subscribe(self, sock, packet):
@@ -541,7 +541,7 @@ class MQTTBrokers:
   def publish(self, sock, packet):
     packet.receivedTime = time.monotonic()
     if packet.topicName.find("+") != -1 or packet.topicName.find("#") != -1:
-      raise ProtocolError("Topic name invalid %s" % packet.topicName)
+      raise MQTTV5.AcksProtocolError("Topic name invalid %s" % packet.topicName)
     # Test Topic to disconnect the client
     if packet.topicName.startswith("cmd/"):
         self.handleBehaviourPublish(sock, packet.topicName, packet.data)

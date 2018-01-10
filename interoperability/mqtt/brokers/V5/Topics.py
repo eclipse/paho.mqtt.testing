@@ -65,6 +65,11 @@ def topicMatches(wild, nonwild, wildCheck=True):
     assert nonwild.find('+') == nonwild.find('#') == -1
   assert isValidTopicName(wild) and isValidTopicName(nonwild)
 
+  if wild.startswith('$share'):
+    # strip shared prefix $share/sharename/
+    assert wild.count('/') >= 2
+    wild = wild.split('/', 2)[2]
+
   rc = False
   if wild.find('+') == wild.find('#') == -1:
     # no wildcards, so check is simple

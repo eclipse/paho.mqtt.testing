@@ -25,6 +25,9 @@ from .Subscriptions import *
 
 logger = logging.getLogger('MQTT broker')
 
+def isDollarTopic(name):
+  return name[0] == '$' and not name.startswith('$share/')
+
 class SubscriptionEngines:
 
    def __init__(self, sharedData={}):
@@ -62,7 +65,7 @@ class SubscriptionEngines:
      rc = None
      resubscribed = False
      if Topics.isValidTopicName(aTopic):
-       subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
+       subscriptions = self.__subscriptions if not isDollarTopic(aTopic) else self.__dollar_subscriptions
        for s in subscriptions:
          if s.getClientid() == aClientid and s.getTopic() == aTopic:
            s.resubscribe(options)
@@ -95,7 +98,7 @@ class SubscriptionEngines:
      "unsubscribe to one topic"
      matched = False
      if Topics.isValidTopicName(aTopic):
-       subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
+       subscriptions = self.__subscriptions if not isDollarTopic(aTopic) else self.__dollar_subscriptions
        for s in subscriptions:
          if s.getClientid() == aClientid and s.getTopic() == aTopic:
            logger.info("[MQTT-3.10.4-1] topic filters must be compared byte for byte")
@@ -115,7 +118,7 @@ class SubscriptionEngines:
      "return a list of subscriptions for this client"
      rc = None
      if Topics.isValidTopicName(aTopic):
-       subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
+       subscriptions = self.__subscriptions if not isDollarTopic(aTopic) else self.__dollar_subscriptions
        if aClientid == None:
          rc = [sub for sub in subscriptions if Topics.topicMatches(sub.getTopic(), aTopic)]
        else:
@@ -137,21 +140,20 @@ class SubscriptionEngines:
        #  break
      return chosen
 
-   def subscribers(self, aTopic):
+   def subscriptions(self, aTopic):
      "list all clients subscribed to this (non-wildcard) topic"
-     result = []
+     result = set()
      if Topics.isValidTopicName(aTopic):
-       subscriptions = self.__subscriptions if aTopic[0] != "$" else self.__dollar_subscriptions
+       subscriptions = self.__subscriptions if not isDollarTopic(aTopic) else self.__dollar_subscriptions
        for s in subscriptions:
          if Topics.topicMatches(s.getTopic(), aTopic):
-           if s.getClientid() not in result: # don't add a client id twice
-               result.append(s.getClientid())
+           result.add(s) # don't add a subscription twice
      return result
 
    def setRetained(self, aTopic, aMessage, aQoS, properties):
      "set a retained message on a non-wildcard topic"
      if Topics.isValidTopicName(aTopic):
-       retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
+       retained = self.__retained if not isDollarTopic(aTopic) else self.__dollar_retained
        if len(aMessage) == 0:
          if aTopic in retained.keys():
            logger.info("[MQTT-3.3.1-11] Deleting zero byte retained message")
@@ -163,7 +165,7 @@ class SubscriptionEngines:
      "returns (msg, QoS, properties) for a topic"
      result = None
      if Topics.isValidTopicName(aTopic):
-       retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
+       retained = self.__retained if not isDollarTopic(aTopic) else self.__dollar_retained
        if aTopic in retained.keys():
          result = retained[aTopic]
      return result
@@ -171,7 +173,7 @@ class SubscriptionEngines:
    def getRetainedTopics(self, aTopic):
      "returns a list of topics for which retained publications exist"
      if Topics.isValidTopicName(aTopic):
-       retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
+       retained = self.__retained if not isDollarTopic(aTopic) else self.__dollar_retained
        return retained.keys()
      else:
        return None

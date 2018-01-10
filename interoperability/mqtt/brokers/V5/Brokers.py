@@ -16,7 +16,7 @@
 *******************************************************************
 """
 
-import types, time, logging
+import types, time, logging, random
 
 from . import Topics
 from .SubscriptionEngines import SubscriptionEngines
@@ -145,7 +145,23 @@ class Brokers:
     else:
       logger.info("[MQTT-2.1.2-12] non-retained message - do not store")
 
-    for subscriber in self.se.subscribers(topic):  # all subscribed clients
+    subscriptions = self.se.subscriptions(topic)
+    # For shared subscriptions, there is only one recipient
+    nonshared = [s for s in list(subscriptions) if not s.getTopic().startswith('$share/')]
+    shared = [s for s in list(subscriptions) if s.getTopic().startswith('$share/')]
+    subscriptions = []
+    clientids = set()
+    for n in nonshared:
+      if n.getClientid() not in clientids:
+        clientids.add(n.getClientid())
+        subscriptions.append(n)
+    sharenames = set()  # set of shared topic names
+    for s in shared:
+      sharenames.add(s.getTopic())
+    for sname in list(sharenames):
+      subscriptions.append(random.choice([s for s in shared if s.getTopic() == sname]))
+    
+    for subscriber in [s.getClientid() for s in subscriptions]:  # all subscribed clients
       # qos is lower of publication and subscription
       if len(self.se.getSubscriptions(topic, subscriber)) > 1:
         logger.info("[MQTT-3.3.5-1] overlapping subscriptions")

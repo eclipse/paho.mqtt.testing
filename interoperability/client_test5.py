@@ -1036,6 +1036,56 @@ class Test(unittest.TestCase):
       callback.clear()
       callback2.clear()
 
+    def test_shared_subscriptions(self):
+      
+      callback.clear()
+      callback2.clear()
+      shared_sub_topic = '$share/sharename/x'
+      shared_pub_topic = 'x'
+      
+      connack = aclient.connect(host=host, port=port, cleanstart=True)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, False)
+      aclient.subscribe([shared_sub_topic, topics[0]], [MQTTV5.SubscribeOptions(2)]*2) # subscribe to will message topic
+      self.waitfor(callback.subscribeds, 1, 3)
+
+      connack = bclient.connect(host=host, port=port, cleanstart=True)
+      self.assertEqual(connack.reasonCode.getName(), "Success")
+      self.assertEqual(connack.sessionPresent, False)
+      bclient.subscribe([shared_sub_topic, topics[0]], [MQTTV5.SubscribeOptions(2)]*2) # subscribe to will message topic
+      self.waitfor(callback2.subscribeds, 1, 3)
+
+      callback.clear()
+      callback2.clear()
+      
+      count = 10
+      for i in range(count):
+        bclient.publish(topics[0], "message "+str(i), 0)
+      j = 0
+      while len(callback.messages) + len(callback2.messages) < 2*count and j < 20:
+        time.sleep(.1)
+        j += 1
+      time.sleep(1)
+      self.assertEqual(len(callback.messages), count)
+      self.assertEqual(len(callback2.messages), count)
+      
+      callback.clear()
+      callback2.clear()
+
+      count = 10
+      for i in range(count):
+        bclient.publish(shared_pub_topic, "message "+str(i), 0)
+      j = 0
+      while len(callback.messages) + len(callback2.messages) < count and j < 20:
+        time.sleep(.1)
+        j += 1
+      time.sleep(1)
+      # Each message should only be received once
+      self.assertEqual(len(callback.messages) + len(callback2.messages), count)
+
+      aclient.disconnect()
+      bclient.disconnect()
+
 
 def setData():
   global topics, wildtopics, nosubscribe_topics, host, port
