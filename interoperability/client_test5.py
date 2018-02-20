@@ -765,6 +765,57 @@ class Test(unittest.TestCase):
       self.assertEqual(callback.messagedicts[1]["properties"].TopicAlias, topicalias, topicalias)
       self.assertEqual(callback.messagedicts[2]["properties"].TopicAlias, topicalias, topicalias)
 
+      callback.clear()
+
+      serverTopicAliasMaximum = 0 # no server topic alias allowed
+      connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+      #connect_properties.TopicAliasMaximum = serverTopicAliasMaximum # default is 0
+      connack = aclient.connect(host=host, port=port, cleanstart=True,
+                                       properties=connect_properties)
+      clientTopicAliasMaximum = 0
+      if hasattr(connack.properties, "TopicAliasMaximum"):
+        clientTopicAliasMaximum = connack.properties.TopicAliasMaximum
+
+      aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+      self.waitfor(callback.subscribeds, 1, 3)
+
+      for qos in range(3):
+         aclient.publish(topics[0], b"topic alias 1", qos)
+      self.waitfor(callback.messages, 3, 3)
+      self.assertEqual(len(callback.messages), 3, callback.messages)
+      aclient.disconnect()
+
+      # No topic aliases
+      self.assertFalse(hasattr(callback.messagedicts[0]["properties"], "TopicAlias"), callback.messagedicts[0]["properties"])
+      self.assertFalse(hasattr(callback.messagedicts[1]["properties"], "TopicAlias"), callback.messagedicts[1]["properties"])
+      self.assertFalse(hasattr(callback.messagedicts[2]["properties"], "TopicAlias"), callback.messagedicts[2]["properties"])
+
+      callback.clear()
+
+      serverTopicAliasMaximum = 0 # no server topic alias allowed
+      connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+      connect_properties.TopicAliasMaximum = serverTopicAliasMaximum # default is 0
+      connack = aclient.connect(host=host, port=port, cleanstart=True,
+                                       properties=connect_properties)
+      clientTopicAliasMaximum = 0
+      if hasattr(connack.properties, "TopicAliasMaximum"):
+        clientTopicAliasMaximum = connack.properties.TopicAliasMaximum
+
+      aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+      self.waitfor(callback.subscribeds, 1, 3)
+
+      for qos in range(3):
+         aclient.publish(topics[0], b"topic alias 1", qos)
+      self.waitfor(callback.messages, 3, 3)
+      self.assertEqual(len(callback.messages), 3, callback.messages)
+      aclient.disconnect()
+
+      # No topic aliases
+      self.assertFalse(hasattr(callback.messagedicts[0]["properties"], "TopicAlias"), callback.messagedicts[0]["properties"])
+      self.assertFalse(hasattr(callback.messagedicts[1]["properties"], "TopicAlias"), callback.messagedicts[1]["properties"])
+      self.assertFalse(hasattr(callback.messagedicts[2]["properties"], "TopicAlias"), callback.messagedicts[2]["properties"])
+
+
     def test_maximum_packet_size(self):
       callback.clear()
 
