@@ -144,6 +144,8 @@ class MQTTClients:
   def publishArrived(self, topic, msg, qos, properties, receivedTime, retained=False):
     pub = MQTTV5.Publishes()
     if properties:
+      if hasattr(properties, 'TopicAlias'):
+        del properties.TopicAlias
       pub.properties = properties
     logger.info("[MQTT-3.2.3-3] topic name must match the subscription's topic filter")
     # Topic alias
