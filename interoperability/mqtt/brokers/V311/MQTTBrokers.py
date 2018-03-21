@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -26,7 +26,7 @@ from .Brokers import Brokers
 logger = logging.getLogger('MQTT broker')
 
 def respond(sock, packet):
-  logger.info("out: "+repr(packet))
+  logger.debug("out: "+repr(packet))
   if hasattr(sock, "handlePacket"):
     sock.handlePacket(packet)
   else:
@@ -233,7 +233,7 @@ class MQTTBrokers:
 
   def handlePacket(self, packet, sock):
     terminate = False
-    logger.info("in: "+repr(packet))
+    logger.debug("in: "+repr(packet))
     if sock not in self.clients.keys() and packet.fh.MessageType != MQTTV3.CONNECT:
       self.disconnect(sock, packet)
       raise MQTTV3.MQTTException("[MQTT-3.1.0-1] Connect was not first packet on socket")

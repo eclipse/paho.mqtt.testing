@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -1156,6 +1156,7 @@ class Subscribes(Packets):
 
   def __str__(self):
     return str(self.fh)+", PacketId="+str(self.packetIdentifier)+\
+           ", Properties: "+str(self.properties)+\
            ", Data="+str( [(x, str(y)) for (x, y) in self.data] ) +")"
 
   def __eq__(self, packet):

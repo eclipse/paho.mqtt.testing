@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -137,7 +137,7 @@ class WebSocketTCPHandler(socketserver.StreamRequestHandler):
     while not terminate and server and not server.terminate:
       try:
         if not keptalive:
-          logger.info("Waiting for request")
+          logger.debug("Waiting for request")
         (i, o, e) = select.select([sock], [], [], 1)
         if i == [sock]:
           if first:

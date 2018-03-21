@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -25,7 +25,7 @@ from .Brokers import Brokers
 logger = logging.getLogger('MQTT broker')
 
 def respond(address, callback, packet):
-  logger.info("out: "+repr(packet))
+  logger.debug("out: "+repr(packet))
   if hasattr(callback[1], "handlePacket"):
     callback[1].handlePacket(packet)
   else:
@@ -234,7 +234,7 @@ class MQTTSNBrokers:
 
   def handlePacket(self, packet, sock, callback):
     terminate = False
-    logger.info("in: "+str(packet))
+    logger.debug("in: "+str(packet))
     if sock not in self.clients.keys() and not isinstance(packet, MQTTSN.Connects):
       print(self.clients.keys(), sock)
       self.disconnect(sock, packet)

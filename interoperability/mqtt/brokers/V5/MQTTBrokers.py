@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -44,7 +44,7 @@ def respond(sock, packet, maximumPacketSize=500):
   if packlen > maximumPacketSize:
     logger.error("Packet too big to send to client packet size %d max packet size %d" % (packlen, maximumPacketSize))
     return
-  logger.info("out: "+str(packet))
+  logger.debug("out: "+str(packet))
   if hasattr(sock, "handlePacket"):
     sock.handlePacket(packet)
   else:
@@ -356,7 +356,7 @@ class MQTTBrokers:
 
   def handlePacket(self, packet, sock):
     terminate = False
-    logger.info("in: "+str(packet))
+    logger.debug("in: "+str(packet))
     if sock not in self.clients.keys() and packet.fh.PacketType != MQTTV5.PacketTypes.CONNECT:
       self.disconnect(sock, packet)
       raise MQTTV5.MQTTException("[MQTT-3.1.0-1] Connect was not first packet on socket")
