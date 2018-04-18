@@ -1282,6 +1282,7 @@ class Unsubscribes(Packets):
 
   def __str__(self):
     return str(self.fh)+", PacketId="+str(self.packetIdentifier)+\
+           ", Properties: "+str(self.properties)+\
            ", Data="+str(self.topicFilters)+")"
 
   def __eq__(self, packet):
