@@ -120,7 +120,11 @@ def run(port=1883, config=None,
         if curline.startswith('#') or len(curline) == 0:
           continue
         words = curline.split()
-        if words[0] == "listener":
+        if words[0] == "loglevel":
+          if len(words) > 1:
+            if words[1].upper() == "DEBUG":
+              logger.setLevel(logging.DEBUG)
+        elif words[0] == "listener":
           ca_certs = certfile = keyfile = None
           cert_reqs=ssl.CERT_REQUIRED
           bind_address = ""
@@ -156,7 +160,7 @@ def run(port=1883, config=None,
           elif protocol == "http":
             servers_to_create.append((HTTPListeners, {"host":bind_address, "port":port, "TLS":TLS, "cert_reqs":cert_reqs,
                 "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
-      servers_to_create[-1][1]["serve_forever"] = True    
+      servers_to_create[-1][1]["serve_forever"] = True
       for server in servers_to_create:
         servers.append(server[0].create(**server[1]))
 
@@ -173,7 +177,7 @@ def run(port=1883, config=None,
       server.shutdown()
     except:
       traceback.print_exc()
-  
+
   logger.info("Shutdown brokers")
   for broker in brokers:
     try:
