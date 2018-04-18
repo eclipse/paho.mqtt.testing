@@ -59,7 +59,7 @@ class MQTTClients:
     if len(self.outbound) > 0:
       logger.info("[MQTT-4.4.0-1] resending inflight QoS 1 and 2 messages")
     for pub in self.outbound:
-      logger.debug("resending", pub)
+      logger.debug("resending "+str(pub))
       logger.info("[MQTT-4.4.0-2] dup flag must be set on in re-publish")
       if pub.fh.QoS == 0:
         respond(self.socket, pub)
@@ -97,7 +97,7 @@ class MQTTClients:
       pub.qos2state = "PUBREC"
     if qos in [1, 2]:
       pub.messageIdentifier = self.msgid
-      logger.debug("client id: %d msgid: %d", self.id, self.msgid)
+      logger.debug("client id: %s msgid: %d", self.id, self.msgid)
       if self.msgid == 65535:
         self.msgid = 1
       else:

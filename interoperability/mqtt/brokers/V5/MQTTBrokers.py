@@ -124,7 +124,7 @@ class MQTTClients:
   def sendFirst(self, pub):
     if pub.fh.QoS in [1, 2]:
       pub.packetIdentifier = self.msgid
-      logger.debug("client id: %d msgid: %d", self.id, self.msgid)
+      logger.debug("client id: %s msgid: %d", self.id, self.msgid)
       if self.msgid == MQTTV5.MAX_PACKETID:
         self.msgid = 1
       else:
@@ -248,7 +248,7 @@ class cleanupThreads(threading.Thread):
     self.running = True
     while self.running:
       time.sleep(1)
-      # will delay 
+      # will delay
       for clientid in self.broker.willMessageClients.copy():
         client = self.broker.getClient(clientid)
         if client and time.monotonic() >= client.delayedWillTime:
@@ -458,7 +458,7 @@ class MQTTBrokers:
     logger.info("[MQTT-3.14.4-2] Client must not send any more packets after disconnect")
     me = self.clients[sock]
     me.clearTopicAliases()
-    # Session expiry 
+    # Session expiry
     if packet and hasattr(packet.properties, "SessionExpiryInterval"):
       if me.sessionExpiryInterval == 0 and packet.properties.SessionExpiryInterval > 0:
         raise MQTTV5.ProtocolError("[MQTT-3.1.0-2] Can't reset SessionExpiryInterval from 0")
