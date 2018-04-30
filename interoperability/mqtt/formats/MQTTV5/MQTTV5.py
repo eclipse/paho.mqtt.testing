@@ -1219,6 +1219,7 @@ class UnsubSubacks(Packets):
 
   def __str__(self):
     return str(self.fh)+", PacketId="+str(self.packetIdentifier)+\
+           ", Properties: "+str(self.properties)+\
            ", reason codes="+str([str(rc) for rc in self.reasonCodes])+")"
 
   def __eq__(self, packet):

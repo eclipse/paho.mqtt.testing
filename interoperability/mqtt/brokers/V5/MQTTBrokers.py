@@ -90,7 +90,7 @@ class MQTTClients:
     self.outgoingTopicNamesToAliases = []
 
   def resendPub(self, pub):
-    logger.debug("resending", pub)
+    logger.debug("resending %s", str(pub))
     logger.info("[MQTT-4.4.0-2] dup flag must be set on in re-publish")
     if pub.fh.QoS == 0:
       respond(self.socket, pub, self.maximumPacketSize)
@@ -424,7 +424,7 @@ class MQTTBrokers:
     if hasattr(packet.properties, "SessionExpiryInterval"):
       sessionExpiryInterval = packet.properties.SessionExpiryInterval
     else:
-      sessionExpiryInterval = -1 # no expiry
+      sessionExpiryInterval = 0 # immediate expiry - change to spec
     # will delay
     willDelayInterval = 0
     if hasattr(packet.willProperties, "WillDelayInterval"):

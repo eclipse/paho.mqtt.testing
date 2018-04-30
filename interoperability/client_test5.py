@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -228,7 +228,9 @@ class Test(unittest.TestCase):
       callback.clear()
       callback2.clear()
 
-      aclient.connect(host=host, port=port, cleanstart=True)
+      connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+      connect_properties.SessionExpiryInterval = 99999
+      aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties)
       aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
       aclient.disconnect()
 
@@ -299,7 +301,9 @@ class Test(unittest.TestCase):
       try:
         callback.clear()
         callback2.clear()
-        bclient.connect(host=host, port=port, cleanstart=False)
+        connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+        connect_properties.SessionExpiryInterval = 99999
+        bclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties)
         bclient.subscribe([wildtopics[6]], [MQTTV5.SubscribeOptions(2)])
         bclient.pause() # stops responding to incoming publishes
         bclient.publish(topics[1], b"", 1, retained=False)
@@ -308,7 +312,7 @@ class Test(unittest.TestCase):
         bclient.disconnect()
         assert len(callback2.messages) == 0, "length should be 0: %s" % callback2.messages
         bclient.resume()
-        bclient.connect(host=host, port=port, cleanstart=False)
+        bclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties)
         time.sleep(3)
         assert len(callback2.messages) == 2, "length should be 2: %s" % callback2.messages
         bclient.disconnect()
@@ -497,9 +501,13 @@ class Test(unittest.TestCase):
     def test_publication_expiry(self):
       callback.clear()
       callback2.clear()
-      bclient.connect(host=host, port=port, cleanstart=True)
+      connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+      connect_properties.SessionExpiryInterval = 99999
+      bclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties)
       bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-      bclient.disconnect()
+      disconnect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
+      disconnect_properties.SessionExpiryInterval = 999999999
+      bclient.disconnect(properties = disconnect_properties)
 
       aclient.connect(host=host, port=port, cleanstart=True)
       publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
@@ -696,6 +704,7 @@ class Test(unittest.TestCase):
 
       connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
       connect_properties.TopicAliasMaximum = 0 # server topic aliases not allowed
+      connect_properties.SessionExpiryInterval = 99999
       connack = aclient.connect(host=host, port=port, cleanstart=True,
                                            properties=connect_properties)
       clientTopicAliasMaximum = 0
@@ -988,7 +997,7 @@ class Test(unittest.TestCase):
 
     def test_will_delay(self):
       """
-      the will message should be received earlier than the session expiry 
+      the will message should be received earlier than the session expiry
 
       """
       callback.clear()
@@ -997,7 +1006,7 @@ class Test(unittest.TestCase):
       will_properties = MQTTV5.Properties(MQTTV5.PacketTypes.WILLMESSAGE)
       connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
 
-      # set the will delay and session expiry to the same value - 
+      # set the will delay and session expiry to the same value -
       # then both should occur at the same time
       will_properties.WillDelayInterval = 3 # in seconds
       connect_properties.SessionExpiryInterval = 5
@@ -1089,12 +1098,12 @@ class Test(unittest.TestCase):
       callback2.clear()
 
     def test_shared_subscriptions(self):
-      
+
       callback.clear()
       callback2.clear()
       shared_sub_topic = '$share/sharename/x'
       shared_pub_topic = 'x'
-      
+
       connack = aclient.connect(host=host, port=port, cleanstart=True)
       self.assertEqual(connack.reasonCode.getName(), "Success")
       self.assertEqual(connack.sessionPresent, False)
@@ -1109,7 +1118,7 @@ class Test(unittest.TestCase):
 
       callback.clear()
       callback2.clear()
-      
+
       count = 10
       for i in range(count):
         bclient.publish(topics[0], "message "+str(i), 0)
@@ -1120,7 +1129,7 @@ class Test(unittest.TestCase):
       time.sleep(1)
       self.assertEqual(len(callback.messages), count)
       self.assertEqual(len(callback2.messages), count)
-      
+
       callback.clear()
       callback2.clear()
 
