@@ -67,7 +67,7 @@ class BufferedSockets:
         buffer.append(i ^ mask[mi])
         mi = (mi+1)%4
     else:
-      buffer = mplayload
+      buffer = mpayload
     self.buffer += buffer
 
   def recv(self, bufsize):
