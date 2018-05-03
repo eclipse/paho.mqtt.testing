@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -32,6 +32,7 @@ logger.setLevel(logging.INFO)
 break_connections = False
 
 global options, brokers, clients
+brokers = clients = None
 options = {}
 options["control_connection"] = "localhost:7777"
 options["control_topic"] = "Eclipse/Paho/restart_test/proxy_control"
@@ -64,8 +65,11 @@ class ControlBrokers:
     self.messages.append((client, userdata, msg))
     break_connections = True
     logger.info("Terminating client")
-    brokers.close()
-    clients.close()
+    try:
+        brokers.close()
+        clients.close()
+    except:
+        pass
 
   def on_publish(self, client, userdata, data):
     self.published = True

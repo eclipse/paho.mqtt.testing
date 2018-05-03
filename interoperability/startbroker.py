@@ -27,11 +27,4 @@ if __name__ == "__main__":
   broker_logger.addHandler(ch)
   broker_logger.propagate = False # don't pass log entries up to the root logger
 
-  if len(sys.argv) == 1:
-    mqtt.brokers.main(sys.argv)
-  elif sys.argv[1] in ["3", "V3"]:
-    mqtt.brokers.V311.main(sys.argv)
-  elif sys.argv[1] in ["5", "V5"]:
-    mqtt.brokers.V5.main(sys.argv)
-  else:
-    mqtt.brokers.main(sys.argv)
+  mqtt.brokers.main(sys.argv)

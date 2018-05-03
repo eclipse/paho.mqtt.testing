@@ -50,15 +50,64 @@ def setup_persistence(persistence_filename):
   sharedData = root.mqtt["sharedData"]
   return connection, sharedData
 
-def run(port=1883, config=None,
-        publish_on_pubrel=True,
-        overlapping_single=True,
-        dropQoS0=True,
-        zero_length_clientids=True,
-        topicAliasMaximum=2,
-        maximumPacketSize=1000,
-        receiveMaximum=2,
-        serverKeepAlive=60):
+def process_config(config):
+    options = {}
+    servers_to_create = []
+    lineno = 0
+    while lineno < len(config):
+      curline = config[lineno].strip()
+      lineno += 1
+      if curline.startswith('#') or len(curline) == 0:
+        continue
+      words = curline.split()
+      if words[0] == "loglevel":
+        if len(words) > 1:
+          if words[1].upper() == "DEBUG":
+            logger.setLevel(logging.DEBUG)
+      elif words[0] == "receive_maximum":
+        options["receiveMaximum"] = int(words[1])
+      elif words[0] in ["maximum_packet_size", "message_size_limit"]:
+        options["maximumPacketSize"] = int(words[1])
+      elif words[0] == "listener":
+        ca_certs = certfile = keyfile = None
+        cert_reqs=ssl.CERT_REQUIRED
+        bind_address = ""
+        port = 1883; TLS=False
+        if len(words) > 1:
+          port = int(words[1])
+        protocol = "mqtt"
+        if len(words) >= 3:
+          bind_address = words[2]
+        if len(words) >= 4:
+          if words[3] in ["mqttsn", "http"]:
+            protocol = words[3]
+        while lineno < len(config) and not config[lineno].strip().startswith("listener"):
+          curline = config[lineno].strip()
+          lineno += 1
+          if curline.startswith('#') or len(curline) == 0:
+            continue
+          words = curline.split()
+          if words[0] == "require_certificate":
+            if words[1] == "false":
+              cert_reqs=ssl.CERT_OPTIONAL
+          elif words[0] == "cafile":
+            ca_certs = words[1]; TLS=True
+          elif words[0] == "certfile":
+            certfile = words[1]; TLS=True
+          elif words[0] == "keyfile":
+            keyfile = words[1]; TLS=True
+        if protocol == "mqtt":
+          servers_to_create.append((TCPListeners, {"host":bind_address, "port":port, "TLS":TLS, "cert_reqs":cert_reqs,
+                      "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
+        elif protocol == "mqttsn":
+          servers_to_create.append((UDPListeners, {"host":bind_address, "port":port}))
+        elif protocol == "http":
+          servers_to_create.append((HTTPListeners, {"host":bind_address, "port":port, "TLS":TLS, "cert_reqs":cert_reqs,
+              "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
+    servers_to_create[-1][1]["serve_forever"] = True
+    return servers_to_create, options
+
+def run(config=None):
   global logger, broker3, broker5, brokerSN, server
   logger = logging.getLogger('MQTT broker')
   logger.setLevel(logging.INFO)
@@ -71,26 +120,15 @@ def run(port=1883, config=None,
   else:
     sharedData = {}
 
-  broker3 = MQTTV3Brokers(publish_on_pubrel=publish_on_pubrel,
-      overlapping_single=overlapping_single,
-      dropQoS0=dropQoS0,
-      zero_length_clientids=zero_length_clientids,
-      lock=lock,
-      sharedData=sharedData)
+  options = {}
+  if config != None:
+    servers_to_create, options = process_config(config)
 
-  broker5 = MQTTV5Brokers(publish_on_pubrel=publish_on_pubrel,
-      overlapping_single=overlapping_single,
-      dropQoS0=dropQoS0,
-      zero_length_clientids=zero_length_clientids,
-      topicAliasMaximum=topicAliasMaximum,
-      maximumPacketSize=maximumPacketSize,
-      receiveMaximum=receiveMaximum,
-      serverKeepAlive=serverKeepAlive,
-      lock=lock,
-      sharedData=sharedData)
+  broker3 = MQTTV3Brokers(options=options, lock=lock, sharedData=sharedData)
 
-  brokerSN = MQTTSNBrokers(lock=lock,
-      sharedData=sharedData)
+  broker5 = MQTTV5Brokers(options=options, lock=lock, sharedData=sharedData)
+
+  brokerSN = MQTTSNBrokers(lock=lock, sharedData=sharedData)
 
   brokers = [broker3, broker5, brokerSN]
 
@@ -108,62 +146,12 @@ def run(port=1883, config=None,
 
   try:
     if config == None:
-      TCPBridges.setBroker5(broker5)
-      TCPBridges.create(1886)
+      #TCPBridges.setBroker5(broker5)
+      #TCPBridges.create(1886)
       servers.append(TCPListeners.create(1883, serve_forever=True))
     else:
-      servers_to_create = []
-      lineno = 0
-      while lineno < len(config):
-        curline = config[lineno].strip()
-        lineno += 1
-        if curline.startswith('#') or len(curline) == 0:
-          continue
-        words = curline.split()
-        if words[0] == "loglevel":
-          if len(words) > 1:
-            if words[1].upper() == "DEBUG":
-              logger.setLevel(logging.DEBUG)
-        elif words[0] == "listener":
-          ca_certs = certfile = keyfile = None
-          cert_reqs=ssl.CERT_REQUIRED
-          bind_address = ""
-          port = 1883; TLS=False
-          if len(words) > 1:
-            port = int(words[1])
-          protocol = "mqtt"
-          if len(words) >= 3:
-            bind_address = words[2]
-          if len(words) >= 4:
-            if words[3] in ["mqttsn", "http"]:
-              protocol = words[3]
-          while lineno < len(config) and not config[lineno].strip().startswith("listener"):
-            curline = config[lineno].strip()
-            lineno += 1
-            if curline.startswith('#') or len(curline) == 0:
-              continue
-            words = curline.split()
-            if words[0] == "require_certificate":
-              if words[1] == "false":
-                cert_reqs=ssl.CERT_OPTIONAL
-            elif words[0] == "cafile":
-              ca_certs = words[1]; TLS=True
-            elif words[0] == "certfile":
-              certfile = words[1]; TLS=True
-            elif words[0] == "keyfile":
-              keyfile = words[1]; TLS=True
-          if protocol == "mqtt":
-            servers_to_create.append((TCPListeners, {"host":bind_address, "port":port, "TLS":TLS, "cert_reqs":cert_reqs,
-                        "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
-          elif protocol == "mqttsn":
-            servers_to_create.append((UDPListeners, {"host":bind_address, "port":port}))
-          elif protocol == "http":
-            servers_to_create.append((HTTPListeners, {"host":bind_address, "port":port, "TLS":TLS, "cert_reqs":cert_reqs,
-                "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
-      servers_to_create[-1][1]["serve_forever"] = True
       for server in servers_to_create:
         servers.append(server[0].create(**server[1]))
-
   except KeyboardInterrupt:
     pass
   except:
@@ -243,8 +231,7 @@ def main(argv):
     else:
       assert False, "unhandled option"
 
-  run(publish_on_pubrel=publish_on_pubrel, overlapping_single=overlapping_single, dropQoS0=dropQoS0, port=port,
-     zero_length_clientids=zero_length_clientids, config=cfg)
+  run(config=cfg)
 
 def usage():
   print(

@@ -172,18 +172,22 @@ class MQTTClients:
 
 class MQTTBrokers:
 
-  def __init__(self, publish_on_pubrel=True, 
-    overlapping_single=True, 
-    dropQoS0=True, 
-    zero_length_clientids=True,
-    lock=None, sharedData={}):
+  def __init__(self, options={}, lock=None, sharedData={}):
+
+    defaults = {"publish_on_pubrel":True,
+      "overlapping_single":True,
+      "dropQoS0":True,
+      "zero_length_clientids":True}
+
+    for key in defaults.keys():
+      if key not in options.keys():
+        options[key] = defaults[key]
 
     # optional behaviours
-    self.publish_on_pubrel = publish_on_pubrel
-    self.dropQoS0 = dropQoS0                    # don't queue QoS 0 messages for disconnected clients
-    self.zero_length_clientids = zero_length_clientids
+    for key in options.keys():
+      setattr(self, key, options[key])
 
-    self.broker = Brokers(overlapping_single, sharedData=sharedData)
+    self.broker = Brokers(self.overlapping_single, sharedData=sharedData)
     self.clients = {}   # socket -> clients
     if lock:
       logger.info("Using shared lock %d", id(lock))
@@ -199,7 +203,7 @@ class MQTTBrokers:
 
   def shutdown(self):
     self.disconnectAll()
-  
+
   def setBroker5(self, broker5):
     self.broker.setBroker5(broker5.broker)
 

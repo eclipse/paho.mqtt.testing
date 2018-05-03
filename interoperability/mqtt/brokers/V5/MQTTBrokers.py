@@ -44,7 +44,9 @@ def respond(sock, packet, maximumPacketSize=500):
   if packlen > maximumPacketSize:
     logger.error("Packet too big to send to client packet size %d max packet size %d" % (packlen, maximumPacketSize))
     return
-  logger.debug("out: "+str(packet))
+  if hasattr(sock, "fileno"):
+    logger.debug("out: (%d) %s", sock.fileno(), packet)
+  #mscfile.write("broker=>client%d[label=%s];\n" % (sock.fileno(), str(packet).split("(")[0]))
   if hasattr(sock, "handlePacket"):
     sock.handlePacket(packet)
   else:
@@ -219,11 +221,12 @@ class MQTTClients:
   def pubrel(self, msgid):
     rc = None
     if self.broker.publish_on_pubrel:
-        pub = self.inbound[msgid]
-        if pub.fh.QoS == 2:
-          rc = pub
-        else:
-          logger.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
+        if msgid in self.inbound.keys():
+            pub = self.inbound[msgid]
+            if pub.fh.QoS == 2:
+                rc = pub
+            else:
+                logger.error("Pubrec received for msgid %d, but QoS is %d", msgid, pub.fh.QoS)
     else:
       rc = msgid in self.inbound
     if not rc:
@@ -260,27 +263,26 @@ class cleanupThreads(threading.Thread):
 
 class MQTTBrokers:
 
-  def __init__(self, publish_on_pubrel=True,
-    overlapping_single=True,
-    dropQoS0=True,
-    zero_length_clientids=True,
-    topicAliasMaximum=2,
-    maximumPacketSize=32,
-    receiveMaximum=2,
-    serverKeepAlive=60,
-    lock=None, sharedData={}):
+  def __init__(self, options={}, lock=None, sharedData={}):
+
+    defaults = {"publish_on_pubrel":True,
+      "overlapping_single":True,
+      "dropQoS0":True,
+      "zero_length_clientids":True,
+      "topicAliasMaximum":2,
+      "maximumPacketSize":32,
+      "receiveMaximum":2,
+      "serverKeepAlive":60}
+
+    for key in defaults.keys():
+      if key not in options.keys():
+        options[key] = defaults[key]
 
     # optional behaviours
-    self.publish_on_pubrel = publish_on_pubrel
-    self.dropQoS0 = dropQoS0                    # don't queue QoS 0 messages for disconnected clients
-    self.zero_length_clientids = zero_length_clientids
-    # topic alias maximum for each incoming client connection
-    self.topicAliasMaximum = topicAliasMaximum
-    self.maximumPacketSize = maximumPacketSize
-    self.receiveMaximum = receiveMaximum
-    self.serverKeepAlive = serverKeepAlive
+    for key in options.keys():
+      setattr(self, key, options[key])
 
-    self.broker = Brokers(overlapping_single, topicAliasMaximum, sharedData=sharedData)
+    self.broker = Brokers(self.overlapping_single, options["topicAliasMaximum"], sharedData=sharedData)
     self.clients = {}   # socket -> clients
     if lock:
       logger.info("Using shared lock %d", id(lock))
@@ -304,6 +306,9 @@ class MQTTBrokers:
     Other optional behaviour:
         - topics which are max QoS 0, QoS 1 or unavailable
     """
+    global mscfile
+    #mscfile = open("broker.msc", "w")
+    #mscfile.write("msc {\n broker;\n")
 
   def shutdown(self):
     self.disconnectAll()
@@ -356,7 +361,9 @@ class MQTTBrokers:
 
   def handlePacket(self, packet, sock):
     terminate = False
-    logger.debug("in: "+str(packet))
+    if hasattr(sock, "fileno"):
+        logger.debug("in: (%d) %s", sock.fileno(), packet)
+    #mscfile.write("client%d=>broker[label=%s];\n" % (sock.fileno(), str(packet).split("(")[0]))
     if sock not in self.clients.keys() and packet.fh.PacketType != MQTTV5.PacketTypes.CONNECT:
       self.disconnect(sock, packet)
       raise MQTTV5.MQTTException("[MQTT-3.1.0-1] Connect was not first packet on socket")
