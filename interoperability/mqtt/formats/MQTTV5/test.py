@@ -4,25 +4,23 @@ import MQTTV5
 
 class Test(unittest.TestCase):
 
-    def testMBIs(self):
+    def testVBIs(self):
       fh = MQTTV5.FixedHeaders(MQTTV5.PacketTypes.CONNECT)
       tests = [0, 56, 127, 128, 8888, 16383, 16384, 65535, 2097151, 2097152,
                20555666, 268435454, 268435455]
       for x in tests:
-        self.assertEqual(x, MQTTV5.MBIs.decode(MQTTV5.MBIs.encode(x))[0])
+        self.assertEqual(x, MQTTV5.VBIs.decode(MQTTV5.VBIs.encode(x))[0])
 
       with self.assertRaises(AssertionError):
-        MQTTV5.MBIs.decode(MQTTV5.MBIs.encode(268435456)) # out of MBI range
-        MQTTV5.MBIs.decode(MQTTV5.MBIs.encode(-1)) # out of MBI range
+        MQTTV5.VBIs.decode(MQTTV5.VBIs.encode(268435456)) # out of VBI range
+        MQTTV5.VBIs.decode(MQTTV5.VBIs.encode(-1)) # out of VBI range
 
     def testProperties(self):
       for packetType in MQTTV5.PacketTypes.indexes:
         #print("Properties", MQTTV5.Packets.Names[packetType])
         p = MQTTV5.Properties(packetType)
         q = MQTTV5.Properties(packetType)
-        if packetType not in [MQTTV5.PacketTypes.SUBSCRIBE,
-                              MQTTV5.PacketTypes.UNSUBSCRIBE,
-                              MQTTV5.PacketTypes.PINGREQ,
+        if packetType not in [MQTTV5.PacketTypes.PINGREQ,
                               MQTTV5.PacketTypes.PINGRESP]:
            p.UserPropertyList = [("jk", "jk"), ("kk", "kl")]
         else:
@@ -49,7 +47,7 @@ class Test(unittest.TestCase):
         # Two Byte Integer
         p.TopicAlias = 378
         # Four Byte Integer
-        p.PublicationExpiryInterval = 108927
+        p.MessageExpiryInterval = 108927
         # Variable Byte Integer
         p.SubscriptionIdentifier = 45678988
         # Binary Data

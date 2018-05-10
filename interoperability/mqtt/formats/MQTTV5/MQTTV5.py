@@ -223,7 +223,7 @@ class ReasonCodes:
       self.getName() # check it's good
 
 
-class MBIs:
+class VBIs:  # Variable Byte Integer
 
   @staticmethod
   def encode(x):
@@ -248,6 +248,8 @@ class MBIs:
     """
       Get the value of a multi-byte integer from a buffer
       Return the value, and the number of bytes used.
+
+      [MQTT-1.5.5-1 the encoded value MUST use the minimum number of bytes necessary to represent the value]
     """
     multiplier = 1
     value = 0
@@ -327,7 +329,7 @@ class FixedHeaders(object):
     buffer = bytes([(self.PacketType << 4) | (self.DUP << 3) |\
                          (self.QoS << 1) | self.RETAIN])
     self.remainingLength = length
-    buffer += MBIs.encode(length)
+    buffer += VBIs.encode(length)
     return buffer
 
   def unpack(self, buffer, maximumPacketSize):
@@ -337,7 +339,7 @@ class FixedHeaders(object):
     self.DUP = ((b0 >> 3) & 0x01) == 1
     self.QoS = (b0 >> 1) & 0x03
     self.RETAIN = (b0 & 0x01) == 1
-    (self.remainingLength, bytes) = MBIs.decode(buffer[1:])
+    (self.remainingLength, bytes) = VBIs.decode(buffer[1:])
     if self.remainingLength + bytes + 1 > maximumPacketSize:
        raise ProtocolError("Packet too large")
     return bytes + 1 # length of fixed header
@@ -373,16 +375,16 @@ def readUTF(buffer, maxlen):
   if length > maxlen:
     raise MalformedPacket("Length delimited string too long")
   buf = buffer[2:2+length].decode("utf-8")
-  logger.info("[MQTT-4.7.3-2] topic names and filters not include null")
+  logger.info("[MQTT-4.7.3-2] topic names and filters must not include null")
   zz = buf.find("\x00") # look for null in the UTF string
   if zz != -1:
-    raise MalformedPacket("[MQTT-1.5.3-2] Null found in UTF data "+buf)
+    raise MalformedPacket("[MQTT-1.5.4-2] Null found in UTF data "+buf)
   for c in range (0xD800, 0xDFFF):
     zz = buf.find(chr(c)) # look for D800-DFFF in the UTF string
     if zz != -1:
-      raise MalformedPacket("[MQTT-1.5.3-1] D800-DFFF found in UTF data "+buf)
+      raise MalformedPacket("[MQTT-1.5.4-1] D800-DFFF found in UTF data "+buf)
   if buf.find("\uFEFF") != -1:
-    logger.info("[MQTT-1.5.3-3] U+FEFF in UTF string")
+    logger.info("[MQTT-1.5.4-3] U+FEFF in UTF string")
   return buf, length+2
 
 def writeBytes(buffer):
@@ -533,7 +535,7 @@ class Properties(object):
 
   def writeProperty(self, identifier, type, value):
     buffer = b""
-    buffer += MBIs.encode(identifier) # identifier
+    buffer += VBIs.encode(identifier) # identifier
     if type == self.types.index("Byte"): # value
       buffer += bytes([value])
     elif type == self.types.index("Two Byte Integer"):
@@ -541,7 +543,7 @@ class Properties(object):
     elif type == self.types.index("Four Byte Integer"):
       buffer += writeInt32(value)
     elif type == self.types.index("Variable Byte Integer"):
-      buffer += MBIs.encode(value)
+      buffer += VBIs.encode(value)
     elif type == self.types.index("Binary Data"):
       buffer += writeBytes(value)
     elif type == self.types.index("UTF-8 Encoded String"):
@@ -567,7 +569,7 @@ class Properties(object):
         else:
           buffer += self.writeProperty(identifier, attr_type,
                            getattr(self, compressedName))
-    return MBIs.encode(len(buffer)) + buffer
+    return VBIs.encode(len(buffer)) + buffer
 
   def readProperty(self, buffer, type, propslen):
     if type == self.types.index("Byte"):
@@ -580,7 +582,7 @@ class Properties(object):
       value = readInt32(buffer)
       valuelen = 4
     elif type == self.types.index("Variable Byte Integer"):
-      value, valuelen = MBIs.decode(buffer)
+      value, valuelen = VBIs.decode(buffer)
     elif type == self.types.index("Binary Data"):
       value, valuelen = readBytes(buffer)
     elif type == self.types.index("UTF-8 Encoded String"):
@@ -603,13 +605,13 @@ class Properties(object):
   def unpack(self, buffer):
     self.clear()
     # deserialize properties into attributes from buffer received from network
-    propslen, MBIlen = MBIs.decode(buffer)
-    buffer = buffer[MBIlen:] # strip the bytes used by the MBI
+    propslen, VBIlen = VBIs.decode(buffer)
+    buffer = buffer[VBIlen:] # strip the bytes used by the VBI
     propslenleft = propslen
     while propslenleft > 0: # properties length is 0 if there are none
-      identifier, MBIlen = MBIs.decode(buffer) # property identifier
-      buffer = buffer[MBIlen:] # strip the bytes used by the MBI
-      propslenleft -= MBIlen
+      identifier, VBIlen = VBIs.decode(buffer) # property identifier
+      buffer = buffer[VBIlen:] # strip the bytes used by the VBI
+      propslenleft -= VBIlen
       attr_type = self.properties[identifier][0]
       value, valuelen = self.readProperty(buffer, attr_type, propslenleft)
       buffer = buffer[valuelen:] # strip the bytes used by the value
@@ -625,7 +627,7 @@ class Properties(object):
         if hasattr(self, compressedName):
           raise MQTTException("Property '%s' must not exist more than once" % property)
         setattr(self, propname, value)
-    return self, propslen + MBIlen
+    return self, propslen + VBIlen
 
 
 class Connects(Packets):
