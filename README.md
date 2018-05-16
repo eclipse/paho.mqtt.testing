@@ -2,11 +2,15 @@
 
 The Paho Testing Utilities are a collection of code and tools to help test MQTT clients and Brokers.
 
-## Project description:
+All the features are currently in the interoperability directory.  The components, or capabilities include:
 
-The Paho project has been created to provide reliable open-source implementations of open and standard messaging protocols aimed at new, existing, and emerging applications for Machine-to-Machine (M2M) and Internet of Things (IoT).
-Paho reflects the inherent physical and cost constraints of device connectivity. Its objectives include effective levels of decoupling between devices and applications, designed to keep markets open and encourage the rapid growth of scalable Web and Enterprise middleware and applications.
+- a Python MQTT broker which implements versions 3.1.1 and 5.0 (plus the start of MQTT-SN support)
+- a simple Python MQTT client, also supporting versions 3.1.1 and 5.0, used for simple general test suites
+- an MQTT network proxy, which can forward traffic to and from a broker, and display the MQTT packet info
+- Python modules to de/serialize MQTT packets for MQTT 3.1.1 and 5.0
+- an MQTT load/connection loss test, designed to investigate the reconnection logic for QoS 1 and 2 flows
 
+Check the readme in the interoperability directory for details.
 
 ## Links
 
