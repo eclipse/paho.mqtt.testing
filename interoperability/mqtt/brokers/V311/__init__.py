@@ -16,6 +16,7 @@
 *******************************************************************
 """
 
-from .. import coverage
+#from .. import coverage
 from .start import main
 from .MQTTBrokers import MQTTBrokers
+

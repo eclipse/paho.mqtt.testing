@@ -249,7 +249,7 @@ class VBIs:  # Variable Byte Integer
       Get the value of a multi-byte integer from a buffer
       Return the value, and the number of bytes used.
 
-      [MQTT-1.5.5-1 the encoded value MUST use the minimum number of bytes necessary to represent the value]
+      [MQTT-1.5.5-1] the encoded value MUST use the minimum number of bytes necessary to represent the value
     """
     multiplier = 1
     value = 0

@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2015 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -18,7 +18,7 @@
 
 import mbt, socket, time, _thread, sys, traceback, pdb, select, random, mqtt, logging, copy
 
-import mqtt.formats.MQTTV311 as MQTTV3
+import mqtt.formats.MQTTV5 as MQTTV5
 
 class States:
 
@@ -35,7 +35,7 @@ state = States()
 
 test = None
 
-logger = logging.getLogger("MQTTV311_spec")
+logger = logging.getLogger("MQTTV5_spec")
 #logger.setLevel(logging.INFO)
 
 class Clients:
@@ -143,8 +143,8 @@ class ClientSockets:
 			if not state.broker:
 				broker_logger = logging.getLogger('MQTT broker')
 				broker_logger.setLevel(logging.INFO)
-				broker_logger.addHandler(mqtt.broker.coverage.handler)
-				state.broker = mqtt.broker.MQTTBrokers() # add parameters later
+				broker_logger.addFilter(mqtt.broker.coverage.filter)
+				state.broker = mqtt.broker.V5.MQTTBrokers() # add parameters later
 
 	def connect(self, destination):
 		if self.real:

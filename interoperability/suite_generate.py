@@ -52,7 +52,7 @@ class Brokers:
     MQTTV311_spec.state.broker.reinitialize()
 
   def measure(self):
-    return mqtt.broker.coverage.getmeasures()
+    return mqtt.brokers.coverage.getmeasures()
 
 # Attach to the broker log, so we can get its messages
 broker_log = queue.Queue()
@@ -150,7 +150,7 @@ if __name__ == "__main__":
 	while stored_tests < 10 and test_no < 30:
 		test_no += 1
 		conformance_statements, file_lines = create()
-		cur_measures = mqtt.brokers.V311.coverage.getmeasures()[:2]
+		cur_measures = mqtt.brokers.coverage.getmeasures()[:2]
 
 		filename = "tests/test.log.%d" % (test_no,)
 		if cur_measures != last_measures:
@@ -167,7 +167,7 @@ if __name__ == "__main__":
 
 	final_results = broker.measure()
 	broker.stop()
-	print(mqtt.broker.coverage.getmeasures())
+	print(mqtt.brokers.coverage.getmeasures())
 	logger.info("Generation complete")
 	for curline in final_results:
 		logger.info(curline)

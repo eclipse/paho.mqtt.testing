@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -18,7 +18,7 @@
 
 import inspect, logging
 
-from . import *
+from . import V5
 from mqtt.formats import *
 
 logger = logging.getLogger('MQTT broker')
@@ -46,10 +46,10 @@ def between(str, str1, str2):
 
 def getSources(anObject, depth=0):
   members = [m for n, m in inspect.getmembers(anObject) \
-              if inspect.isclass(m) or inspect.isfunction(m) or inspect.ismethod(m)]
+              if inspect.isclass(m) or inspect.isfunction(m) or inspect.ismethod(m) or inspect.ismodule(m)]
   total = []
   for member in members:
-    if inspect.isfunction(member) or inspect.ismethod(member):
+    if inspect.isfunction(member) or inspect.ismethod(member) or inspect.ismodule(member):
       lines = inspect.getsourcelines(member)[0]
       total += lines
     elif inspect.ismodule(member) or inspect.isclass(member) and depth < 10:
@@ -93,7 +93,8 @@ class Filters:
     lines = []
     for key in self.coverages.keys():
        found = self.coverages[key].intersection(self.found)
-       lines.append("%s %d out of %d = %d%%" % \
+       if len(self.coverages[key]) > 0:
+        lines.append("%s %d out of %d = %d%%" % \
           ("coverage statements" if key == "coverages" else key,
                len(found), len(self.coverages[key]), (len(found) * 100) / len(self.coverages[key])))
 

@@ -20,7 +20,7 @@
 import socketserver, select, sys, traceback, socket, logging, getopt, hashlib, base64
 
 from .MQTTBrokers import MQTTBrokers
-from ..coverage import filter, measure
+#from ..coverage import filter, measure
 from mqtt.formats.MQTTV5.MQTTV5 import MQTTException
 
 broker = None

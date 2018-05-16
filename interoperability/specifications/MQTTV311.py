@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2015 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -141,10 +141,13 @@ class ClientSockets:
 			self.buffer = b""
 			self.brokerSocket = BrokerSockets(self)
 			if not state.broker:
-				broker_logger = logging.getLogger('MQTT broker')
-				broker_logger.setLevel(logging.INFO)
-				broker_logger.addHandler(mqtt.broker.coverage.handler)
-				state.broker = mqtt.broker.MQTTBrokers() # add parameters later
+				try:
+					broker_logger = logging.getLogger('MQTT broker')
+					broker_logger.setLevel(logging.INFO)
+					broker_logger.addFilter(mqtt.brokers.coverage.filter)
+					state.broker = mqtt.brokers.V311.MQTTBrokers() # add parameters later
+				except:
+					traceback.print_exc()
 
 	def connect(self, destination):
 		if self.real:
@@ -432,7 +435,14 @@ mbt.model.addReturnType("publishes")
 
 def select(frees):
 	global state
+	if state.broker:
+		state.broker.lock.acquire()
+		statebrokerlock = state.broker.lock
+		state.broker.lock = None # can't deepcopy lock
 	current_state = copy.deepcopy(state)
+	if state.broker:
+		state.broker.lock = statebrokerlock
+		state.broker.lock.release()
 	free_names = set([f[0].getName() for f in frees])
 	logger.debug("*** after_socket_create %s %s", state.after_socket_create, state.last_free_names)
 	if state.last_free_names == set(['socket_create']):
