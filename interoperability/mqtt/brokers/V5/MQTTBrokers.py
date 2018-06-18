@@ -153,6 +153,7 @@ class MQTTClients:
     # Topic alias
     if len(self.outgoingTopicNamesToAliases) < self.topicAliasMaximum:
       self.outgoingTopicNamesToAliases.append(topic)       # add alias
+      pub.topicName = topic # include topic name as well as alias first time
     if topic in self.outgoingTopicNamesToAliases:
       pub.properties.TopicAlias = self.outgoingTopicNamesToAliases.index(topic) + 1 # Topic aliases start at 1
     else:

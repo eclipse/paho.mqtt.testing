@@ -772,8 +772,15 @@ class Test(unittest.TestCase):
       # first message should set the topic alias
       self.assertTrue(hasattr(callback.messagedicts[0]["properties"], "TopicAlias"), callback.messagedicts[0]["properties"])
       topicalias = callback.messagedicts[0]["properties"].TopicAlias
-      self.assertEqual(callback.messagedicts[1]["properties"].TopicAlias, topicalias, topicalias)
-      self.assertEqual(callback.messagedicts[2]["properties"].TopicAlias, topicalias, topicalias)
+
+      self.assertTrue(topicalias > 0)
+      self.assertEqual(callback.messagedicts[0]["topicname"], topics[0])
+
+      self.assertEqual(callback.messagedicts[1]["properties"].TopicAlias, topicalias)
+      self.assertEqual(callback.messagedicts[1]["topicname"], "")
+
+      self.assertEqual(callback.messagedicts[2]["properties"].TopicAlias, topicalias)
+      self.assertEqual(callback.messagedicts[1]["topicname"], "")
 
       callback.clear()
 
