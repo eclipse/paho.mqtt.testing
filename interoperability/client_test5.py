@@ -151,7 +151,8 @@ class Test(unittest.TestCase):
       wildcardtopic="fromb/+"
 
       publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
-      publish_properties.UserPropertyList = [("a", "2"), ("c", "3")]
+      publish_properties.UserProperty = ("a", "2")
+      publish_properties.UserProperty = ("c", "3")
 
       # retained messages
       callback.clear()
@@ -165,11 +166,11 @@ class Test(unittest.TestCase):
       aclient.disconnect()
 
       self.assertEqual(len(callback.messages), 3)
-      userprops = callback.messages[0][5].UserPropertyList
+      userprops = callback.messages[0][5].UserProperty
       self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
-      userprops = callback.messages[1][5].UserPropertyList
+      userprops = callback.messages[1][5].UserProperty
       self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
-      userprops = callback.messages[2][5].UserPropertyList
+      userprops = callback.messages[2][5].UserProperty
       self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
       qoss = [callback.messages[i][2] for i in range(3)]
       self.assertTrue(1 in qoss and 2 in qoss and 0 in qoss, qoss)
@@ -184,7 +185,8 @@ class Test(unittest.TestCase):
 
       will_properties = MQTTV5.Properties(MQTTV5.PacketTypes.WILLMESSAGE)
       will_properties.WillDelayInterval = 0 # this is the default anyway
-      will_properties.UserPropertyList = [("a", "2"), ("c", "3")]
+      will_properties.UserProperty = ("a", "2")
+      will_properties.UserProperty = ("c", "3")
 
       aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
           willTopic=topics[2], willMessage=b"will message", keepalive=2,
@@ -196,6 +198,8 @@ class Test(unittest.TestCase):
       self.waitfor(callback2.messages, 1, 10)
       bclient.disconnect()
       self.assertEqual(len(callback2.messages), 1, callback2.messages)  # should have the will message
+      props = callback2.messages[0][5]
+      self.assertEqual(props.UserProperty, [("a", "2"), ("c", "3")])
 
     # 0 length clientid
     def test_zero_length_clientid(self):
@@ -454,7 +458,8 @@ class Test(unittest.TestCase):
       aclient.connect(host=host, port=port, cleanstart=True)
       aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
       publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
-      publish_properties.UserPropertyList = [("a", "2"), ("c", "3")]
+      publish_properties.UserProperty = ("a", "2")
+      publish_properties.UserProperty = ("c", "3")
       aclient.publish(topics[0], b"", 0, retained=False, properties=publish_properties)
       aclient.publish(topics[0], b"", 1, retained=False, properties=publish_properties)
       aclient.publish(topics[0], b"", 2, retained=False, properties=publish_properties)
@@ -462,11 +467,11 @@ class Test(unittest.TestCase):
         time.sleep(.1)
       aclient.disconnect()
       self.assertEqual(len(callback.messages), 3, callback.messages)
-      userprops = callback.messages[0][5].UserPropertyList
+      userprops = callback.messages[0][5].UserProperty
       self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
-      userprops = callback.messages[1][5].UserPropertyList
+      userprops = callback.messages[1][5].UserProperty
       self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
-      userprops = callback.messages[2][5].UserPropertyList
+      userprops = callback.messages[2][5].UserProperty
       self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
       qoss = [callback.messages[i][2] for i in range(3)]
       self.assertTrue(1 in qoss and 2 in qoss and 0 in qoss, qoss)
@@ -640,7 +645,7 @@ class Test(unittest.TestCase):
       aclient.publish(topics[0], b"sub identifier test", 1, retained=False)
       self.waitfor(callback.messages, 1, 3)
       self.assertEqual(len(callback.messages), 1, callback.messages)
-      self.assertEqual(callback.messages[0][5].SubscriptionIdentifier, 456789, callback.messages[0][5].SubscriptionIdentifier)
+      self.assertEqual(callback.messages[0][5].SubscriptionIdentifier[0], 456789, callback.messages[0][5].SubscriptionIdentifier)
       aclient.disconnect()
 
       callback.clear()

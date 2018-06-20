@@ -435,8 +435,9 @@ class MQTTBrokers:
       sessionExpiryInterval = 0 # immediate expiry - change to spec
     # will delay
     willDelayInterval = 0
-    if hasattr(packet.willProperties, "WillDelayInterval"):
-      willDelayInterval = packet.willProperties.WillDelayInterval
+    if hasattr(packet.WillProperties, "WillDelayInterval"):
+      willDelayInterval = packet.WillProperties.WillDelayInterval
+      delattr(packet.WillProperties, "WillDelayInterval") # must not be sent with will message
     if willDelayInterval > sessionExpiryInterval:
       willDelayInterval = sessionExpiryInterval
     if me == None:
@@ -455,7 +456,7 @@ class MQTTBrokers:
     assert me.receiveMaximum <= MQTTV5.MAX_PACKETID
     logger.info("[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts")
     self.clients[sock] = me
-    me.will = (packet.WillTopic, packet.WillQoS, packet.WillMessage, packet.WillRETAIN) if packet.WillFlag else None
+    me.will = (packet.WillTopic, packet.WillQoS, packet.WillMessage, packet.WillRETAIN, packet.WillProperties) if packet.WillFlag else None
     self.broker.connect(me, clean)
     logger.info("[MQTT-3.2.0-1] the first response to a client must be a connack")
     resp.reasonCode.set("Success")

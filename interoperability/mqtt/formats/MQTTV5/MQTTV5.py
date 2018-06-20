@@ -425,7 +425,7 @@ class Properties(object):
       "Topic Alias" : 35,
       "Maximum QoS" : 36,
       "Retain Available" : 37,
-      "User Property List" : 38,
+      "User Property" : 38,
       "Maximum Packet Size" : 39,
       "Wildcard Subscription Available" : 40,
       "Subscription Identifier Available" : 41,
@@ -481,6 +481,9 @@ class Properties(object):
       42 : (self.types.index("Byte"), [PacketTypes.CONNACK]),
     }
 
+  def allowsMultiple(self, compressedName):
+    return self.getIdentFromName(compressedName) in [11, 38]
+
   def getIdentFromName(self, compressedName):
     # return the identifier corresponding to the property name
     result = -1
@@ -498,11 +501,15 @@ class Properties(object):
     else:
       # the name could have spaces in, or not.  Remove spaces before assignment
       if name not in [name.replace(' ', '') for name in self.names.keys()]:
-        raise MQTTException("Attribute name must be one of "+str(self.names.keys()))
+        raise MQTTException("Property name must be one of "+str(self.names.keys()))
       # check that this attribute applies to the packet type
       if self.packetType not in self.properties[self.getIdentFromName(name)][1]:
-        raise MQTTException("Attribute %s does not apply to packet type %s"
+        raise MQTTException("Property %s does not apply to packet type %s"
             % (name, Packets.Names[self.packetType]) )
+      if self.allowsMultiple(name):
+        value = [value]
+        if hasattr(self, name):
+          value = object.__getattribute__(self, name) + value
       object.__setattr__(self, name, value)
 
   def __str__(self):
@@ -557,13 +564,10 @@ class Properties(object):
     buffer = b""
     for name in self.names.keys():
       compressedName = name.replace(' ', '')
-      isList = False
-      if compressedName.endswith('List'):
-        isList = True
       if hasattr(self, compressedName):
         identifier = self.getIdentFromName(compressedName)
         attr_type = self.properties[identifier][0]
-        if isList:
+        if self.allowsMultiple(compressedName):
           for prop in getattr(self, compressedName):
             buffer += self.writeProperty(identifier, attr_type, prop)
         else:
@@ -618,15 +622,9 @@ class Properties(object):
       propslenleft -= valuelen
       propname = self.getNameFromIdent(identifier)
       compressedName = propname.replace(' ', '')
-      if propname.endswith('List'):
-        if not hasattr(self, compressedName):
-          setattr(self, propname, [value])
-        else:
-          setattr(self, propname, getattr(self, compressedName) + [value])
-      else:
-        if hasattr(self, compressedName):
-          raise MQTTException("Property '%s' must not exist more than once" % property)
-        setattr(self, propname, value)
+      if not self.allowsMultiple(compressedName) and hasattr(self, compressedName):
+        raise MQTTException("Property '%s' must not exist more than once" % property)
+      setattr(self, propname, value)
     return self, propslen + VBIlen
 
 
@@ -634,7 +632,7 @@ class Connects(Packets):
 
   def __init__(self, buffer = None):
     object.__setattr__(self, "names",
-         ["fh", "properties", "willProperties", "ProtocolName", "ProtocolVersion",
+         ["fh", "properties", "WillProperties", "ProtocolName", "ProtocolVersion",
           "ClientIdentifier", "CleanStart", "KeepAliveTimer",
           "WillFlag", "WillQoS", "WillRETAIN", "WillTopic", "WillMessage",
           "usernameFlag", "passwordFlag", "username", "password"])
@@ -653,7 +651,7 @@ class Connects(Packets):
     self.passwordFlag = False
 
     self.properties = Properties(PacketTypes.CONNECT)
-    self.willProperties = Properties(PacketTypes.WILLMESSAGE)
+    self.WillProperties = Properties(PacketTypes.WILLMESSAGE)
 
     # Payload
     self.ClientIdentifier = ""   # UTF-8
@@ -675,8 +673,8 @@ class Connects(Packets):
     buffer += self.properties.pack()
     buffer += writeUTF(self.ClientIdentifier)
     if self.WillFlag:
-      assert self.willProperties.packetType == PacketTypes.WILLMESSAGE
-      buffer += self.willProperties.pack()
+      assert self.WillProperties.packetType == PacketTypes.WILLMESSAGE
+      buffer += self.WillProperties.pack()
       buffer += writeUTF(self.WillTopic)
       buffer += writeBytes(self.WillMessage)
     if self.usernameFlag:
@@ -736,7 +734,7 @@ class Connects(Packets):
       curlen += valuelen
 
       if self.WillFlag:
-        curlen += self.willProperties.unpack(buffer[curlen:])[1]
+        curlen += self.WillProperties.unpack(buffer[curlen:])[1]
         self.WillTopic, valuelen = readUTF(buffer[curlen:], packlen - curlen)
         curlen += valuelen
         self.WillMessage, valuelen = readBytes(buffer[curlen:])
@@ -780,6 +778,7 @@ class Connects(Packets):
       buf += ", WillQoS=" + str(self.WillQoS) +\
              ", WillRETAIN=" + str(self.WillRETAIN) +\
              ", WillTopic='"+ self.WillTopic +\
+             ", WillProperties='"+ str(self.WillProperties) +\
              "', WillMessage='"+str(self.WillMessage)+"'"
     if self.username:
       buf += ", username="+self.username

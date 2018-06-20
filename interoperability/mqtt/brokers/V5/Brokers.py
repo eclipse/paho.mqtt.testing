@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -68,12 +68,12 @@ class Brokers:
       self.willMessageClients.remove(aClientid)
     print("sendWillMessage", self.__clients[aClientid].will)
     logger.info("[MQTT-3.1.2-8] sending will message for client %s", aClientid)
-    willtopic, willQoS, willmsg, willRetain = self.__clients[aClientid].will
+    willtopic, willQoS, willmsg, willRetain, willProperties = self.__clients[aClientid].will
     if willRetain:
       logger.info("[MQTT-3.1.2-17] sending will message retained for client %s", aClientid)
     else:
       logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
-    self.publish(aClientid, willtopic, willmsg, willQoS, None, time.monotonic(), willRetain)
+    self.publish(aClientid, willtopic, willmsg, willQoS, willProperties, time.monotonic(), willRetain)
     logger.info("[MQTT-3.1.2-10] will message is deleted after use or disconnect, for client %s", aClientid)
     logger.info("[MQTT-3.14.4-3] on receipt of disconnect, will message is deleted")
     self.__clients[aClientid].will = None
@@ -112,9 +112,13 @@ class Brokers:
        also to any disconnected non-cleanstart clients with qos in [1,2]
     """
 
-    def publishAction():
-      if hasattr(subsprops, "SubscriptionIdentifier"):
-        properties.SubscriptionIdentifier = subsprops.SubscriptionIdentifier
+    def publishAction(options, subsprops, subsids=None):
+      if subsids or hasattr(subsprops, "SubscriptionIdentifier"):
+        if subsids:
+          for subsid in subsids:
+            properties.SubscriptionIdentifier = subsid
+        else:
+          properties.SubscriptionIdentifier = subsprops.SubscriptionIdentifier[0]
       elif hasattr(properties, "SubscriptionIdentifier"):
         delattr(properties, "SubscriptionIdentifier")
       out_qos = min(options.QoS, qos)
@@ -163,23 +167,33 @@ class Brokers:
     
     for subscriber in [s.getClientid() for s in subscriptions]:  # all subscribed clients
       # qos is lower of publication and subscription
-      if len(self.se.getSubscriptions(topic, subscriber)) > 1:
+      overlapping = False
+      subscriptions = self.se.getSubscriptions(topic, subscriber)
+      if len(subscriptions) > 1:
         logger.info("[MQTT-3.3.5-1] overlapping subscriptions")
+        overlapping = True
       if retained:
         logger.info("[MQTT-2.1.2-10] outgoing publish does not have retained flag set")
       if self.overlapping_single:
         if subscriber in self.__clients.keys():
           options, subsprops = self.se.optionsOf(subscriber, topic)
-          publishAction()
+          # any other subscription ids?
+          subsids = []
+          if overlapping:
+            for subscription in subscriptions:
+              subopts, subprops = subscription.getOptions()
+              if hasattr(subprops, "SubscriptionIdentifier"):
+                subsids += subprops.SubscriptionIdentifier
+          publishAction(options, subsprops, subsids=subsids)
         else:
           # MQTT V3 subscription
           out_qos = min(self.__broker3.se.qosOf(subscriber, topic), qos)
           self.__broker3.getClient(subscriber).publishArrived(topic, message, out_qos)
       else:
-        for subscription in self.se.getSubscriptions(topic, subscriber):
+        for subscription in subscriptions:
           if subscriber in self.__clients.keys():
             options, subsprops = subscription.getOptions()
-            publishAction()
+            publishAction(options, subsprops)
           else:
             # MQTT V3 subscription
             out_qos = min(self.__broker3.se.qosOf(subscriber, topic), qos)

@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -128,7 +128,7 @@ class Client:
       connect.WillQoS = willQoS
       connect.WillRETAIN = willRetain
       if willProperties:
-        connect.willProperties = willProperties
+        connect.WillProperties = willProperties
 
     if username:
       connect.usernameFlag = True
