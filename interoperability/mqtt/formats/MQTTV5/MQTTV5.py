@@ -507,7 +507,8 @@ class Properties(object):
         raise MQTTException("Property %s does not apply to packet type %s"
             % (name, Packets.Names[self.packetType]) )
       if self.allowsMultiple(name):
-        value = [value]
+        if type(value) != type([]):
+          value = [value]
         if hasattr(self, name):
           value = object.__getattribute__(self, name) + value
       object.__setattr__(self, name, value)
@@ -1080,7 +1081,7 @@ class SubscribeOptions(object):
 
   def pack(self):
     assert self.QoS in [0, 1, 2]
-    assert self.retainHandling in [0, 1, 2]
+    assert self.retainHandling in [0, 1, 2], "Retain handling should be 0, 1 or 2"
     noLocal = 1 if self.noLocal else 0
     retainAsPublished = 1 if self.retainAsPublished else 0
     buffer = bytes([(self.retainHandling << 4) | (retainAsPublished << 3) |\
@@ -1093,8 +1094,8 @@ class SubscribeOptions(object):
     self.retainAsPublished = True if ((b0 >> 3) & 0x01) == 1 else False
     self.noLocal = True if ((b0 >> 2) & 0x01) == 1 else False
     self.QoS = (b0 & 0x03)
-    assert self.retainHandling in [0, 1, 2]
-    assert self.QoS in [0, 1, 2]
+    assert self.retainHandling in [0, 1, 2], "Retain handling should be 0, 1 or 2, not %d" % self.retainHandling
+    assert self.QoS in [0, 1, 2], "QoS should be 0, 1 or 2, not %d" % self.QoS
     return 1
 
   def __str__(self):

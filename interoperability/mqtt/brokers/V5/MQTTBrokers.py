@@ -523,6 +523,9 @@ class MQTTBrokers:
     logger.info("[MQTT-3.8.4-5] return code must be returned for each topic in subscribe")
     logger.info("[MQTT-3.9.3-1] the order of return codes must match order of topics in subscribe")
     resp.reasonCodes = respqoss
+    # propagating user property is broker specific behaviour, to aid testing
+    if hasattr(packet.properties, "UserProperty"):
+      resp.properties.UserProperty = packet.properties.UserProperty
     respond(sock, resp)
 
   def unsubscribe(self, sock, packet):
@@ -533,6 +536,9 @@ class MQTTBrokers:
     me = self.clients[sock]
     if len(me.outbound) > 0:
       logger.info("[MQTT-3.10.4-3] sending unsuback has no effect on outward inflight messages")
+    # propagating user property is broker specific behaviour, to aid testing
+    if hasattr(packet.properties, "UserProperty"):
+      resp.properties.UserProperty = packet.properties.UserProperty
     resp.packetIdentifier = packet.packetIdentifier
     resp.reasonCodes = reasonCodes
     respond(sock, resp)
