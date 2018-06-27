@@ -561,15 +561,22 @@ class MQTTBrokers:
           if packet.fh.DUP:
             logger.info("[MQTT-3.3.1-3] Incoming publish DUP 1 ==> outgoing publish with DUP 0")
             logger.info("[MQTT-4.3.2-2] server must store message in accordance with QoS 1")
-          self.broker.publish(self.clients[sock].id, packet.topicName,
+          subscribers = self.broker.publish(self.clients[sock].id, packet.topicName,
                 packet.data, packet.fh.QoS, packet.properties,
                 packet.receivedTime, packet.fh.RETAIN)
           resp = MQTTV5.Pubacks()
           logger.info("[MQTT-2.3.1-6] puback messge id same as publish")
           resp.packetIdentifier = packet.packetIdentifier
+          if subscribers == None:
+            resp.reasonCode.set("No matching subscribers")
+          if packet.topicName == "test_qos_1_2_errors":
+            resp.reasonCode.set("Not authorized")
+            if hasattr(packet.properties, "UserProperty"):
+              resp.properties.UserProperty = packet.properties.UserProperty
           respond(sock, resp)
         elif packet.fh.QoS == 2:
           myclient = self.clients[sock]
+          subscribers = None
           if self.publish_on_pubrel:
             if packet.packetIdentifier in myclient.inbound.keys():
               if packet.fh.DUP == 0:
@@ -587,12 +594,22 @@ class MQTTBrokers:
             else:
               myclient.inbound.append(packet.packetIdentifier)
               logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")
-              self.broker.publish(myclient, packet.topicName,
+              subscribers = self.broker.publish(myclient, packet.topicName,
                    packet.data, packet.fh.QoS, packet.properties,
                    packet.receivedTime, packet.fh.RETAIN)
           resp = MQTTV5.Pubrecs()
           logger.info("[MQTT-2.3.1-6] pubrec messge id same as publish")
           resp.packetIdentifier = packet.packetIdentifier
+          if subscribers == None:
+            resp.reasonCode.set("No matching subscribers")
+          if packet.topicName == "test_qos_1_2_errors":
+            resp.reasonCode.set("Not authorized")
+            if self.publish_on_pubrel:
+              del myclient.inbound[packet.packetIdentifier]
+            else:
+              myclient.inbound.remove(packet.packetIdentifier)
+            if hasattr(packet.properties, "UserProperty"):
+              resp.properties.UserProperty = packet.properties.UserProperty
           respond(sock, resp)
 
   def handleBehaviourPublish(self,sock, topic, data):
@@ -629,6 +646,13 @@ class MQTTBrokers:
     resp = MQTTV5.Pubcomps()
     logger.info("[MQTT-2.3.1-6] pubcomp messge id same as publish")
     resp.packetIdentifier = packet.packetIdentifier
+    if not pub:
+      resp.reasonCode.set("Packet identifier not found")
+      resp.properties.ReasonString = "Looking for packet id "+str(packet.packetIdentifier)
+    elif pub.topicName == "test_qos_1_2_errors_pubcomp":
+      resp.reasonCode.set("Packet identifier not found")
+      if hasattr(packet.properties, "UserProperty"):
+        resp.properties.UserProperty = packet.properties.UserProperty
     respond(sock, resp)
 
   def pingreq(self, sock, packet):

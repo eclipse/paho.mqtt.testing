@@ -1037,7 +1037,12 @@ class Acks(Packets):
     return fhlen + self.fh.remainingLength
 
   def __str__(self):
-    return str(self.fh)+", PacketId="+str(self.packetIdentifier)+")"
+    result = str(self.fh)+", PacketId="+str(self.packetIdentifier)+")"
+    if self.reasonCode.getName() != "Success" or not self.properties.isEmpty():
+      result += ", Reason code: " + self.reasonCode.getName()
+      if not self.properties.isEmpty():
+        result += ", Properties: " + str(self.properties)
+    return result
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \

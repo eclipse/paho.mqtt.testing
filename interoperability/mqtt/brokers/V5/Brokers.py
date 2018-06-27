@@ -165,7 +165,8 @@ class Brokers:
     for sname in list(sharenames):
       subscriptions.append(random.choice([s for s in shared if s.getTopic() == sname]))
     
-    for subscriber in [s.getClientid() for s in subscriptions]:  # all subscribed clients
+    subscribed_clients = [s.getClientid() for s in subscriptions]
+    for subscriber in subscribed_clients:  # all subscribed clients
       # qos is lower of publication and subscription
       overlapping = False
       subscriptions = self.se.getSubscriptions(topic, subscriber)
@@ -198,6 +199,7 @@ class Brokers:
             # MQTT V3 subscription
             out_qos = min(self.__broker3.se.qosOf(subscriber, topic), qos)
             self.__broker3.getClient(subscriber).publishArrived(topic, message, out_qos)
+    return subscribed_clients if len(subscribed_clients) > 0 else None
 
   def __doRetained__(self, aClientid, topic, subsoptions, resubscribeds):
     # topic can be single, or a list
