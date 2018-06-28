@@ -122,9 +122,8 @@ class Brokers:
       elif hasattr(properties, "SubscriptionIdentifier"):
         delattr(properties, "SubscriptionIdentifier")
       out_qos = min(options.QoS, qos)
-      if not options.noLocal or subscriber != aClientid: # noLocal
-        outretain = retained if options.retainAsPublished else False
-        self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
+      outretain = retained if options.retainAsPublished else False
+      self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
 
     # topic alias
     if hasattr(properties, "TopicAlias"):
@@ -180,12 +179,19 @@ class Brokers:
           options, subsprops = self.se.optionsOf(subscriber, topic)
           # any other subscription ids?
           subsids = []
+          nolocalfilter = []
           if overlapping:
             for subscription in subscriptions:
               subopts, subprops = subscription.getOptions()
-              if hasattr(subprops, "SubscriptionIdentifier"):
-                subsids += subprops.SubscriptionIdentifier
-          publishAction(options, subsprops, subsids=subsids)
+              if not subopts.noLocal or subscriber != aClientid: # noLocal
+                nolocalfilter.append(subscription)
+                if hasattr(subprops, "SubscriptionIdentifier"):
+                  subsids += subprops.SubscriptionIdentifier
+          else:
+            if not options.noLocal or subscriber != aClientid: # noLocal
+              nolocalfilter = subscriptions
+          if len(nolocalfilter) > 0:
+            publishAction(options, subsprops, subsids=subsids)
         else:
           # MQTT V3 subscription
           out_qos = min(self.__broker3.se.qosOf(subscriber, topic), qos)
@@ -194,7 +200,8 @@ class Brokers:
         for subscription in subscriptions:
           if subscriber in self.__clients.keys():
             options, subsprops = subscription.getOptions()
-            publishAction(options, subsprops)
+            if not options.noLocal or subscriber != aClientid: # noLocal
+              publishAction(options, subsprops)
           else:
             # MQTT V3 subscription
             out_qos = min(self.__broker3.se.qosOf(subscriber, topic), qos)

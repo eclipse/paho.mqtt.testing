@@ -346,6 +346,7 @@ class MQTTBrokers:
             self.disconnect(sock, reasonCode="Malformed packet", sendWillMessage=True)
             terminate = True
         except MQTTV5.MalformedPacket as error:
+          traceback.print_exc()
           disconnect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.DISCONNECT)
           disconnect_properties.ReasonString = error.args[0]
           self.disconnect(sock, reasonCode="Malformed packet", sendWillMessage=True)
@@ -585,6 +586,7 @@ class MQTTBrokers:
                 logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
             else:
               myclient.inbound[packet.packetIdentifier] = packet
+            subscribers = self.broker.se.getSubscriptions(packet.topicName)
           else:
             if packet.packetIdentifier in myclient.inbound:
               if packet.fh.DUP == 0:
