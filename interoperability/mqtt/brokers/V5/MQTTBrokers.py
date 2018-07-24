@@ -271,7 +271,7 @@ class MQTTBrokers:
       "dropQoS0":True,
       "zero_length_clientids":True,
       "topicAliasMaximum":2,
-      "maximumPacketSize":32,
+      "maximumPacketSize":256,
       "receiveMaximum":2,
       "serverKeepAlive":60}
 
