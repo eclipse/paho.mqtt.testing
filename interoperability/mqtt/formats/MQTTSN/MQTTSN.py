@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -178,7 +178,8 @@ class Flags:
 
   def pack(self):
     "pack data into string buffer ready for transmission down socket"
-    buffer = bytes([(self.DUP << 7) | (self.QoS << 5) |
+    QoS = 3 if self.QoS == -1 else self.QoS
+    buffer = bytes([(self.DUP << 7) | (QoS << 5) |
       (self.RETAIN << 4) | (self.Will << 3) | \
       (self.CleanSession << 2) | self.TopicIdType])
     return buffer
@@ -186,7 +187,8 @@ class Flags:
   def unpack(self, b0):
     "unpack data from string buffer into separate fields"
     self.DUP = ((b0 >> 7) & 0x01) == 1
-    self.QoS = (b0 >> 5) & 0x03
+    QoS = (b0 >> 5) & 0x03
+    self.QoS = -1 if QoS == 3 else QoS
     self.RETAIN = ((b0 >> 4) & 0x01) == 1
     self.Will = ((b0 >> 3) & 0x01) == 1
     self.CleanSession = ((b0 >> 2) & 0x01) == 1

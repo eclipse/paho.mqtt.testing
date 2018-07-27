@@ -235,8 +235,9 @@ class MQTTSNBrokers:
   def handlePacket(self, packet, sock, callback):
     terminate = False
     logger.debug("in: "+str(packet))
-    if sock not in self.clients.keys() and not isinstance(packet, MQTTSN.Connects):
-      print(self.clients.keys(), sock)
+    if sock not in self.clients.keys() and not isinstance(packet, MQTTSN.Connects) and not \
+      (isinstance(packet, MQTTSN.Publishes) and packet.Flags.QoS == -1):
+      #print(self.clients.keys(), sock)
       self.disconnect(sock, packet)
       raise MQTTSN.MQTTSNException("[MQTT-3.1.0-1] Connect was not first packet on socket")
     else:
@@ -357,10 +358,16 @@ class MQTTSNBrokers:
     respond(sock, resp)
 
   def publish(self, sock, packet, callback):
-    if packet.Flags.QoS == 0:
+    if packet.Flags.QoS == -1:
       if packet.Flags.TopicIdType == 2:
         topic = MQTTSN.writeInt16(packet.TopicId).decode()
-        print("topic", topic)
+        logger.debug("topic %s", topic)
+      self.broker.publish("QoS -1", # no clientid for QoS -1
+             topic, packet.Data, 0, packet.Flags.RETAIN)
+    elif packet.Flags.QoS == 0:
+      if packet.Flags.TopicIdType == 2:
+        topic = MQTTSN.writeInt16(packet.TopicId).decode()
+        logger.debug("topic %s", topic)
       self.broker.publish(self.clients[sock].id,
              topic, packet.Data, packet.Flags.QoS, packet.Flags.RETAIN)
     elif packet.fh.QoS == 1:

@@ -54,7 +54,7 @@ class BufferedSockets:
       length = 0
       for i in range(0, 8):
         length += ord(self.socket.recv(1))
-        length = (leng << 8)
+        length = (length << 8)
     if maskbit:
       mask = self.socket.recv(4)
     mpayload = bytearray()
@@ -225,7 +225,7 @@ def create(port, host="", TLS=False, serve_forever=False,
     server.serve_forever()
   else:
     thread = threading.Thread(target = server.serve_forever)
-    #thread.daemon = True
+    thread.daemon = True
     thread.start()
   return server
 
