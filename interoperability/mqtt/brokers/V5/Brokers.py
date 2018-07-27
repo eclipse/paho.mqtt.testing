@@ -224,7 +224,12 @@ class Brokers:
         if s not in topicsUsed and Topics.topicMatches(t, s):
           # topic has retained publication
           topicsUsed.append(s)
-          (ret_msg, ret_qos, properties) = self.se.getRetained(s)
+          retained_message = self.se.getRetained(s)
+          if len(retained_message) == 2:
+            (ret_msg, ret_qos) = retained_message
+            properties = None
+          else:
+            (ret_msg, ret_qos, properties) = retained_message
           thisqos = min(ret_qos, subsoptions[i].QoS)
           self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, properties, True)
       i += 1

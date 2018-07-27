@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
  
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -132,7 +132,12 @@ class Brokers:
         if s not in topicsUsed and Topics.topicMatches(t, s):
           # topic has retained publication
           topicsUsed.append(s)
-          (ret_msg, ret_qos) = self.se.getRetained(s)
+          retained_msg = self.se.getRetained(s)
+          if len(retained_msg) == 3:
+            #maybe we should add the v5 properties to the v3 payload?
+            (ret_msg, ret_qos, v5props) = retained_msg
+          else:
+            (ret_msg, ret_qos) = retained_msg
           thisqos = min(ret_qos, qos[i])
           self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, True)
       i += 1
