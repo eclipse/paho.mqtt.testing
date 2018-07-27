@@ -150,7 +150,7 @@ class SubscriptionEngines:
            result.add(s) # don't add a subscription twice
      return result
 
-   def setRetained(self, aTopic, aMessage, aQoS, properties):
+   def setRetained(self, aTopic, aMessage, aQoS, receivedTime, properties):
      "set a retained message on a non-wildcard topic"
      if Topics.isValidTopicName(aTopic):
        retained = self.__retained if not isDollarTopic(aTopic) else self.__dollar_retained
@@ -159,7 +159,7 @@ class SubscriptionEngines:
            logger.info("[MQTT-3.3.1-11] Deleting zero byte retained message")
            del retained[aTopic]
        else:
-         retained[aTopic] = (aMessage, aQoS, properties)
+         retained[aTopic] = (aMessage, aQoS, receivedTime, properties)
 
    def getRetained(self, aTopic):
      "returns (msg, QoS, properties) for a topic"

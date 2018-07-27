@@ -68,7 +68,7 @@ class Brokers:
           logger.info("[MQTT-3.1.2-17] sending will message retained for client %s", aClientid)
         else:
           logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
-        self.publish(aClientid, willtopic, willmsg, willQoS, willRetain)
+        self.publish(aClientid, willtopic, willmsg, willQoS, willRetain, time.monotonic())
       self.disconnect(aClientid)
 
   def disconnect(self, aClientid):
@@ -90,13 +90,13 @@ class Brokers:
     for c in self.__clients.keys()[:]: # copy the array because disconnect will remove an element
       self.disconnect(c)
 
-  def publish(self, aClientid, topic, message, qos, retained=False):
+  def publish(self, aClientid, topic, message, qos, retained, receivedTime):
     """publish to all subscribed connected clients
        also to any disconnected non-cleansession clients with qos in [1,2]
     """
     if retained:
       logger.info("[MQTT-2.1.2-6] store retained message and QoS")
-      self.se.setRetained(topic, message, qos)
+      self.se.setRetained(topic, message, qos, receivedTime)
     else:
       logger.info("[MQTT-2.1.2-12] non-retained message - do not store")
 
@@ -133,13 +133,13 @@ class Brokers:
           # topic has retained publication
           topicsUsed.append(s)
           retained_msg = self.se.getRetained(s)
-          if len(retained_msg) == 3:
+          if len(retained_msg) == 4:
             #maybe we should add the v5 properties to the v3 payload?
-            (ret_msg, ret_qos, v5props) = retained_msg
+            (ret_msg, ret_qos, receivedTime, v5props) = retained_msg
           else:
-            (ret_msg, ret_qos) = retained_msg
+            (ret_msg, ret_qos, receivedTime) = retained_msg
           thisqos = min(ret_qos, qos[i])
-          self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, True)
+          self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, retained=True)
       i += 1
 
   def subscribe(self, aClientid, topic, qos):

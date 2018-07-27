@@ -374,17 +374,18 @@ class MQTTBrokers:
     respond(sock, resp)
 
   def publish(self, sock, packet):
+    packet.receivedTime = time.monotonic()
     if packet.topicName.find("+") != -1 or packet.topicName.find("#") != -1:
       raise MQTTV3.MQTTException("[MQTT-3.3.2-2][MQTT-4.7.1-1] wildcards not allowed in topic name")
     if packet.fh.QoS == 0:
       self.broker.publish(self.clients[sock].id,
-             packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
+             packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN, packet.receivedTime)
     elif packet.fh.QoS == 1:
       if packet.fh.DUP:
         logger.info("[MQTT-3.3.1-3] Incoming publish DUP 1 ==> outgoing publish with DUP 0")
         logger.info("[MQTT-4.3.2-2] server must store message in accordance with QoS 1")
       self.broker.publish(self.clients[sock].id,
-             packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
+             packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN, packet.receivedTime)
       resp = MQTTV3.Pubacks()
       logger.info("[MQTT-2.3.1-6] puback messge id same as publish")
       resp.messageIdentifier = packet.messageIdentifier
@@ -408,7 +409,8 @@ class MQTTBrokers:
         else:
           myclient.inbound.append(packet.messageIdentifier)
           logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")
-          self.broker.publish(myclient, packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN)
+          self.broker.publish(myclient, packet.topicName, packet.data, packet.fh.QoS, packet.fh.RETAIN,
+                      packet.receivedTime)
       resp = MQTTV3.Pubrecs()
       logger.info("[MQTT-2.3.1-6] pubrec messge id same as publish")
       resp.messageIdentifier = packet.messageIdentifier
@@ -419,7 +421,7 @@ class MQTTBrokers:
     pub = myclient.pubrel(packet.messageIdentifier)
     if pub:
       if self.publish_on_pubrel:
-        self.broker.publish(myclient.id, pub.topicName, pub.data, pub.fh.QoS, pub.fh.RETAIN)
+        self.broker.publish(myclient.id, pub.topicName, pub.data, pub.fh.QoS, pub.fh.RETAIN, pub.receivedTime)
         del myclient.inbound[packet.messageIdentifier]
       else:
         myclient.inbound.remove(packet.messageIdentifier)

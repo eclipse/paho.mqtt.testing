@@ -73,7 +73,7 @@ class Brokers:
       logger.info("[MQTT-3.1.2-17] sending will message retained for client %s", aClientid)
     else:
       logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
-    self.publish(aClientid, willtopic, willmsg, willQoS, willProperties, time.monotonic(), willRetain)
+    self.publish(aClientid, willtopic, willmsg, willQoS, willRetain, willProperties, time.monotonic())
     logger.info("[MQTT-3.1.2-10] will message is deleted after use or disconnect, for client %s", aClientid)
     logger.info("[MQTT-3.14.4-3] on receipt of disconnect, will message is deleted")
     self.__clients[aClientid].will = None
@@ -107,7 +107,7 @@ class Brokers:
     for c in self.__clients.keys()[:]: # copy the array because disconnect will remove an element
       self.disconnect(c)
 
-  def publish(self, aClientid, topic, message, qos, properties, receivedTime, retained):
+  def publish(self, aClientid, topic, message, qos, retained, properties, receivedTime):
     """publish to all subscribed connected clients
        also to any disconnected non-cleanstart clients with qos in [1,2]
     """
@@ -144,7 +144,7 @@ class Brokers:
 
     if retained:
       logger.info("[MQTT-2.1.2-6] store retained message and QoS")
-      self.se.setRetained(topic, message, qos, properties)
+      self.se.setRetained(topic, message, qos, receivedTime, properties)
     else:
       logger.info("[MQTT-2.1.2-12] non-retained message - do not store")
 
@@ -225,13 +225,13 @@ class Brokers:
           # topic has retained publication
           topicsUsed.append(s)
           retained_message = self.se.getRetained(s)
-          if len(retained_message) == 2:
-            (ret_msg, ret_qos) = retained_message
+          if len(retained_message) == 3:
+            (ret_msg, ret_qos, receivedTime) = retained_message
             properties = None
           else:
-            (ret_msg, ret_qos, properties) = retained_message
+            (ret_msg, ret_qos, receivedTime, properties) = retained_message
           thisqos = min(ret_qos, subsoptions[i].QoS)
-          self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, properties, True)
+          self.__clients[aClientid].publishArrived(s, ret_msg, thisqos, properties, receivedTime, True)
       i += 1
 
   def subscribe(self, aClientid, topic, optionsprops):

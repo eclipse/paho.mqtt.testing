@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2014 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
  
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -140,7 +140,7 @@ class SubscriptionEngines:
                result.append(s.getClientid())
      return result
 
-   def setRetained(self, aTopic, aMessage, aQoS):
+   def setRetained(self, aTopic, aMessage, aQoS, receivedTime):
      "set a retained message on a non-wildcard topic"
      if Topics.isValidTopicName(aTopic):
        retained = self.__retained if aTopic[0] != "$" else self.__dollar_retained
@@ -149,7 +149,7 @@ class SubscriptionEngines:
            logger.info("[MQTT-3.3.1-11] Deleting zero byte retained message")
            del retained[aTopic]
        else:
-         retained[aTopic] = (aMessage, aQoS)
+         retained[aTopic] = (aMessage, aQoS, receivedTime)
 
    def getRetained(self, aTopic):
      "returns (msg, QoS) for a topic"
