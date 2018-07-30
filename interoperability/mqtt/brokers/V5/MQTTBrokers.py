@@ -151,7 +151,7 @@ class MQTTClients:
       pub.properties = properties
     logger.info("[MQTT-3.2.3-3] topic name must match the subscription's topic filter")
     # Topic alias
-    if len(self.outgoingTopicNamesToAliases) < self.topicAliasMaximum:
+    if len(self.outgoingTopicNamesToAliases) < self.topicAliasMaximum and not topic in self.outgoingTopicNamesToAliases:
       self.outgoingTopicNamesToAliases.append(topic)       # add alias
       pub.topicName = topic # include topic name as well as alias first time
     if topic in self.outgoingTopicNamesToAliases:
