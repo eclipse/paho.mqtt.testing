@@ -45,7 +45,10 @@ def respond(sock, packet, maximumPacketSize=500):
     logger.error("Packet too big to send to client packet size %d max packet size %d" % (packlen, maximumPacketSize))
     return
   if hasattr(sock, "fileno"):
-    logger.debug("out: (%d) %s", sock.fileno(), packet)
+    packet_string = str(packet)
+    if len(packet_string) > 256:
+      packet_string = packet_string[:255] + '...' + (' payload length:' + str(len(packet.data)) if hasattr(packet, "data") else "")
+    logger.debug("out: (%d) %s", sock.fileno(), packet_string)
   #mscfile.write("broker=>client%d[label=%s];\n" % (sock.fileno(), str(packet).split("(")[0]))
   if hasattr(sock, "handlePacket"):
     sock.handlePacket(packet)
@@ -364,7 +367,10 @@ class MQTTBrokers:
   def handlePacket(self, packet, sock):
     terminate = False
     if hasattr(sock, "fileno"):
-        logger.debug("in: (%d) %s", sock.fileno(), packet)
+      packet_string = str(packet)
+      if len(packet_string) > 256:
+        packet_string = packet_string[0:256] + '...' + (' payload length:' + str(len(packet.data)) if hasattr(packet, "data") else "")
+      logger.debug("in: (%d) %s", sock.fileno(), packet_string)
     #mscfile.write("client%d=>broker[label=%s];\n" % (sock.fileno(), str(packet).split("(")[0]))
     if sock not in self.clients.keys() and packet.fh.PacketType != MQTTV5.PacketTypes.CONNECT:
       self.disconnect(sock, packet)

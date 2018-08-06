@@ -45,16 +45,15 @@ class BufferedSockets:
 
     opcode = (header1 & 0x0f)
     maskbit = (header2 & 0x80) == 0x80
-    length = (header2 & 0x7f)
-    if length == 126:
+    length = (header2 & 0x7f) # works for 0 to 125 inclusive
+    if length == 126: # for 126 to 65535 inclusive
       lb1 = ord(self.socket.recv(1))
       lb2 = ord(self.socket.recv(1))
-      length = lb1*256+lb2
+      length = lb1*256 + lb2
     elif length == 127:
       length = 0
       for i in range(0, 8):
-        length += ord(self.socket.recv(1))
-        length = (length << 8)
+        length += ord(self.socket.recv(1)) * 2**((7 - i)*8)
     if maskbit:
       mask = self.socket.recv(4)
     mpayload = bytearray()
@@ -95,11 +94,22 @@ class BufferedSockets:
       l = len(data)
       if l < 126:
         header.append(l)
-      elif 125 < l <= 32767:
+      elif l < 65536:
+        """ If 126, the following 2 bytes interpreted as a 16-bit unsigned integer are
+            the payload length.
+        """
         header += bytearray([126, l // 256, l % 256])
-      elif l > 32767:
-        logger("TODO: payload longer than 32767 bytes")
-        return
+      elif l < 2**64:
+        """ If 127, the following 8 bytes interpreted as a 64-bit unsigned integer (the
+            most significant bit MUST be 0) are the payload length.
+        """
+        mybytes = [127]
+        for i in range(0, 7):
+          divisor = 2**((7 - i)*8)
+          mybytes.append(l // divisor)
+          l %= divisor
+        mybytes.append(l) # units
+        header += bytearray(mybytes)
     return self.socket.send(header + data)
 
 

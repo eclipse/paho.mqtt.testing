@@ -26,7 +26,10 @@ from .Brokers import Brokers
 logger = logging.getLogger('MQTT broker')
 
 def respond(sock, packet):
-  logger.debug("out: "+repr(packet))
+  packet_string = str(packet)
+  if len(packet_string) > 256:
+    packet_string = packet_string[:255] + '...' + (' payload length:' + str(len(packet.data)) if hasattr(packet, "data") else "")
+  logger.debug("out: (%d) %s", sock.fileno(), packet_string)
   if hasattr(sock, "handlePacket"):
     sock.handlePacket(packet)
   else:
@@ -237,7 +240,10 @@ class MQTTBrokers:
 
   def handlePacket(self, packet, sock):
     terminate = False
-    logger.debug("in: "+repr(packet))
+    packet_string = str(packet)
+    if len(packet_string) > 256:
+      packet_string = packet_string[:255] + '...' + (' payload length:' + str(len(packet.data)) if hasattr(packet, "data") else "")
+    logger.debug("in: (%d) %s", sock.fileno(), packet_string)
     if sock not in self.clients.keys() and packet.fh.MessageType != MQTTV3.CONNECT:
       self.disconnect(sock, packet)
       raise MQTTV3.MQTTException("[MQTT-3.1.0-1] Connect was not first packet on socket")
