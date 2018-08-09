@@ -53,6 +53,7 @@ def setup_persistence(persistence_filename):
 def process_config(config):
     options = {}
     servers_to_create = []
+    bridges_to_create = []
     lineno = 0
     while lineno < len(config):
       curline = config[lineno].strip()
@@ -81,7 +82,8 @@ def process_config(config):
         if len(words) >= 4:
           if words[3] in ["mqttsn", "http"]:
             protocol = words[3]
-        while lineno < len(config) and not config[lineno].strip().startswith("listener"):
+        while lineno < len(config) and not (config[lineno].strip().startswith("listener") or
+                                            config[lineno].strip().startswith("connection") ):
           curline = config[lineno].strip()
           lineno += 1
           if curline.startswith('#') or len(curline) == 0:
@@ -104,8 +106,54 @@ def process_config(config):
         elif protocol == "http":
           servers_to_create.append((HTTPListeners, {"host":bind_address, "port":port, "TLS":TLS, "cert_reqs":cert_reqs,
               "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
+      elif words[0] == "connection":
+        # Bridge connection, pull out address, protocol and topic lines.
+        bridgename="local"
+        address = "localhost"
+        host = "localhost"
+        port = "1883"
+        protocol = "mqtt"
+        topic = "+"
+        direction = "both"
+        localprefix = ""
+        remoteprefix = ""
+        if len(words) > 1:
+          bridgename = words[1]
+        while lineno < len(config) and not (config[lineno].strip().startswith("listener") or
+                                            config[lineno].strip().startswith("connection")) :
+          curline = config[lineno].strip()
+          lineno+=1
+          if curline.startswith('#') or len(curline) == 0:
+            continue
+          words = curline.split()
+          if words[0] == "protocol":
+            protocol = words[1]
+          elif words[0] == "address":
+            address = words[1]
+            parts = address.split(":")
+            host = parts[0]
+            if len(parts)>1:
+              port = int(parts[1])
+          elif words[0] == "topic":
+            if len(words) > 1:
+              topic = words[1]
+            if len(words) > 2:
+              direction = words[2]
+            if len(words) > 3:
+              localprefix = words[3]
+            if len(words) > 4:
+              remoteprefix = words[4]
+        if protocol == "mqtt":
+          bridges_to_create.append((TCPBridges, {"name":bridgename,
+                                                 "host":host,
+                                                 "port":port,
+                                                 "topic":topic,
+                                                 "direction":direction,
+                                                 "localprefix":localprefix,
+                                                 "remoteprefix":remoteprefix}))
+
     servers_to_create[-1][1]["serve_forever"] = True
-    return servers_to_create, options
+    return servers_to_create, options, bridges_to_create
 
 def run(config=None):
   global logger, broker3, broker5, brokerSN, server
@@ -122,7 +170,7 @@ def run(config=None):
 
   options = {}
   if config != None:
-    servers_to_create, options = process_config(config)
+    servers_to_create, options, bridges_to_create = process_config(config)
 
   broker3 = MQTTV3Brokers(options=options, lock=lock, sharedData=sharedData)
 
@@ -139,6 +187,7 @@ def run(config=None):
   brokerSN.setBroker5(broker5)
 
   servers = []
+  bridges = []
   UDPListeners.setBroker(brokerSN)
   TCPListeners.setBrokers(broker3, broker5)
   HTTPListeners.setBrokers(broker3, broker5, brokerSN)
@@ -146,10 +195,15 @@ def run(config=None):
 
   try:
     if config == None:
-      #TCPBridges.setBroker5(broker5)
-      #TCPBridges.create(1886)
+#      TCPBridges.setBroker5(broker5)
+#      TCPBridges.create("bridge",1883,"172.16.0.4")
       servers.append(TCPListeners.create(1883, serve_forever=True))
     else:
+      logger.debug("Starting bridges")
+      for bridge in bridges_to_create:
+        bridge[0].setBroker5(broker5)
+        bridges.append(bridge[0].create(**bridge[1]))
+      logger.debug("Starting servers")
       for server in servers_to_create:
         servers.append(server[0].create(**server[1]))
   except KeyboardInterrupt:
