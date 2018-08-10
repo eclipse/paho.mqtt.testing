@@ -635,6 +635,7 @@ class Test(unittest.TestCase):
 
     def test_subscribe_identifiers(self):
       callback.clear()
+      callback2.clear()
 
       aclient.connect(host=host, port=port, cleanstart=True)
       sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
@@ -642,13 +643,31 @@ class Test(unittest.TestCase):
       aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
       self.waitfor(callback.subscribeds, 1, 3)
 
-      aclient.publish(topics[0], b"sub identifier test", 1, retained=False)
+      bclient.connect(host=host, port=port, cleanstart=True)
+      sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
+      sub_properties.SubscriptionIdentifier = 2
+      bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
+
+      sub_properties.clear()
+      sub_properties.SubscriptionIdentifier = 3
+      bclient.subscribe([topics[0]+"/#"], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
+
+      bclient.publish(topics[0], b"sub identifier test", 1, retained=False)
+
       self.waitfor(callback.messages, 1, 3)
       self.assertEqual(len(callback.messages), 1, callback.messages)
       self.assertEqual(callback.messages[0][5].SubscriptionIdentifier[0], 456789, callback.messages[0][5].SubscriptionIdentifier)
       aclient.disconnect()
 
+      self.waitfor(callback2.messages, 1, 3)
+      self.assertEqual(len(callback2.messages), 1, callback2.messages)
+      expected_subsids = set([2, 3])
+      received_subsids = set(callback2.messages[0][5].SubscriptionIdentifier)
+      self.assertEqual(received_subsids, expected_subsids, received_subsids)
+      bclient.disconnect()
+
       callback.clear()
+      callback2.clear()
 
     def test_request_response(self):
       callback.clear()

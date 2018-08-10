@@ -113,14 +113,14 @@ class Brokers:
     """
 
     def publishAction(options, subsprops, subsids=None):
+      if hasattr(properties, "SubscriptionIdentifier"):
+        delattr(properties, "SubscriptionIdentifier")
       if subsids or hasattr(subsprops, "SubscriptionIdentifier"):
         if subsids:
           for subsid in subsids:
             properties.SubscriptionIdentifier = subsid
         else:
           properties.SubscriptionIdentifier = subsprops.SubscriptionIdentifier[0]
-      elif hasattr(properties, "SubscriptionIdentifier"):
-        delattr(properties, "SubscriptionIdentifier")
       out_qos = min(options.QoS, qos)
       outretain = retained if options.retainAsPublished else False
       self.__clients[subscriber].publishArrived(topic, message, out_qos, properties, receivedTime, outretain)
