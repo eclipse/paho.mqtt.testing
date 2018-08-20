@@ -124,9 +124,9 @@ def run(config=None):
   if config != None:
     servers_to_create, options = process_config(config)
 
-  broker3 = MQTTV3Brokers(options=options, lock=lock, sharedData=sharedData)
+  broker3 = MQTTV3Brokers(options=options.copy(), lock=lock, sharedData=sharedData)
 
-  broker5 = MQTTV5Brokers(options=options, lock=lock, sharedData=sharedData)
+  broker5 = MQTTV5Brokers(options=options.copy(), lock=lock, sharedData=sharedData)
 
   brokerSN = MQTTSNBrokers(lock=lock, sharedData=sharedData)
 
@@ -209,7 +209,8 @@ def main(argv):
     print(err) # will print something like "option -a not recognized"
     usage()
     sys.exit(2)
-  publish_on_pubrel = overlapping_single = dropQoS0 = zero_length_clientids = True
+  overlapping_single = dropQoS0 = zero_length_clientids = True
+  publish_on_pubrel = False
   port = 1883
   cfg = None
   for o, a in opts:

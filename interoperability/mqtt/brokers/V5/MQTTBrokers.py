@@ -592,6 +592,8 @@ class MQTTBrokers:
                 logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
             else:
               myclient.inbound[packet.packetIdentifier] = packet
+            if len(packet.topicName) == 0 and hasattr(packet.properties, "TopicAlias"):
+              packet.topicName = self.broker.getAliasTopic(self.clients[sock].id, packet.properties.TopicAlias)
             subscribers = self.broker.se.getSubscriptions(packet.topicName)
           else:
             if packet.packetIdentifier in myclient.inbound:
@@ -602,7 +604,7 @@ class MQTTBrokers:
             else:
               myclient.inbound.append(packet.packetIdentifier)
               logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")
-              subscribers = self.broker.publish(myclient, packet.topicName,
+              subscribers = self.broker.publish(self.clients[sock].id, packet.topicName,
                    packet.data, packet.fh.QoS, packet.fh.RETAIN, packet.properties,
                    packet.receivedTime)
           resp = MQTTV5.Pubrecs()
@@ -610,7 +612,7 @@ class MQTTBrokers:
           resp.packetIdentifier = packet.packetIdentifier
           if subscribers == None:
             resp.reasonCode.set("No matching subscribers")
-          if packet.topicName == "test_qos_1_2_errors":
+          if hasattr(packet, "topicName") and packet.topicName == "test_qos_1_2_errors":
             resp.reasonCode.set("Not authorized")
             if self.publish_on_pubrel:
               del myclient.inbound[packet.packetIdentifier]
@@ -657,7 +659,7 @@ class MQTTBrokers:
     if not pub:
       resp.reasonCode.set("Packet identifier not found")
       resp.properties.ReasonString = "Looking for packet id "+str(packet.packetIdentifier)
-    elif pub.topicName == "test_qos_1_2_errors_pubcomp":
+    elif hasattr(pub, "topicName") and pub.topicName == "test_qos_1_2_errors_pubcomp":
       resp.reasonCode.set("Packet identifier not found")
       if hasattr(packet.properties, "UserProperty"):
         resp.properties.UserProperty = packet.properties.UserProperty

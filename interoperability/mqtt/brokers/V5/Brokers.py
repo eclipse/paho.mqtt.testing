@@ -66,7 +66,6 @@ class Brokers:
     self.__clients[aClientid].delayedWillTime = None
     if aClientid in self.willMessageClients:
       self.willMessageClients.remove(aClientid)
-    print("sendWillMessage", self.__clients[aClientid].will)
     logger.info("[MQTT-3.1.2-8] sending will message for client %s", aClientid)
     willtopic, willQoS, willmsg, willRetain, willProperties = self.__clients[aClientid].will
     if willRetain:
@@ -107,6 +106,14 @@ class Brokers:
     for c in self.__clients.keys()[:]: # copy the array because disconnect will remove an element
       self.disconnect(c)
 
+  def getAliasTopic(self, aClientid, topicAlias):
+    mytopic = None
+    if topicAlias > 0 and topicAlias in self.__clients[aClientid].topicAliasToNames.keys():
+      mytopic = self.__clients[aClientid].topicAliasToNames[topicAlias]  
+    else:
+      raise ProtocolError("Topic alias invalid", topicAlias)
+    return mytopic
+
   def publish(self, aClientid, topic, message, qos, retained, properties, receivedTime):
     """publish to all subscribed connected clients
        also to any disconnected non-cleanstart clients with qos in [1,2]
@@ -130,10 +137,7 @@ class Brokers:
       if properties.TopicAlias == 0:
         raise ProtocolError("Topic alias invalid", properties.TopicAlias)
       if len(topic) == 0:
-        if properties.TopicAlias in self.__clients[aClientid].topicAliasToNames.keys():
-          topic = self.__clients[aClientid].topicAliasToNames[properties.TopicAlias]
-        else:
-          raise ProtocolError("Topic alias invalid", properties.TopicAlias)
+        topic = self.getAliasTopic(aClientid, properties.TopicAlias)
       else: # set incoming topic alias
         if properties.TopicAlias in self.__clients[aClientid].topicAliasToNames.keys() or \
             properties.TopicAlias <= self.topicAliasMaximum:
