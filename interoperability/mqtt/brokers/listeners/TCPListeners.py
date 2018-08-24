@@ -227,6 +227,7 @@ def create(port, host="", TLS=False, serve_forever=False,
     server.socket = ssl.wrap_socket(server.socket,
       ca_certs=ca_certs, certfile=certfile, keyfile=keyfile,
       cert_reqs=cert_reqs, server_side=True)
+  server.request_queue_size = 50
   server.terminate = False
   server.allow_reuse_address = True
   server.server_bind()
