@@ -85,7 +85,7 @@ class Bridges:
     self.direction = direction
     self.localprefix = localprefix
     self.remoteprefix = remoteprefix
-    self.client = mqtt.clients.V5.Client("local")
+    self.client = mqtt.clients.V5.Client(name)
     self.callback = Callbacks(broker5)
     self.client.registerCallback(self.callback)
     self.local_connect()
@@ -139,7 +139,7 @@ def create(name="local", host="localhost", port=1883, topic="+", direction="both
 
   if host == "":
     host = "localhost"
-  logger.info("Starting TCP bridge for address '%s' port %d %s", host, int(port), "with TLS support" if TLS else "")
+  logger.info("Starting TCP bridge '%s' for address '%s' port %d %s", name, host, int(port), "with TLS support" if TLS else "")
   bridge = Bridges(name, host, port, topic, direction, localprefix, remoteprefix)
   thread = threading.Thread(target=bridge.run)
   thread.start()
