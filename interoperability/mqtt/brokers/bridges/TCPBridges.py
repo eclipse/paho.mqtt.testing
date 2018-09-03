@@ -46,14 +46,14 @@ class Callbacks(mqtt.clients.V5.Callback):
     self.__init__()
 
   def disconnected(self, reasoncode, properties):
-    logger.info("disconnected %s %s", str(reasoncode), str(properties))
+    logger.info("Bridge: disconnected %s %s", str(reasoncode), str(properties))
     self.disconnects.append({"reasonCode" : reasoncode, "properties" : properties})
 
   def connectionLost(self, cause):
-    logger.info("connectionLost %s" % str(cause))
+    logger.info("Bridge: connectionLost %s" % str(cause))
 
   def publishArrived(self, topicName, payload, qos, retained, msgid, properties=None):
-    logger.info("publishArrived %s %s %d %s %d %s", topicName, payload, qos, retained, msgid, str(properties))
+    logger.info("Bridge: publishArrived %s %s %d %s %d %s", topicName, payload, qos, retained, msgid, str(properties))
     self.messages.append((topicName, payload, qos, retained, msgid, properties))
     self.messagedicts.append({"topicname" : topicName, "payload" : payload,
         "qos" : qos, "retained" : retained, "msgid" : msgid, "properties" : properties})
@@ -63,15 +63,15 @@ class Callbacks(mqtt.clients.V5.Callback):
     return True
 
   def published(self, msgid):
-    logger.info("published %d", msgid)
+    logger.info("Bridge: published %d", msgid)
     self.publisheds.append(msgid)
 
   def subscribed(self, msgid, data):
-    logger.info("subscribed %d", msgid)
+    logger.info("Bridge: subscribed %d", msgid)
     self.subscribeds.append((msgid, data))
 
   def unsubscribed(self, msgid):
-    logger.info("unsubscribed %d", msgid)
+    logger.info("Bridge: unsubscribed %d", msgid)
     self.unsubscribeds.append(msgid)
 
 
@@ -94,7 +94,7 @@ class Bridges:
     # connect locally with V5, so we get noLocal and retainAsPublished
     connect = MQTTV5.Connects()
     connect.ClientIdentifier = self.name
-    logger.debug(connect.ClientIdentifier)
+    logger.debug("Bridge: local_connect:"+connect.ClientIdentifier)
     broker5.connect(self, connect)
     subscribe = MQTTV5.Subscribes()
     options = MQTTV5.SubscribeOptions()
@@ -103,20 +103,21 @@ class Bridges:
     broker5.subscribe(self, subscribe)
 
   def connect(self):
-    logger.info("Bridge: connecting to %s:%d"%(self.host, self.port))
+    logger.info("Bridge: connect: connecting to %s:%d"%(self.host, self.port))
     connected = False
     retry=2
     while not connected:
       try:
         self.client.connect(host=self.host, port=self.port, cleanstart=True)
-      except OSError:
+        connected = True
+      except OSError as e:
         #try again with a small amount of backoff, could ake this configurable
-        logger.debug("Bridge: failed to connect to remote end due to an OS Error, retrying...")
+        logger.debug("Bridge: failed to connect to remote end due to an OS Error (%s), retrying...",str(e))
         time.sleep(retry)
         retry *= 2
-      except MQTTV5.MQTTException:
+      except MQTTV5.MQTTException as e:
         #I think we'll retry this one too, the other end probably wasn't ready
-        logger.debug("Bridge: failed to connect to remote end due to an MQTT Error, retrying...")
+        logger.debug("Bridge: failed to connect to remote end due to an MQTT Error (%s), retrying...",str(e))
         time.sleep(retry)
         retry *= 2
         
@@ -135,12 +136,13 @@ class Bridges:
 
   def handlePacket(self, packet):
     # response from local broker
-    logger.info("from local broker %s", str(packet))
+    logger.info("Bridge: from local broker %s", str(packet))
     if packet.fh.PacketType == MQTTV5.PacketTypes.PUBLISH:
       self.client.publish(packet.topicName, packet.data, packet.fh.QoS) #retained=False, properties=None)
 
   def run(self):
     while True:
+      logger.info("Bridge: initiating connect logic")
       self.connect()
       time.sleep(300)
     self.shutdown()
@@ -155,7 +157,7 @@ def create(name="local", host="localhost", port=1883, topic="+", direction="both
 
   if host == "":
     host = "localhost"
-  logger.info("Starting TCP bridge '%s' for address '%s' port %d %s", name, host, int(port), "with TLS support" if TLS else "")
+  logger.info("Bridge: Starting TCP bridge '%s' for address '%s' port %d %s", name, host, int(port), "with TLS support" if TLS else "")
   bridge = Bridges(name, host, port, topic, direction, localprefix, remoteprefix)
   thread = threading.Thread(target=bridge.run)
   thread.start()
