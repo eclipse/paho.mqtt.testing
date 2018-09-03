@@ -104,7 +104,23 @@ class Bridges:
 
   def connect(self):
     logger.info("Bridge: connecting to %s:%d"%(self.host, self.port))
-    self.client.connect(host=self.host, port=self.port, cleanstart=True)
+    connected = False
+    retry=2
+    while not connected:
+      try:
+        self.client.connect(host=self.host, port=self.port, cleanstart=True)
+      except OSError:
+        #try again with a small amount of backoff, could ake this configurable
+        logger.debug("Bridge: failed to connect to remote end due to an OS Error, retrying...")
+        time.sleep(retry)
+        retry *= 2
+      except MQTTV5.MQTTException:
+        #I think we'll retry this one too, the other end probably wasn't ready
+        logger.debug("Bridge: failed to connect to remote end due to an MQTT Error, retrying...")
+        time.sleep(retry)
+        retry *= 2
+        
+        
     # subscribe if necessary
     options = MQTTV5.SubscribeOptions()
     options.noLocal = options.retainAsPublished = True
