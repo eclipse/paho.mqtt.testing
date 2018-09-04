@@ -83,8 +83,8 @@ class Bridges:
     self.port = int(port)
     self.topic = topic
     self.direction = direction
-    self.localprefix = localprefix
-    self.remoteprefix = remoteprefix
+    self.localprefix = localprefix.strip('\"')
+    self.remoteprefix = remoteprefix.strip('\"')
     self.client = mqtt.clients.V5.Client(name)
     self.callback = Callbacks(broker5)
     self.client.registerCallback(self.callback)
@@ -138,7 +138,8 @@ class Bridges:
     # response from local broker
     logger.info("Bridge: from local broker %s", str(packet))
     if packet.fh.PacketType == MQTTV5.PacketTypes.PUBLISH:
-      self.client.publish(packet.topicName, packet.data, packet.fh.QoS) #retained=False, properties=None)
+      logger.info("Bridge: sending on %s", self.remoteprefix+packet.topicName)
+      self.client.publish(self.remoteprefix+packet.topicName, packet.data, packet.fh.QoS) #retained=False, properties=None)
 
   def run(self):
     while True:
