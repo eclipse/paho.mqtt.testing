@@ -269,7 +269,7 @@ class MQTTBrokers:
 
   def __init__(self, options={}, lock=None, sharedData={}):
 
-    defaults = {"publish_on_pubrel":True,
+    defaults = {"publish_on_pubrel":False,
       "overlapping_single":True,
       "dropQoS0":True,
       "zero_length_clientids":True,
@@ -576,7 +576,7 @@ class MQTTBrokers:
           resp.packetIdentifier = packet.packetIdentifier
           if subscribers == None:
             resp.reasonCode.set("No matching subscribers")
-          if packet.topicName == "test_qos_1_2_errors":
+          if packet.topicName == "test_qos_1_2_errors": # specific error behaviour for testing
             resp.reasonCode.set("Not authorized")
             if hasattr(packet.properties, "UserProperty"):
               resp.properties.UserProperty = packet.properties.UserProperty
@@ -592,9 +592,9 @@ class MQTTBrokers:
                 logger.info("[MQTT-3.3.1-2] DUP flag is 1 on redelivery")
             else:
               myclient.inbound[packet.packetIdentifier] = packet
-            if len(packet.topicName) == 0 and hasattr(packet.properties, "TopicAlias"):
-              packet.topicName = self.broker.getAliasTopic(self.clients[sock].id, packet.properties.TopicAlias)
-            subscribers = self.broker.se.getSubscriptions(packet.topicName)
+              if len(packet.topicName) == 0 and hasattr(packet.properties, "TopicAlias"):
+                packet.topicName = self.broker.getAliasTopic(self.clients[sock].id, packet.properties.TopicAlias)
+              subscribers = self.broker.se.getSubscriptions(packet.topicName)
           else:
             if packet.packetIdentifier in myclient.inbound:
               if packet.fh.DUP == 0:
@@ -604,9 +604,13 @@ class MQTTBrokers:
             else:
               myclient.inbound.append(packet.packetIdentifier)
               logger.info("[MQTT-4.3.3-2] server must store message in accordance with QoS 2")
+              if len(packet.topicName) == 0 and hasattr(packet.properties, "TopicAlias"):
+                packet.topicName = self.broker.getAliasTopic(self.clients[sock].id, packet.properties.TopicAlias)
               subscribers = self.broker.publish(self.clients[sock].id, packet.topicName,
                    packet.data, packet.fh.QoS, packet.fh.RETAIN, packet.properties,
                    packet.receivedTime)
+              if packet.topicName == "test_qos_1_2_errors_pubcomp":
+                myclient.pubcomp_error = packet.packetIdentifier
           resp = MQTTV5.Pubrecs()
           logger.info("[MQTT-2.3.1-6] pubrec messge id same as publish")
           resp.packetIdentifier = packet.packetIdentifier
@@ -659,10 +663,13 @@ class MQTTBrokers:
     if not pub:
       resp.reasonCode.set("Packet identifier not found")
       resp.properties.ReasonString = "Looking for packet id "+str(packet.packetIdentifier)
-    elif hasattr(pub, "topicName") and pub.topicName == "test_qos_1_2_errors_pubcomp":
+    elif (hasattr(pub, "topicName") and pub.topicName == "test_qos_1_2_errors_pubcomp") or \
+         (hasattr(myclient, "pubcomp_error") and myclient.pubcomp_error == packet.packetIdentifier):
       resp.reasonCode.set("Packet identifier not found")
       if hasattr(packet.properties, "UserProperty"):
         resp.properties.UserProperty = packet.properties.UserProperty
+      if hasattr(myclient, "pubcomp_error"):
+        del myclient.pubcomp_error
     respond(sock, resp)
 
   def pingreq(self, sock, packet):

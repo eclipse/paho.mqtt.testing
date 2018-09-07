@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -130,11 +130,17 @@ class SubscriptionEngines:
      chosen = None
      for sub in self.getSubscriptions(topic, clientid):
        if chosen == None:
-         chosen = sub.getOptions()
+         if hasattr(sub, "getOptions"):
+           chosen = sub.getOptions()
+         else: # MQTT V3 case
+           chosen = (MQTTV5.SubscribeOptions(QoS=sub.getQoS()), MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE))
        else:
          logger.info("[MQTT-3.3.5-1] Overlapping subscriptions max QoS")
          if sub.getQoS() > chosen[0].QoS:
-           chosen = sub.getOptions()
+           if hasattr(sub, "getOptions"):
+             chosen = sub.getOptions()
+           else: # MQTT V3 case
+             chosen = (MQTTV5.SubscribeOptions(QoS=sub.getQoS()), MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE))
        # Omit the following optimization because we want to check for condition [MQTT-3.3.5-1]
        #if chosen == 2:
        #  break
