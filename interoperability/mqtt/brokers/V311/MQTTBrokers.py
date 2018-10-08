@@ -219,12 +219,14 @@ class MQTTBrokers:
     "this is going to be called from multiple threads, so synchronize"
     self.lock.acquire()
     terminate = False
+    raw_packet = None
     try:
       try:
         raw_packet = MQTTV3.getPacket(sock)
       except:
-        raise MQTTV3.MQTTException("[MQTT-4.8.0-1] 'transient error' reading packet, closing connection")
+        pass # handled by raw_packet == None
       if raw_packet == None:
+        logger.info("[MQTT-4.8.0-1] 'transient error' reading packet, closing connection")
         # will message
         self.disconnect(sock, None, terminate=True)
         terminate = True

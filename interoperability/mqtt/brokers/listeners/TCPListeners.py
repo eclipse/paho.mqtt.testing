@@ -202,6 +202,11 @@ class WebSocketTCPHandler(socketserver.StreamRequestHandler):
         logger.exception("WebSocketTCPHandler")
         break
     logger.info("Finishing communications for socket %d", sock_no)
+    try:
+      sock.shutdown(socket.SHUT_RDWR)
+    except:
+      pass
+    sock.close()
 
 
 class ThreadingTCPServer(socketserver.ThreadingMixIn,

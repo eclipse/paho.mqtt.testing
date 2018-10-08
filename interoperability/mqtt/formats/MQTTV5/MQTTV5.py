@@ -135,6 +135,9 @@ class ReasonCodes:
   def __str__(self):
     return self.getName()
 
+  def json(self):
+    return self.getName()
+
   def pack(self):
     return bytes([self.value])
 
@@ -266,8 +269,9 @@ class VBIs:  # Variable Byte Integer
 
 def getPacket(aSocket):
   "receive the next packet"
+  aSocket.settimeout(.3)
   buf = aSocket.recv(1) # get the first byte fixed header
-  if buf == b"":
+  if len(buf) == 0:
     return None
   if str(aSocket).find("[closed]") != -1:
     closed = True
@@ -280,8 +284,8 @@ def getPacket(aSocket):
   remlength = 0
   while 1:
     next = aSocket.recv(1)
-    while len(next) == 0:
-      next = aSocket.recv(1)
+    if len(next) == 0:
+      return None
     buf += next
     digit = buf[-1]
     remlength += (digit & 127) * multiplier
@@ -292,7 +296,11 @@ def getPacket(aSocket):
   rest = bytes([])
   if remlength > 0:
     while len(rest) < remlength:
+      before = len(rest)
       rest += aSocket.recv(remlength-len(rest))
+      if len(rest) == before: # no data was read
+        # as we have no timeout on the read, no data probably means a socket error
+        return None
   assert len(rest) == remlength
   return buf + rest
 
@@ -323,6 +331,14 @@ class FixedHeaders(object):
     "return printable representation of our data"
     return Packets.classNames[self.PacketType]+'(fh.DUP='+str(self.DUP)+ \
            ", fh.QoS="+str(self.QoS)+", fh.RETAIN="+str(self.RETAIN)
+
+  def json(self):
+    return {
+      "PacketType":Packets.classNames[self.PacketType],
+      "DUP": self.DUP,
+      "QoS": self.QoS, 
+      "RETAIN": self.RETAIN,
+      }
 
   def pack(self, length):
     "pack data into string buffer ready for transmission down socket"
@@ -526,6 +542,16 @@ class Properties(object):
     buffer += "]"
     return buffer
 
+  def json(self):
+    data = {}
+    for name in self.names.keys():
+      compressedName = name.replace(' ', '')
+      if hasattr(self, compressedName):
+        data[compressedName] = getattr(self, compressedName)
+        if type(data[compressedName]) == type(b''): # can't json serialize bytes
+          data[compressedName] = str(data[compressedName])
+    return data
+
   def isEmpty(self):
     rc = True
     for name in self.names.keys():
@@ -661,7 +687,6 @@ class Connects(Packets):
     self.username = None         # UTF-8
     self.password = None         # binary
 
-    #self.properties = Properties()
     if buffer != None:
       self.unpack(buffer)
 
@@ -788,6 +813,30 @@ class Connects(Packets):
     buf += ", properties="+str(self.properties)
     return buf+")"
 
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "ProtocolName": self.ProtocolName,
+      "ProtocolVersion": self.ProtocolVersion,
+      "CleanStart": self.CleanStart,
+      "WillFlag": self.WillFlag, 
+      "KeepAliveTimer": self.KeepAliveTimer,
+      "ClientId": self.ClientIdentifier,
+      "usernameFlag": self.usernameFlag,
+      "passwordFlag": self.passwordFlag}
+    if self.WillFlag:
+      data["WillQoS"] = self.WillQoS
+      data["WillRETAIN"] = self.WillRETAIN
+      data["WillTopic"] = self.WillTopic
+      data["WillProperties"] = self.WillProperties.json()
+      data["WillMessage"] = str(self.WillMessage)
+    if self.username:
+      data["username"] = self.username
+    if self.password:
+      data["password"] = self.password
+    data["Properties"] = self.properties.json()
+    return data
+
   def __eq__(self, packet):
     rc = Packets.__eq__(self, packet) and \
            self.ProtocolName == packet.ProtocolName and \
@@ -848,6 +897,15 @@ class Connacks(Packets):
           ", ReturnCode="+str(self.reasonCode)+\
           ", properties="+str(self.properties)+")"
 
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "SessionPresent": (self.sessionPresent & 0x01) == 1,
+      "ReturnCode": str(self.reasonCode),
+      "Properties": self.properties.json(),
+    }
+    return data
+
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
            self.reasonCode == packet.reasonCode
@@ -900,6 +958,14 @@ class Disconnects(Packets):
 
   def __str__(self):
     return str(self.fh)+", ReasonCode: "+str(self.reasonCode)+", Properties: "+str(self.properties)
+
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "ReasonCode": str(self.reasonCode),
+      "Properties": self.properties.json(),
+    }
+    return data
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -970,6 +1036,17 @@ class Publishes(Packets):
     rc += ", Properties: "+str(self.properties)
     rc += ", TopicName="+str(self.topicName)+", Payload="+str(self.data)+")"
     return rc
+
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "Properties": self.properties.json(),
+      "TopicName": self.topicName,
+      "Payload": str(self.data),
+    }
+    if self.fh.QoS != 0:
+      data["PacketId"] = self.packetIdentifier
+    return data
 
   def __eq__(self, packet):
     rc = Packets.__eq__(self, packet) and \
@@ -1044,6 +1121,17 @@ class Acks(Packets):
         result += ", Properties: " + str(self.properties)
     return result
 
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "PacketId": self.packetIdentifier,
+    }
+    if self.reasonCode.getName() != "Success" or not self.properties.isEmpty():
+      data["Reason code"] = self.reasonCode.getName(),
+      if not self.properties.isEmpty():
+        data["Properties"] = self.properties.json()
+    return data
+
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
            self.packetIdentifier == packet.packetIdentifier
@@ -1108,6 +1196,15 @@ class SubscribeOptions(object):
         ", retainAsPublished="+str(self.retainAsPublished)+\
         ", retainHandling="+str(self.retainHandling)+"}"
 
+  def json(self):
+    data = {
+      "QoS": self.QoS,
+      "noLocal": self.noLocal,
+      "retainAsPublished": self.retainAsPublished,
+      "retainHandling": self.retainHandling,
+    }
+    return data
+
 
 class Subscribes(Packets):
 
@@ -1165,6 +1262,15 @@ class Subscribes(Packets):
     return str(self.fh)+", PacketId="+str(self.packetIdentifier)+\
            ", Properties: "+str(self.properties)+\
            ", Data="+str( [(x, str(y)) for (x, y) in self.data] ) +")"
+
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "PacketId": self.packetIdentifier,
+      "Properties": self.properties.json(),
+      "Data": [(x, y.json()) for (x, y) in self.data],
+    }
+    return data
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -1228,6 +1334,16 @@ class UnsubSubacks(Packets):
     return str(self.fh)+", PacketId="+str(self.packetIdentifier)+\
            ", Properties: "+str(self.properties)+\
            ", reason codes="+str([str(rc) for rc in self.reasonCodes])+")"
+
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "PacketId": self.packetIdentifier,
+      "Properties": self.properties.json(),
+      "Reason codes": [str(rc) for rc in self.reasonCodes],
+    }
+    return data
+
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
@@ -1293,6 +1409,15 @@ class Unsubscribes(Packets):
            ", Properties: "+str(self.properties)+\
            ", Data="+str(self.topicFilters)+")"
 
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "PacketId": self.packetIdentifier,
+      "Properties": self.properties.json(),
+      "Data": self.topicFilters,
+    }
+    return data
+
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
            self.packetIdentifier == packet.packetIdentifier and \
@@ -1330,6 +1455,12 @@ class Pingreqs(Packets):
   def __str__(self):
     return str(self.fh)+")"
 
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+    }
+    return data
+
 
 class Pingresps(Packets):
 
@@ -1354,6 +1485,12 @@ class Pingresps(Packets):
 
   def __str__(self):
     return str(self.fh)+")"
+
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+    }
+    return data
 
 
 class Disconnects(Packets):
@@ -1404,6 +1541,14 @@ class Disconnects(Packets):
   def __str__(self):
     return str(self.fh)+", ReasonCode: "+str(self.reasonCode)+", Properties: "+str(self.properties)
 
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "ReasonCode": str(self.reasonCode),
+      "Properties": self.properties.json(),
+    }
+    return data
+
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \
            self.reasonCode == packet.reasonCode and \
@@ -1449,6 +1594,14 @@ class Auths(Packets):
 
   def __str__(self):
     return str(self.fh)+", ReasonCode: "+str(self.reasonCode)+", Properties: "+str(self.properties)
+
+  def json(self):
+    data = {
+      "fh": self.fh.json(),
+      "ReasonCode": str(self.reasonCode),
+      "Properties": self.properties.json(),
+    }
+    return data
 
   def __eq__(self, packet):
     return Packets.__eq__(self, packet) and \

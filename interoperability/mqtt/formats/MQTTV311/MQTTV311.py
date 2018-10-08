@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -61,7 +61,7 @@ def MessageType(byte):
 def getPacket(aSocket):
   "receive the next packet"
   buf = aSocket.recv(1) # get the first byte fixed header
-  if buf == b"":
+  if len(buf) == 0:
     return None
   if str(aSocket).find("[closed]") != -1:
     closed = True
@@ -74,8 +74,8 @@ def getPacket(aSocket):
   remlength = 0
   while 1:
     next = aSocket.recv(1)
-    while len(next) == 0:
-      next = aSocket.recv(1)
+    if len(next) == 0:
+      return None
     buf += next
     digit = buf[-1]
     remlength += (digit & 127) * multiplier
@@ -86,7 +86,11 @@ def getPacket(aSocket):
   rest = bytes([])
   if remlength > 0:
     while len(rest) < remlength:
+      before = len(rest)
       rest += aSocket.recv(remlength-len(rest))
+      if len(rest) == before: # no data was read
+        # as we have no timeout on the read, no data probably means a socket error
+        return None
   assert len(rest) == remlength
   return buf + rest
 

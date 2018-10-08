@@ -17,13 +17,15 @@
 *******************************************************************
 """
 
-import traceback, random, sys, string, copy, threading, logging, socket, time, uuid
+import traceback, random, sys, string, copy, threading, logging, socket, time, uuid, json
 
 from mqtt.formats import MQTTV5
 
 from .Brokers import Brokers
 
 logger = logging.getLogger('MQTT broker')
+
+mybroker = None
 
 def respond(sock, packet, maximumPacketSize=500):
   # deal with expiry
@@ -53,6 +55,17 @@ def respond(sock, packet, maximumPacketSize=500):
   if hasattr(sock, "handlePacket"):
     sock.handlePacket(packet)
   else:
+    if mybroker.visual:
+      try:
+        data = {"direction" : "StoC", "socket" : sock.fileno(), 
+            "clientid":  mybroker.clients[sock].id if sock in mybroker.clients.keys() else "", 
+            "packet" : packet.json() }
+        # for any byte arrays, use base64 in json
+        databytes = bytes(json.dumps(data), 'utf-8')
+        mybroker.broker.publish('$internal', '$SYS/clients-packets', databytes, 
+                0, 0, None, time.monotonic())
+      except:
+        traceback.print_exc()
     try:
       sock.send(packet.pack()) # Could get socket error on send
     except:
@@ -269,6 +282,10 @@ class MQTTBrokers:
 
   def __init__(self, options={}, lock=None, sharedData={}):
 
+    global mybroker
+    mybroker = self
+    self.visual = True
+
     defaults = {"publish_on_pubrel":False,
       "overlapping_single":True,
       "dropQoS0":True,
@@ -330,12 +347,14 @@ class MQTTBrokers:
     "this is going to be called from multiple threads, so synchronize"
     self.lock.acquire()
     sendWillMessage = False
+    raw_packet = None
     try:
       try:
         raw_packet = MQTTV5.getPacket(sock)
       except:
-        raise MQTTV5.MQTTException("[MQTT-4.8.0-1] 'transient error' reading packet, closing connection")
+        pass # handled by raw_packet == None
       if raw_packet == None:
+        logger.info("[MQTT-4.8.0-1] 'transient error' reading packet, closing connection")
         # will message
         if sock in self.clients.keys():
           self.disconnect(sock, None, sendWillMessage=True)
@@ -343,6 +362,18 @@ class MQTTBrokers:
       else:
         try:
           packet = MQTTV5.unpackPacket(raw_packet, self.maximumPacketSize)
+          if self.visual:
+            clientid = self.clients[sock].id if sock in self.clients.keys() else ""
+            if clientid == "" and hasattr(packet, "ClientIdentifier"):
+              clientid = packet.ClientIdentifier
+            try:
+              data = {"direction" : "CtoS", "socket" : sock.fileno(), 
+                    "clientid":  clientid, "packet" : packet.json() }
+              databytes = bytes(json.dumps(data), 'utf-8')
+              self.broker.publish('$internal', '$SYS/clients-packets', databytes,
+                   0, 0, None, time.monotonic())
+            except:
+              traceback.print_exc()
           if packet:
             terminate = self.handlePacket(packet, sock)
           else:

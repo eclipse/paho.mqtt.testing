@@ -32,13 +32,16 @@ class SubscriptionEngines:
        self.sharedData["subscriptions"] = []  # list of subscriptions
      else:
        logger.info("Sharing subscription data")
+     if "dollar_subscriptions" not in self.sharedData:
+       self.sharedData["dollar_subscriptions"] = []  # list of subscriptions
      self.__subscriptions = self.sharedData["subscriptions"] 
+     self.__dollar_subscriptions = self.sharedData["dollar_subscriptions"] 
      if "retained" not in self.sharedData:
        self.sharedData["retained"] = {}  # map of topics to retained msg+qos
-     self.__retained = self.sharedData["retained"]  
-
-     self.__dollar_subscriptions = []
-     self.__dollar_retained = {}
+     self.__retained = self.sharedData["retained"]
+     if "dollar_retained" not in self.sharedData:
+       self.sharedData["dollar_retained"] = {}  # map of topics to retained msg+qos
+     self.__dollar_retained = self.sharedData["dollar_retained"]  
 
    def reinitialize(self):
      self.__init__()

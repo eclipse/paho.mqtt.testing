@@ -1132,25 +1132,25 @@ class Test(unittest.TestCase):
 
       callback.clear()
       callback2.clear()
-      shared_sub_topic = '$share/sharename/x'
-      shared_pub_topic = 'x'
+      shared_sub_topic = '$share/sharename/' + topic_prefix + 'x'
+      shared_pub_topic = topic_prefix + 'x'
 
       connack = aclient.connect(host=host, port=port, cleanstart=True)
       self.assertEqual(connack.reasonCode.getName(), "Success")
       self.assertEqual(connack.sessionPresent, False)
-      aclient.subscribe([shared_sub_topic, topics[0]], [MQTTV5.SubscribeOptions(2)]*2) # subscribe to will message topic
+      aclient.subscribe([shared_sub_topic, topics[0]], [MQTTV5.SubscribeOptions(2)]*2) 
       self.waitfor(callback.subscribeds, 1, 3)
 
       connack = bclient.connect(host=host, port=port, cleanstart=True)
       self.assertEqual(connack.reasonCode.getName(), "Success")
       self.assertEqual(connack.sessionPresent, False)
-      bclient.subscribe([shared_sub_topic, topics[0]], [MQTTV5.SubscribeOptions(2)]*2) # subscribe to will message topic
+      bclient.subscribe([shared_sub_topic, topics[0]], [MQTTV5.SubscribeOptions(2)]*2) 
       self.waitfor(callback2.subscribeds, 1, 3)
 
       callback.clear()
       callback2.clear()
 
-      count = 10
+      count = 1
       for i in range(count):
         bclient.publish(topics[0], "message "+str(i), 0)
       j = 0
@@ -1164,7 +1164,6 @@ class Test(unittest.TestCase):
       callback.clear()
       callback2.clear()
 
-      count = 10
       for i in range(count):
         bclient.publish(shared_pub_topic, "message "+str(i), 0)
       j = 0
@@ -1197,9 +1196,11 @@ if __name__ == "__main__":
 
   iterations = 1
 
-  global topics, wildtopics, nosubscribe_topics, host
-  topics =  ("TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA")
-  wildtopics = ("TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#")
+  global topics, wildtopics, nosubscribe_topics, host, topic_prefix
+  topic_prefix = "client_test5/"
+  topics = [topic_prefix+topic for topic in ["TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA"]]
+  wildtopics = [topic_prefix+topic for topic in ["TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#"]]
+  print(wildtopics)
   nosubscribe_topics = ("test/nosubscribe",)
 
   host = "localhost"
