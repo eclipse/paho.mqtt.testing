@@ -26,7 +26,7 @@ so that the tests that use this package can send invalid data for error testing.
 
 import logging, struct
 
-logger = logging.getLogger('MQTTV5')
+logger = logging.getLogger('MQTT broker')
 
 # Low-level protocol interface
 
@@ -265,6 +265,7 @@ class VBIs:  # Variable Byte Integer
       if digit & 128 == 0:
         break
       multiplier *= 128
+    assert len(VBIs.encode(value)) == bytes, "[MQTT-1.5.5-1] The encoded value MUST use the minimum number of bytes necessary"
     return (value, bytes)
 
 def getPacket(aSocket):
@@ -600,6 +601,8 @@ class Properties(object):
         else:
           buffer += self.writeProperty(identifier, attr_type,
                            getattr(self, compressedName))
+    if len(buffer) == 0:
+       logger.info("[MQTT-2.2.2-1] If there are no properties, a property length of 0 must be included")
     return VBIs.encode(len(buffer)) + buffer
 
   def readProperty(self, buffer, type, propslen):
@@ -619,6 +622,7 @@ class Properties(object):
     elif type == self.types.index("UTF-8 Encoded String"):
       value, valuelen = readUTF(buffer, propslen)
     elif type == self.types.index("UTF-8 String Pair"):
+      logger.info("[MQTT-1.5.7-1] Both string pair strings must be properly formed")
       value, valuelen = readUTF(buffer, propslen)
       buffer = buffer[valuelen:] # strip the bytes used by the value
       value1, valuelen1 = readUTF(buffer, propslen - valuelen)
@@ -719,9 +723,9 @@ class Connects(Packets):
       packlen = fhlen + self.fh.remainingLength
       assert len(buffer) >= packlen, "buffer length %d packet length %d" % (len(buffer), packlen)
       curlen = fhlen # points to after header + remaining length
-      assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-      assert self.fh.QoS == 0, "[MQTT-2.1.2-1] QoS was not 0, was %d" % self.fh.QoS
-      assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
+      assert self.fh.DUP == False, "[MQTT-2.1.3-1]"
+      assert self.fh.QoS == 0, "[MQTT-2.1.3-1] QoS was not 0, was %d" % self.fh.QoS
+      assert self.fh.RETAIN == False, "[MQTT-2.1.3-1]"
 
       # to allow the server to send back a CONNACK with unsupported protocol version,
       # the following two assertions will need to be disabled
@@ -888,9 +892,9 @@ class Connacks(Packets):
     curlen += 1
     curlen += self.reasonCode.unpack(buffer[curlen:])
     curlen += self.properties.unpack(buffer[curlen:])[1]
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1]"
+    assert self.fh.QoS == 0, "[MQTT-2.1.3-1]"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1]"
 
   def __str__(self):
     return str(self.fh)+", Session present="+str((self.sessionPresent & 0x01) == 1)+\
@@ -943,9 +947,9 @@ class Disconnects(Packets):
     assert PacketType(buffer) == PacketTypes.DISCONNECT
     fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.QoS == 0, "[MQTT-2.1.3-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1] DISCONNECT reserved bits must be 0"
     curlen = 0
     if self.fh.remainingLength > 0:
       self.reasonCode.unpack(buffer[curlen:])
@@ -994,7 +998,10 @@ class Publishes(Packets):
 
   def pack(self):
     buffer = writeUTF(self.topicName)
-    if self.fh.QoS != 0:
+    if self.fh.QoS == 0:
+      logger.info("[MQTT-2.2.1-2] no packet indentifier in publish if QoS is 0")
+    else:
+      logger.info("[MQTT-2.2.1-4] packet indentifier must be in publish if QoS is 1 or 2")
       buffer +=  writeInt16(self.packetIdentifier)
     buffer += self.properties.pack()
     buffer += self.data
@@ -1017,11 +1024,11 @@ class Publishes(Packets):
     curlen += valuelen
     if self.fh.QoS != 0:
       self.packetIdentifier = readInt16(buffer[curlen:])
-      logger.info("[MQTT-2.3.1-1] packet indentifier must be in publish if QoS is 1 or 2")
+      logger.info("[MQTT-2.2.1-3] packet indentifier must be in publish if QoS is 1 or 2")
       curlen += 2
       assert self.packetIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
     else:
-      logger.info("[MQTT-2.3.1-5] no packet indentifier in publish if QoS is 0")
+      logger.info("[MQTT-2.2.1-2] no packet indentifier in publish if QoS is 0")
       self.packetIdentifier = 0
     curlen += self.properties.unpack(buffer[curlen:])[1]
     self.data = buffer[curlen:fhlen + self.fh.remainingLength]
@@ -1096,15 +1103,15 @@ class Acks(Packets):
     assert len(buffer) >= fhlen + self.fh.remainingLength
     self.packetIdentifier = readInt16(buffer[fhlen:])
     curlen = fhlen + 2
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] %s reserved bits must be 0" %\
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1] %s reserved bits must be 0" %\
       self.ackName
     if self.ackType == PacketTypes.PUBREL:
       assert self.fh.QoS == 1, "[MQTT-3.6.1-1] %s reserved bits must be 0010" %\
         self.ackName
     else:
-      assert self.fh.QoS == 0, "[MQTT-2.1.2-1] %s reserved bits must be 0" %\
+      assert self.fh.QoS == 0, "[MQTT-2.1.3-1] %s reserved bits must be 0" %\
         self.ackName
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] %s reserved bits must be 0" %\
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1] %s reserved bits must be 0" %\
       self.ackName
     if self.fh.remainingLength > 2:
       self.reasonCode.unpack(buffer[curlen:])
@@ -1238,9 +1245,9 @@ class Subscribes(Packets):
     assert PacketType(buffer) == PacketTypes.SUBSCRIBE
     fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
-    logger.info("[MQTT-2.3.1-1] packet indentifier must be in subscribe")
+    logger.info("[MQTT-2.2.1-3] packet indentifier must be in subscribe")
     self.packetIdentifier = readInt16(buffer[fhlen:])
-    assert self.packetIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
+    assert self.packetIdentifier > 0, "[MQTT-2.2.1-3] packet indentifier must be > 0"
     leftlen = self.fh.remainingLength - 2
     leftlen -= self.properties.unpack(buffer[-leftlen:])[1]
     self.data = []
@@ -1253,9 +1260,9 @@ class Subscribes(Packets):
       self.data.append((topic, options))
     assert len(self.data) > 0, "[MQTT-3.8.3-1] at least one topic, qos pair must be in subscribe"
     assert leftlen == 0
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] DUP must be false in subscribe"
-    assert self.fh.QoS == 1, "[MQTT-2.1.2-1] QoS must be 1 in subscribe"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] RETAIN must be false in subscribe"
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1] DUP must be false in subscribe"
+    assert self.fh.QoS == 1, "[MQTT-2.1.3-1] QoS must be 1 in subscribe"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1] RETAIN must be false in subscribe"
     return fhlen + self.fh.remainingLength
 
   def __str__(self):
@@ -1325,9 +1332,9 @@ class UnsubSubacks(Packets):
       leftlen -= 1
       self.reasonCodes.append(reasonCode)
     assert leftlen == 0
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] DUP should be false in suback"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] QoS should be 0 in suback"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] Retain should be false in suback"
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1] DUP should be false in suback"
+    assert self.fh.QoS == 0, "[MQTT-2.1.3-1] QoS should be 0 in suback"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1] Retain should be false in suback"
     return fhlen + self.fh.remainingLength
 
   def __str__(self):
@@ -1387,9 +1394,9 @@ class Unsubscribes(Packets):
     assert PacketType(buffer) == PacketTypes.UNSUBSCRIBE
     fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
-    logger.info("[MQTT-2.3.1-1] packet indentifier must be in unsubscribe")
+    logger.info("[MQTT-2.2.1-3] packet indentifier must be in unsubscribe")
     self.packetIdentifier = readInt16(buffer[fhlen:])
-    assert self.packetIdentifier > 0, "[MQTT-2.3.1-1] packet indentifier must be > 0"
+    assert self.packetIdentifier > 0, "[MQTT-2.2.1-3] packet indentifier must be > 0"
     leftlen = self.fh.remainingLength - 2
     leftlen -= self.properties.unpack(buffer[-leftlen:])[1]
     self.topicFilters = []
@@ -1398,9 +1405,9 @@ class Unsubscribes(Packets):
       leftlen -= topiclen
       self.topicFilters.append(topic)
     assert leftlen == 0
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-    assert self.fh.QoS == 1, "[MQTT-2.1.2-1]"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1]"
+    assert self.fh.QoS == 1, "[MQTT-2.1.3-1]"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1]"
     logger.info("[MQTT-3-10.1-1] fixed header bits are 0,0,1,0")
     return fhlen + self.fh.remainingLength
 
@@ -1447,9 +1454,9 @@ class Pingreqs(Packets):
     assert PacketType(buffer) == PacketTypes.PINGREQ
     fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert self.fh.remainingLength == 0
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1]"
+    assert self.fh.QoS == 0, "[MQTT-2.1.3-1]"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1]"
     return fhlen
 
   def __str__(self):
@@ -1478,9 +1485,9 @@ class Pingresps(Packets):
     assert PacketType(buffer) == PacketTypes.PINGRESP
     fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert self.fh.remainingLength == 0
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1]"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1]"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1]"
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1]"
+    assert self.fh.QoS == 0, "[MQTT-2.1.3-1]"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1]"
     return fhlen
 
   def __str__(self):
@@ -1525,9 +1532,9 @@ class Disconnects(Packets):
     assert PacketType(buffer) == PacketTypes.DISCONNECT
     fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.QoS == 0, "[MQTT-2.1.3-1] DISCONNECT reserved bits must be 0"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1] DISCONNECT reserved bits must be 0"
     curlen = fhlen
     if self.fh.remainingLength > 0:
       self.reasonCode.unpack(buffer[curlen:])
@@ -1582,9 +1589,9 @@ class Auths(Packets):
     assert PacketType(buffer) == PacketTypes.AUTH
     fhlen = self.fh.unpack(buffer, maximumPacketSize)
     assert len(buffer) >= fhlen + self.fh.remainingLength
-    assert self.fh.DUP == False, "[MQTT-2.1.2-1] AUTH reserved bits must be 0"
-    assert self.fh.QoS == 0, "[MQTT-2.1.2-1] AUTH reserved bits must be 0"
-    assert self.fh.RETAIN == False, "[MQTT-2.1.2-1] AUTH reserved bits must be 0"
+    assert self.fh.DUP == False, "[MQTT-2.1.3-1] AUTH reserved bits must be 0"
+    assert self.fh.QoS == 0, "[MQTT-2.1.3-1] AUTH reserved bits must be 0"
+    assert self.fh.RETAIN == False, "[MQTT-2.1.3-1] AUTH reserved bits must be 0"
     curlen = fhlen
     curlen += self.reasonCode.unpack(buffer[curlen:])
     curlen += self.properties.unpack(buffer[curlen:])[1]
