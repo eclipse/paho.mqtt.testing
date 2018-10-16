@@ -35,7 +35,7 @@ ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
 def sendtosocket(mysocket, data):
-  logger.debug("out: %s", str(data))
+  logger.debug("MQTTv5 Client: sendtosocket: %s", str(data))
   sent = 0
   length = len(data)
   try:
@@ -48,23 +48,23 @@ def sendtosocket(mysocket, data):
 class Callback:
 
   def connectionLost(self, cause):
-    logger.debug("default connectionLost %s", str(cause))
+    logger.debug("MQTTv5 Client: default connectionLost %s", str(cause))
 
   def publishArrived(self, topicName, payload, qos, retained, msgid):
-    logger.debug("default publishArrived %s %s %d %d %d", topicName, payload, qos, retained, msgid)
+    logger.debug("MQTTv5 Client: default publishArrived %s %s %d %d %d", topicName, payload, qos, retained, msgid)
     return True
 
   def published(self, msgid):
-    logger.debug("default published %d", msgid)
+    logger.debug("MQTTv5 Client: default published %d", msgid)
 
   def subscribed(self, msgid):
-    logger.debug("default subscribed %d", msgid)
+    logger.debug("MQTTv5 Client: default subscribed %d", msgid)
 
   def unsubscribed(self, msgid):
-    logger.debug("default unsubscribed %d", msgid)
+    logger.debug("MQTTv5 Client: default unsubscribed %d", msgid)
 
   def disconnected(self, reasoncode, properties):
-    logger.debug("default disconnected")
+    logger.debug("MQTTv5 Client: default disconnected")
 
 
 
@@ -74,6 +74,7 @@ class Client:
     return self.__receiver
 
   def __init__(self, clientid):
+    logger.debug("MQTTv5 Client: init(%s)", clientid)
     self.clientid = clientid
     self.msgid = 1
     self.callback = None
@@ -105,6 +106,7 @@ class Client:
   def connect(self, host="localhost", port=1883, cleanstart=True, keepalive=0, newsocket=True, protocolName=None,
               willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None,
               properties=None, willProperties=None):
+    logger.debug("MQTTv5 Client: connect(host=%s, newsocket=%s)", host, newsocket)
     if newsocket:
       try:
         self.sock.close()
@@ -181,6 +183,7 @@ class Client:
 
 
   def publish(self, topic, payload, qos=0, retained=False, properties=None):
+    logger.debug("MQTTv5 Client: publish on topic '%s'", topic)
     publish = MQTTV5.Publishes()
     publish.fh.QoS = qos
     publish.fh.RETAIN = retained
@@ -200,11 +203,12 @@ class Client:
 
 
   def disconnect(self, properties=None):
+    logger.debug("MQTTv5 Client: disconnecting")
     if self.__receiver:
       self.__receiver.stopping = True
       count = 0
       while (len(self.__receiver.inMsgs) > 0 or len(self.__receiver.outMsgs) > 0) and self.__receiver.paused == False:
-        logger.debug("disconnecting %s %s", self.__receiver.inMsgs, self.__receiver.outMsgs)
+        logger.debug("MQTTv5 Client: disconnecting %s %s", self.__receiver.inMsgs, self.__receiver.outMsgs)
         time.sleep(.2)
         count += 1
         if count == 20:
@@ -228,6 +232,7 @@ class Client:
       self.__receiver.stopping = False
 
   def terminate(self):
+    logger.debug("MQTTv5 Client: terminating")
     if self.__receiver:
       self.__receiver.stopping = True
     self.sock.shutdown(socket.SHUT_RDWR)
