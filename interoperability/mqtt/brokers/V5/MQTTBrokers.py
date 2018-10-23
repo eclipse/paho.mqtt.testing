@@ -44,18 +44,20 @@ def respond(sock, packet, maximumPacketSize=500):
   # deal with packet size
   packlen = len(packet.pack())
   if packlen > maximumPacketSize:
-    logger.error("Packet too big to send to client packet size %d max packet size %d" % (packlen, maximumPacketSize))
+    logger.error("[MQTT5-3.1.2-24] Packet too big to send to client packet size %d max packet size %d" % (packlen, maximumPacketSize))
+    logger.info("[MQTT5-3.1.2-25] message must be discarded and behave as if it had been sent")
     return
   if hasattr(sock, "fileno"):
     packet_string = str(packet)
     if len(packet_string) > 256:
       packet_string = packet_string[:255] + '...' + (' payload length:' + str(len(packet.data)) if hasattr(packet, "data") else "")
     logger.debug("out: (%d) %s", sock.fileno(), packet_string)
-  #mscfile.write("broker=>client%d[label=%s];\n" % (sock.fileno(), str(packet).split("(")[0]))
+  if mybroker.mscfile != None:
+    mybroker.mscfile.write("broker=>client%d[label=%s];\n" % (sock.fileno(), str(packet).split("(")[0]))
   if hasattr(sock, "handlePacket"):
     sock.handlePacket(packet)
   else:
-    if mybroker.visual:
+    if mybroker.options["visual"]:
       try:
         data = {"direction" : "StoC", "socket" : sock.fileno(), 
             "clientid":  mybroker.clients[sock].id if sock in mybroker.clients.keys() else "", 
@@ -92,7 +94,7 @@ class MQTTClients:
     self.outbound = [] # message objects - for ordering
     self.outmsgs = {} # msgids to message objects
     # inbound messages
-    if broker.publish_on_pubrel:
+    if broker.options["publish_on_pubrel"]:
       self.inbound = {} # stored inbound QoS 2 publications
     else:
       self.inbound = []
@@ -167,7 +169,10 @@ class MQTTClients:
       pub.properties = properties
     logger.info("[MQTT-3.2.3-3] topic name must match the subscription's topic filter")
     # Topic alias
+    if self.topicAliasMaximum == 0:
+      logger.info("[MQTT5-3.1.2-27] if topic alias is 0, no topic aliases must be sent") 
     if len(self.outgoingTopicNamesToAliases) < self.topicAliasMaximum and not topic in self.outgoingTopicNamesToAliases:
+      logger.info("[MQTT5-3.1.2-26] Server must not send topic alias > max") 
       self.outgoingTopicNamesToAliases.append(topic)       # add alias
       pub.topicName = topic # include topic name as well as alias first time
     if topic in self.outgoingTopicNamesToAliases:
@@ -185,7 +190,7 @@ class MQTTClients:
     if qos == 2:
       pub.qos2state = "PUBREC"
     if len(self.outbound) >= self.receiveMaximum or not self.connected:
-      if qos > 0 or not self.broker.dropQoS0:
+      if qos > 0 or not self.broker.options["dropQoS0"]:
         self.queued.append(pub) # this should never be infinite in reality
       if qos > 0 and not self.connected:
         logger.info("[MQTT-3.1.2-5] storing of QoS 1 and 2 messages for disconnected client %s", self.id)
@@ -237,7 +242,7 @@ class MQTTClients:
 
   def pubrel(self, msgid):
     rc = None
-    if self.broker.publish_on_pubrel:
+    if self.broker.options["publish_on_pubrel"]:
         if msgid in self.inbound.keys():
             pub = self.inbound[msgid]
             if pub.fh.QoS == 2:
@@ -284,26 +289,9 @@ class MQTTBrokers:
 
     global mybroker
     mybroker = self
-    self.visual = True
+    self.options = options
 
-    defaults = {"publish_on_pubrel":False,
-      "overlapping_single":True,
-      "dropQoS0":True,
-      "zero_length_clientids":True,
-      "topicAliasMaximum":2,
-      "maximumPacketSize":256,
-      "receiveMaximum":2,
-      "serverKeepAlive":60}
-
-    for key in defaults.keys():
-      if key not in options.keys():
-        options[key] = defaults[key]
-
-    # optional behaviours
-    for key in options.keys():
-      setattr(self, key, options[key])
-
-    self.broker = Brokers(self.overlapping_single, options["topicAliasMaximum"], sharedData=sharedData)
+    self.broker = Brokers(self.options["overlapping_single"], self.options["topicAliasMaximum"], sharedData=sharedData)
     self.clients = {}   # socket -> clients
     if lock:
       logger.info("Using shared lock %d", id(lock))
@@ -314,22 +302,12 @@ class MQTTBrokers:
     self.cleanupThread = cleanupThreads(self.broker)
 
     logger.info("MQTT 5.0 Paho Test Broker")
-    logger.info("Optional behaviour, publish on pubrel: %s", self.publish_on_pubrel)
-    logger.info("Optional behaviour, single publish on overlapping topics: %s", self.broker.overlapping_single)
-    logger.info("Optional behaviour, drop QoS 0 publications to disconnected clients: %s", self.dropQoS0)
-    logger.info("Optional behaviour, support zero length clientids: %s", self.zero_length_clientids)
-    logger.info("Optional behaviour, number of client topic aliases allowed: %d", self.topicAliasMaximum)
-    logger.info("Optional behaviour, maximum packet size: %d", self.maximumPacketSize)
-    logger.info("Optional behaviour, receive maximum: %d", self.receiveMaximum)
-    logger.info("Optional behaviour, server keep alive: %d", self.serverKeepAlive)
+    logger.info("Options %s", self.options)
 
-    """
-    Other optional behaviour:
-        - topics which are max QoS 0, QoS 1 or unavailable
-    """
-    global mscfile
-    #mscfile = open("broker.msc", "w")
-    #mscfile.write("msc {\n broker;\n")
+    self.mscfile = None
+    if "mscfile" in self.options.keys():
+      self.mscfile = open(self.options["mscfile"], "w")
+      self.mscfile.write("msc {\n broker;\n")
 
   def shutdown(self):
     self.disconnectAll()
@@ -361,8 +339,8 @@ class MQTTBrokers:
         terminate = True
       else:
         try:
-          packet = MQTTV5.unpackPacket(raw_packet, self.maximumPacketSize)
-          if self.visual:
+          packet = MQTTV5.unpackPacket(raw_packet, self.options["maximumPacketSize"])
+          if self.options["visual"]:
             clientid = self.clients[sock].id if sock in self.clients.keys() else ""
             if clientid == "" and hasattr(packet, "ClientIdentifier"):
               clientid = packet.ClientIdentifier
@@ -402,11 +380,14 @@ class MQTTBrokers:
       if len(packet_string) > 256:
         packet_string = packet_string[0:256] + '...' + (' payload length:' + str(len(packet.data)) if hasattr(packet, "data") else "")
       logger.debug("in: (%d) %s", sock.fileno(), packet_string)
-    #mscfile.write("client%d=>broker[label=%s];\n" % (sock.fileno(), str(packet).split("(")[0]))
+    if self.mscfile != None:
+      self.mscfile.write("client%d=>broker[label=%s];\n" % (sock.fileno(), str(packet).split("(")[0]))
     if sock not in self.clients.keys() and packet.fh.PacketType != MQTTV5.PacketTypes.CONNECT:
       self.disconnect(sock, packet)
-      raise MQTTV5.MQTTException("[MQTT-3.1.0-1] Connect was not first packet on socket")
+      raise MQTTV5.MQTTException("[MQTT5-3.1.0-1-error] Connect was not first packet on socket")
     else:
+      if packet.fh.PacketType == MQTTV5.PacketTypes.CONNECT:
+        logger.info("[MQTT5-3.1.0-1] Connect must be first packet on socket")
       getattr(self, MQTTV5.Packets.Names[packet.fh.PacketType].lower())(sock, packet)
       if sock in self.clients.keys():
         self.clients[sock].lastPacket = time.monotonic()
@@ -418,54 +399,70 @@ class MQTTBrokers:
     resp = MQTTV5.Connacks()
     if packet.ProtocolName != "MQTT":
       self.disconnect(sock, None)
-      raise MQTTV5.MQTTException("[MQTT-3.1.2-1] Wrong protocol name %s" % packet.ProtocolName)
+      raise MQTTV5.MQTTException("[MQTT5-3.1.2-1-error] Wrong protocol name %s" % packet.ProtocolName)
+    logger.info("[MQTT5-3.1.2-1] Protocol name must be MQTT")
     if packet.ProtocolVersion != 5:
-      logger.error("[MQTT-3.1.2-2] Wrong protocol version %d", packet.ProtocolVersion)
+      logger.error("[MQTT5-3.1.2-2-error] Wrong protocol version %d", packet.ProtocolVersion)
       resp.reasonCode.set("Unsupported protocol version")
       respond(sock, resp)
-      logger.info("[MQTT-3.2.2-5] must close connection after non-zero connack")
+      logger.info("[MQTT5-3.2.2-6] must set session present to 0 with non-zero connack")
+      logger.info("[MQTT5-3.2.2-7] must close connection after connack reason >= 0x80")
       self.disconnect(sock, None)
-      logger.info("[MQTT-3.1.4-5] When rejecting connect, no more data must be processed")
+      logger.info("[MQTT5-3.1.4-6] When rejecting connect, no more data must be processed")
       return
+    logger.info("[MQTT5-3.1.2-2] Protocol version must be 5")
     if sock in self.clients.keys():    # is socket is already connected?
       self.disconnect(sock, None)
-      logger.info("[MQTT-3.1.4-5] When rejecting connect, no more data must be processed")
-      raise MQTTV5.MQTTException("[MQTT-3.1.0-2] Second connect packet")
+      logger.info("[MQTT5-3.1.4-6] When rejecting connect, no more data must be processed")
+      raise MQTTV5.MQTTException("[MQTT5-3.1.0-2] Second connect packet")
     if len(packet.ClientIdentifier) == 0:
       packet.ClientIdentifier = str(uuid.uuid4()) # give the client a unique clientid
-      logger.info("[MQTT-3.1.3-6] 0-length clientid must be assigned a unique id %s", packet.ClientIdentifier)
+      logger.info("[MQTT5-3.1.3-6] 0-length clientid must be assigned a unique id %s", packet.ClientIdentifier)
       resp.properties.AssignedClientIdentifier = packet.ClientIdentifier # returns the assigned client id
-    logger.info("[MQTT-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed")
+      logger.info("[MQTT5-3.1.3-7] must return the assigned client id")
+    else:
+      logger.info("[MQTT5-3.1.3-5] Clientids of 1 to 23 chars and ascii alphanumeric must be allowed")
+      if False: # reject clientid test
+        logger.info("[MQTT5-3.1.3-8] server rejects clientid - may return connack")
     if packet.ClientIdentifier in [client.id for client in self.clients.values()]: # is this client already connected on a different socket?
       for cursock in self.clients.keys():
         if self.clients[cursock].id == packet.ClientIdentifier:
-          logger.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
-          self.disconnect(cursock, None)
+          logger.info("[MQTT5-3.1.4-3] Disconnecting old client %s", packet.ClientIdentifier)
+          self.disconnect(cursock, reasonCode="Session taken over")
           break
     me = None
     clean = False
     if packet.CleanStart:
+      logger.info("[MQTT5-3.1.2-4] discard existing session when cleanstart set to 1")
+      logger.info("[MQTT5-3.1.4-4] server must perform clean start processing")
       clean = True
+      logger.info("[MQTT5-3.2.2-2] session present must be set to 0 if cleanstart is 1")
     else:
       me = self.broker.getClient(packet.ClientIdentifier) # find existing state, if there is any
+      if not me:
+        logger.info("[MQTT5-3.1.2-6] no existing session and cleanstart set to 0")
       # has that state expired?
       if me and me.sessionExpiryInterval >= 0 and time.monotonic() - me.sessionEndedTime > me.sessionExpiryInterval:
         me = None
         clean = True
+      else:
+        logger.info("[MQTT5-3.1.2-5] resume an existing session when cleanstart set to 0")
       if me:
-        logger.info("[MQTT-3.1.3-2] clientid used to retrieve client state")
+        logger.info("[MQTT5-3.1.3-2] clientid used to retrieve client state")
+        logger.info("[MQTT5-3.2.2-3] session present must be set to 1")
     resp.sessionPresent = True if me else False
     # Connack topic alias maximum for incoming client created topic aliases
-    if self.topicAliasMaximum > 0:
-      resp.properties.TopicAliasMaximum = self.topicAliasMaximum
-    if self.maximumPacketSize < MQTTV5.MAX_PACKET_SIZE:
-      resp.properties.MaximumPacketSize = self.maximumPacketSize
-    if self.receiveMaximum < MQTTV5.MAX_PACKETID:
-      resp.properties.ReceiveMaximum = self.receiveMaximum
+    if self.options["topicAliasMaximum"] > 0:
+      resp.properties.TopicAliasMaximum = self.options["topicAliasMaximum"]
+    if self.options["maximumPacketSize"] < MQTTV5.MAX_PACKET_SIZE:
+      resp.properties.MaximumPacketSize = self.options["maximumPacketSize"]
+    if self.options["receiveMaximum"] < MQTTV5.MAX_PACKETID:
+      resp.properties.ReceiveMaximum = self.options["receiveMaximum"]
     keepalive = packet.KeepAliveTimer
-    if packet.KeepAliveTimer > 0 and self.serverKeepAlive < packet.KeepAliveTimer:
-      keepalive = self.serverKeepAlive
+    if packet.KeepAliveTimer > 0 and self.options["serverKeepAlive"] < packet.KeepAliveTimer:
+      keepalive = self.options["serverKeepAlive"]
       resp.properties.ServerKeepAlive = keepalive
+      logger.info("[MQTT5-3.1.2-21] client must use server keep alive if returned on connack")
     # Session expiry
     if hasattr(packet.properties, "SessionExpiryInterval"):
       sessionExpiryInterval = packet.properties.SessionExpiryInterval
@@ -486,6 +483,9 @@ class MQTTBrokers:
       me.keepalive = keepalive
       me.sessionExpiryInterval = sessionExpiryInterval
       me.willDelayInterval = willDelayInterval
+    if me.delayedWillTime:
+      me.delayedWillTime = None
+      logger.info("[MQTT5-3.1.3-9] don't send delayed will if client connects in time")
     # the topic alias maximum in the connect properties sets the maximum outgoing topic aliases for a client
     me.topicAliasMaximum = packet.properties.TopicAliasMaximum if hasattr(packet.properties, "TopicAliasMaximum") else 0
     me.maximumPacketSize = packet.properties.MaximumPacketSize if hasattr(packet.properties, "MaximumPacketSize") else MQTTV5.MAX_PACKET_SIZE
@@ -495,8 +495,11 @@ class MQTTBrokers:
     logger.info("[MQTT-4.1.0-1] server must store data for at least as long as the network connection lasts")
     self.clients[sock] = me
     me.will = (packet.WillTopic, packet.WillQoS, packet.WillMessage, packet.WillRETAIN, packet.WillProperties) if packet.WillFlag else None
+    if me.will != None:
+      logger.info("[MQTT5-3.1.2-7] the will message must be stored if the WillFlag is set")
     self.broker.connect(me, clean)
-    logger.info("[MQTT-3.2.0-1] the first response to a client must be a connack")
+    logger.info("[MQTT5-3.2.0-1] the first response to a client must be a connack")
+    logger.info("[MQTT5-3.1.4-5] the server must acknowledge the connect with a connack success")
     resp.reasonCode.set("Success")
     respond(sock, resp)
     me.resend()
@@ -555,7 +558,7 @@ class MQTTBrokers:
     if len(topics) > 0:
       self.broker.subscribe(self.clients[sock].id, topics, optionss)
     resp = MQTTV5.Subacks()
-    logger.info("[MQTT-2.3.1-7][MQTT-3.8.4-2] Suback has same message id as subscribe")
+    logger.info("[MQTT5-2.2.1-6-suback] Suback has same message id as subscribe")
     logger.info("[MQTT-3.8.4-1] Must respond with suback")
     resp.packetIdentifier = packet.packetIdentifier
     logger.info("[MQTT-3.8.4-5] return code must be returned for each topic in subscribe")
@@ -569,7 +572,7 @@ class MQTTBrokers:
   def unsubscribe(self, sock, packet):
     reasonCodes = self.broker.unsubscribe(self.clients[sock].id, packet.topicFilters)
     resp = MQTTV5.Unsubacks()
-    logger.info("[MQTT-2.3.1-7] Unsuback has same message id as unsubscribe")
+    logger.info("[MQTT5-2.2.1-6-unsuback] Unsuback has same message id as unsubscribe")
     logger.info("[MQTT-3.10.4-4] Unsuback must be sent - same message id as unsubscribe")
     me = self.clients[sock]
     if len(me.outbound) > 0:
@@ -589,9 +592,12 @@ class MQTTBrokers:
     if packet.topicName.startswith("cmd/"):
         self.handleBehaviourPublish(sock, packet.topicName, packet.data)
     else:
-        if len(self.clients[sock].inbound) >= self.receiveMaximum:
+        if len(self.clients[sock].inbound) >= self.options["receiveMaximum"]:
           self.disconnect(sock, reasonCode="Receive maximum exceeded", sendWillMessage=True)
-        elif packet.fh.QoS == 0:
+          return
+        if hasattr(packet.properties, "UserProperty") and len(packet.properties.UserProperty) > 1:
+          logger.info("[MQTT-3.1.3-10] Must maintain order of user properties")
+        if packet.fh.QoS == 0:
           self.broker.publish(self.clients[sock].id, packet.topicName,
                  packet.data, packet.fh.QoS, packet.fh.RETAIN, packet.properties,
                  packet.receivedTime)
@@ -603,7 +609,7 @@ class MQTTBrokers:
                 packet.data, packet.fh.QoS, packet.fh.RETAIN, packet.properties,
                 packet.receivedTime)
           resp = MQTTV5.Pubacks()
-          logger.info("[MQTT-2.3.1-6] puback messge id same as publish")
+          logger.info("[MQTT5-2.2.1-5-puback] puback message id same as publish")
           resp.packetIdentifier = packet.packetIdentifier
           if subscribers == None:
             resp.reasonCode.set("No matching subscribers")
@@ -615,7 +621,7 @@ class MQTTBrokers:
         elif packet.fh.QoS == 2:
           myclient = self.clients[sock]
           subscribers = None
-          if self.publish_on_pubrel:
+          if self.options["publish_on_pubrel"]:
             if packet.packetIdentifier in myclient.inbound.keys():
               if packet.fh.DUP == 0:
                 logger.error("[MQTT-3.3.1-2] duplicate QoS 2 message id %d found with DUP 0", packet.packetIdentifier)
@@ -643,13 +649,13 @@ class MQTTBrokers:
               if packet.topicName == "test_qos_1_2_errors_pubcomp":
                 myclient.pubcomp_error = packet.packetIdentifier
           resp = MQTTV5.Pubrecs()
-          logger.info("[MQTT-2.3.1-6] pubrec messge id same as publish")
+          logger.info("[MQTT5-2.2.1-5-pubrec] pubrec message id same as publish")
           resp.packetIdentifier = packet.packetIdentifier
           if subscribers == None:
             resp.reasonCode.set("No matching subscribers")
           if hasattr(packet, "topicName") and packet.topicName == "test_qos_1_2_errors":
             resp.reasonCode.set("Not authorized")
-            if self.publish_on_pubrel:
+            if self.options["publish_on_pubrel"]:
               del myclient.inbound[packet.packetIdentifier]
             else:
               myclient.inbound.remove(packet.packetIdentifier)
@@ -682,14 +688,14 @@ class MQTTBrokers:
     myclient = self.clients[sock]
     pub = myclient.pubrel(packet.packetIdentifier)
     if pub:
-      if self.publish_on_pubrel:
+      if self.options["publish_on_pubrel"]:
         self.broker.publish(myclient.id, pub.topicName, pub.data, pub.fh.QoS, pub.fh.RETAIN, pub.properties,
                 pub.receivedTime)
         del myclient.inbound[packet.packetIdentifier]
       else:
         myclient.inbound.remove(packet.packetIdentifier)
     resp = MQTTV5.Pubcomps()
-    logger.info("[MQTT-2.3.1-6] pubcomp messge id same as publish")
+    logger.info("[MQTT5-2.2.1-5-pubcomp] pubcomp message id same as publish")
     resp.packetIdentifier = packet.packetIdentifier
     if not pub:
       resp.reasonCode.set("Packet identifier not found")
@@ -704,6 +710,7 @@ class MQTTBrokers:
     respond(sock, resp)
 
   def pingreq(self, sock, packet):
+    logger.info("[MQTT5-3.1.2-20] client must send ping in the absence of other packets")
     resp = MQTTV5.Pingresps()
     logger.info("[MQTT-3.12.4-1] sending pingresp in response to pingreq")
     respond(sock, resp)
@@ -718,6 +725,7 @@ class MQTTBrokers:
     if myclient.pubrec(packet.packetIdentifier):
       logger.info("[MQTT-3.5.4-1] must reply with pubrel in response to pubrec")
       resp = MQTTV5.Pubrels()
+      logger.info("[MQTT5-2.2.1-5-pubrel] pubrel message id same as publish")
       resp.packetIdentifier = packet.packetIdentifier
       respond(sock, resp)
 
@@ -730,5 +738,5 @@ class MQTTBrokers:
       client = self.clients[sock]
       if client.keepalive > 0 and time.monotonic() - client.lastPacket > client.keepalive * 1.5:
         # keep alive timeout
-        logger.info("[MQTT-3.1.2-22] keepalive timeout for client %s", client.id)
+        logger.info("[MQTT5-3.1.2-22] keepalive timeout for client %s", client.id)
         self.disconnect(sock, None, sendWillMessage=True)

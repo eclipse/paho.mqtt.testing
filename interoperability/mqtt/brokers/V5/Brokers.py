@@ -66,14 +66,14 @@ class Brokers:
     self.__clients[aClientid].delayedWillTime = None
     if aClientid in self.willMessageClients:
       self.willMessageClients.remove(aClientid)
-    logger.info("[MQTT-3.1.2-8] sending will message for client %s", aClientid)
+    logger.info("[MQTT5-3.1.2-8] sending will message for client %s", aClientid)
     willtopic, willQoS, willmsg, willRetain, willProperties = self.__clients[aClientid].will
     if willRetain:
-      logger.info("[MQTT-3.1.2-17] sending will message retained for client %s", aClientid)
+      logger.info("[MQTT5-3.1.2-15] sending will message retained for client %s", aClientid)
     else:
-      logger.info("[MQTT-3.1.2-16] sending will message non-retained for client %s", aClientid)
+      logger.info("[MQTT5-3.1.2-14] sending will message non-retained for client %s", aClientid)
     self.publish(aClientid, willtopic, willmsg, willQoS, willRetain, willProperties, time.monotonic())
-    logger.info("[MQTT-3.1.2-10] will message is deleted after use or disconnect, for client %s", aClientid)
+    logger.info("[MQTT5-3.1.2-10] will message is deleted after use or disconnect, for client %s", aClientid)
     logger.info("[MQTT-3.14.4-3] on receipt of disconnect, will message is deleted")
     self.__clients[aClientid].will = None
 
@@ -94,11 +94,10 @@ class Brokers:
     if aClientid in self.__clients.keys():
       self.__clients[aClientid].connected = False
       if sessionExpiryInterval == 0:
-        logger.info("[MQTT-3.1.2-6] broker must discard the session data for client %s", aClientid)
         self.cleanSession(aClientid)
         del self.__clients[aClientid]
       else:
-        logger.info("[MQTT-3.1.2-4] broker must store the session data for client %s", aClientid)
+        logger.info("[MQTT5-3.1.2-23] broker must store the session data for client %s", aClientid)
         self.__clients[aClientid].sessionEndedTime = time.monotonic()
         self.__clients[aClientid].connected = False
 

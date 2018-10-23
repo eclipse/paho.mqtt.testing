@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2017 IBM Corp.
+  Copyright (c) 2013, 2018 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -50,8 +50,7 @@ def setup_persistence(persistence_filename):
   sharedData = root.mqtt["sharedData"]
   return connection, sharedData
 
-def process_config(config):
-    options = {}
+def process_config(config, options):
     servers_to_create = []
     lineno = 0
     while lineno < len(config):
@@ -66,8 +65,24 @@ def process_config(config):
             logger.setLevel(logging.DEBUG)
       elif words[0] == "receive_maximum":
         options["receiveMaximum"] = int(words[1])
+      elif words[0] == "topic_alias_maximum":
+        options["topicAliasMaximum"] = int(words[1])
       elif words[0] in ["maximum_packet_size", "message_size_limit"]:
         options["maximumPacketSize"] = int(words[1])
+      elif words[0] == "persistence" and words[1] == "true":
+        options["persistence"] = True
+      elif words[0] in ["maximum_qos", "retain_available", "subscription_identifier_available",
+              "shared_subscription_available", "server_keep_alive", "visual", "mscfile"]:
+        bools = {"true":True,'false':False}
+        result = words[1]
+        if words[1] in bools.keys():
+          result = bools[words[1]]
+        else:
+          try:
+            result = int(words[1])
+          except:
+            pass
+        options[words[0]] = result
       elif words[0] == "listener":
         ca_certs = certfile = keyfile = None
         cert_reqs=ssl.CERT_REQUIRED
@@ -114,15 +129,34 @@ def run(config=None):
   logger.addFilter(filter)
 
   lock = threading.RLock() # shared lock
-  persistence = False
-  if persistence:
+
+  options = {
+    "visual":False,
+    "persistence": False,
+    "overlapping_single": True,
+    "dropQoS0": True, 
+    "zero_length_clientids":True, 
+    "publish_on_pubrel":False,
+    "topicAliasMaximum":2,
+    "maximumPacketSize":256,
+    "receiveMaximum":2,
+    "serverKeepAlive":60,
+    "maximum_qos":2,
+    "retain_available":True,
+    "subscription_identifier_available":True,
+    "shared_subscription_available":True,
+    "server_keep_alive":None,
+  }
+
+  if config != None:
+    servers_to_create, options = process_config(config, options)
+
+  if options["persistence"]:
+    logger.info("Using persistence")    
     connection, sharedData = setup_persistence("sharedData") # location for data shared between brokers - subscriptions for example
   else:
     sharedData = {}
-
-  options = {}
-  if config != None:
-    servers_to_create, options = process_config(config)
+  logger.debug("Starting sharedData %s", sharedData)
 
   broker3 = MQTTV3Brokers(options=options.copy(), lock=lock, sharedData=sharedData)
 
@@ -176,7 +210,7 @@ def run(config=None):
   filter.measure()
 
   logger.debug("Ending sharedData %s", sharedData)
-  if persistence:
+  if options["persistence"]:
     sharedData._p_changed = True
     import transaction
     transaction.commit()
@@ -217,14 +251,6 @@ def main(argv):
     if o in ("-h", "--help"):
       usage()
       sys.exit()
-    elif o in ("-p", "--publish_on_pubrel"):
-      publish_on_pubrel = False if a in ["off", "false", "0"] else True
-    elif o in ("-o", "--overlapping_single"):
-      overlapping_single = False if a in ["off", "false", "0"] else True
-    elif o in ("-d", "--dropQoS0"):
-      dropQoS0 = False if a in ["off", "false", "0"] else True
-    elif o in ("-z", "--zero_length_clientids"):
-      zero_length_clientids = False if a in ["off", "false", "0"] else True
     elif o in ("--port"):
       port = int(a)
     elif o in ("-c", "--config-file"):
@@ -240,10 +266,7 @@ def usage():
 Eclipse Paho combined MQTT V311 and MQTT V5 broker
 
  -h --help: print this message
- -p: --publish_on_pubrel=0/1 unset/set publish on pubrel, publish on publish otherwise
- -o: --overlapping_single=0/1
- -d: --dropQoS0=0/1
- -z: --zero_length_clientid=0/1 disallow/allow zero length clientid test
+ -c --confile-file: the name of a configuration file
  --port= port number to listen to
 
 """)

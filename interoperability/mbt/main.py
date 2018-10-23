@@ -127,7 +127,8 @@ class Traces:
 		if len(frees) > 0:
 			if callback:
 				frees = callback(frees) # allow the test model to restrict choice
-			found = random.choice(frees) 
+			if len(frees) > 0:
+				found = random.choice(frees) 
 
 		return found
 
