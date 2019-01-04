@@ -57,7 +57,7 @@ class MyHandler(socketserver.StreamRequestHandler):
               packet = MQTTV3.unpackPacket(inbuf)
               if packet.fh.MessageType == MQTTV3.PUBLISH and \
                 packet.topicName == "MQTTSAS topic" and \
-                packet.data == "TERMINATE":
+                packet.data == b"TERMINATE":
                 print("Terminating client", self.ids[id(clients)])
                 brokers.close()
                 clients.close()
