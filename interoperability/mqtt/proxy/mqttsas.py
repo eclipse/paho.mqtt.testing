@@ -68,7 +68,7 @@ class MyHandler(socketserver.StreamRequestHandler):
               print(inbuf)
             except:
               traceback.print_exc()
-            brokers.send(inbuf)       # pass it on
+            brokers.sendall(inbuf)       # pass it on
           elif s == brokers:
             inbuf = MQTTV3.getPacket(brokers) # get one packet
             if inbuf == None:
@@ -77,7 +77,7 @@ class MyHandler(socketserver.StreamRequestHandler):
               print(timestamp(), "S to C", self.ids[id(clients)], repr(MQTTV3.unpackPacket(inbuf)))
             except:
               traceback.print_exc()
-            clients.send(inbuf)
+            clients.sendall(inbuf)
       print(timestamp()+" client "+self.ids[id(clients)]+" connection closing")
     except:
       print(repr((i, o, e)), repr(inbuf))

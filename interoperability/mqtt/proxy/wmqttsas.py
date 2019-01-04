@@ -74,7 +74,7 @@ class MyHandler(socketserver.StreamRequestHandler):
               print("C to S", timestamp(), repr(inbuf))
               sys.exit()
             #print "C to S", timestamp(), repr(inbuf)
-            brokers.send(inbuf)       # pass it on
+            brokers.sendall(inbuf)       # pass it on
           elif s == brokers:
             inbuf = MQTTV3.getPacket(brokers) # get one packet
             if inbuf == None:
@@ -88,7 +88,7 @@ class MyHandler(socketserver.StreamRequestHandler):
               print("S to C", timestamp(), repr(inbuf))
               sys.exit()
             #print "S to C", timestamp(), repr(inbuf)
-            clients.send(inbuf)
+            clients.sendall(inbuf)
       wx.CallAfter(myWindow.status, timestamp()+" client "+self.ids[id(clients)]+\
                    " connection closing")
     except:
