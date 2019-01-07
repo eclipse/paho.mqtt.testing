@@ -238,7 +238,7 @@ def create(port, host="", TLS=False, serve_forever=False,
     bind_address = host
   server = ThreadingTCPServer((bind_address, port), WebSocketTCPHandler, False)
   if TLS:
-    context = ssl.SSLContext()
+    context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLSv1_2)
     context.allow_non_sni_connections = allow_non_sni_connections
     try:
       context.sni_callback = snicallback
