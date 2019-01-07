@@ -132,6 +132,8 @@ def run(config=None):
   logger.setLevel(logging.INFO)
   logger.addFilter(filter)
 
+  logger.info("Python version "+sys.version)
+
   lock = threading.RLock() # shared lock
 
   options = {
