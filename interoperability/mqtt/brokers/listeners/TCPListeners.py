@@ -222,7 +222,7 @@ def setBrokers(aBroker3, aBroker5):
 def snicallback(socket, text, context):
   rc = None # success
   if text:
-    logger.info("Connection SNI info "+text)
+    logger.debug("Connection SNI info "+text)
   elif context.allow_non_sni_connections == False:
     logger.info("Denying TLS connection because of no SNI information")
     rc = ssl.ALERT_DESCRIPTION_INTERNAL_ERROR # stop connection
