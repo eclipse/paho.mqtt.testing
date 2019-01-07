@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2018 IBM Corp.
+  Copyright (c) 2013, 2019 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -324,7 +324,6 @@ class MQTTBrokers:
   def handleRequest(self, sock):
     "this is going to be called from multiple threads, so synchronize"
     self.lock.acquire()
-    sendWillMessage = False
     raw_packet = None
     try:
       try:
@@ -546,8 +545,7 @@ class MQTTBrokers:
         respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, "Unspecified error"))
       else:
         if topicFilter == "test/QoS 1 only":
-          respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK,
-             identifier=MQTTV5.ReasonCodes.min(1, QoS)))
+          respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, identifier=min(1, QoS)))
         elif topicFilter == "test/QoS 0 only":
           respqoss.append(MQTTV5.ReasonCodes(MQTTV5.PacketTypes.SUBACK, identifier=min(0, QoS)))
         else:

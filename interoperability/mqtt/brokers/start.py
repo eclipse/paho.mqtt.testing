@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2018 IBM Corp.
+  Copyright (c) 2013, 2019 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -87,7 +87,7 @@ def process_config(config, options):
         ca_certs = certfile = keyfile = None
         cert_reqs=ssl.CERT_REQUIRED
         bind_address = ""
-        port = 1883; TLS=False
+        port = 1883; TLS=False; allow_non_sni_connections=True;
         if len(words) > 1:
           port = int(words[1])
         protocol = "mqtt"
@@ -111,9 +111,13 @@ def process_config(config, options):
             certfile = words[1]; TLS=True
           elif words[0] == "keyfile":
             keyfile = words[1]; TLS=True
+          elif words[0] == "allow_non_sni_connections":
+            if words[1] == "false":
+              allow_non_sni_connections = False
         if protocol == "mqtt":
           servers_to_create.append((TCPListeners, {"host":bind_address, "port":port, "TLS":TLS, "cert_reqs":cert_reqs,
-                      "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile}))
+                      "ca_certs":ca_certs, "certfile":certfile, "keyfile":keyfile, 
+                      "allow_non_sni_connections":allow_non_sni_connections}))
         elif protocol == "mqttsn":
           servers_to_create.append((UDPListeners, {"host":bind_address, "port":port}))
         elif protocol == "http":

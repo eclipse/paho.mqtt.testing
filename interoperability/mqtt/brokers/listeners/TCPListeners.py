@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2018 IBM Corp.
+  Copyright (c) 2013, 2019 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -219,9 +219,18 @@ def setBrokers(aBroker3, aBroker5):
   broker3 = aBroker3
   broker5 = aBroker5
 
+def snicallback(socket, text, context):
+  rc = None # success
+  if text:
+    logger.info("Connection SNI info "+text)
+  elif context.allow_non_sni_connections == False:
+    logger.info("Denying TLS connection because of no SNI information")
+    rc = ssl.ALERT_DESCRIPTION_INTERNAL_ERROR # stop connection
+  return rc
+
 def create(port, host="", TLS=False, serve_forever=False,
     cert_reqs=ssl.CERT_REQUIRED,
-    ca_certs=None, certfile=None, keyfile=None):
+    ca_certs=None, certfile=None, keyfile=None, allow_non_sni_connections=True):
   global server
   logger.info("Starting TCP listener on address '%s' port %d %s", host, port, "with TLS support" if TLS else "")
   bind_address = ""
@@ -229,9 +238,18 @@ def create(port, host="", TLS=False, serve_forever=False,
     bind_address = host
   server = ThreadingTCPServer((bind_address, port), WebSocketTCPHandler, False)
   if TLS:
-    server.socket = ssl.wrap_socket(server.socket,
-      ca_certs=ca_certs, certfile=certfile, keyfile=keyfile,
-      cert_reqs=cert_reqs, server_side=True)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.allow_non_sni_connections = allow_non_sni_connections
+    try:
+      context.sni_callback = snicallback
+    except:
+      logger.error("SNI callback not supported")
+    if certfile:
+      context.load_cert_chain(certfile, keyfile)
+    if ca_certs:
+      context.load_verify_locations(ca_certs)
+    context.verify_mode = cert_reqs
+    server.socket = context.wrap_socket(server.socket, server_side=True)
   server.request_queue_size = 50
   server.terminate = False
   server.allow_reuse_address = True
