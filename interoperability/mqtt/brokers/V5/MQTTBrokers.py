@@ -28,6 +28,7 @@ logger = logging.getLogger('MQTT broker')
 mybroker = None
 
 def respond(sock, packet, maximumPacketSize=500):
+  packed = packet.pack()
   # deal with expiry
   if packet.fh.PacketType == MQTTV5.PacketTypes.PUBLISH:
     if hasattr(packet.properties, "MessageExpiryInterval"):
@@ -42,7 +43,7 @@ def respond(sock, packet, maximumPacketSize=500):
         except:
           traceback.print_exc()
   # deal with packet size
-  packlen = len(packet.pack())
+  packlen = len(packed)
   if packlen > maximumPacketSize:
     logger.error("[MQTT5-3.1.2-24] Packet too big to send to client packet size %d max packet size %d" % (packlen, maximumPacketSize))
     logger.info("[MQTT5-3.1.2-25] message must be discarded and behave as if it had been sent")
@@ -69,7 +70,8 @@ def respond(sock, packet, maximumPacketSize=500):
       except:
         traceback.print_exc()
     try:
-      sock.send(packet.pack()) # Could get socket error on send
+      bytes_sent = sock.send(packed) # Could get socket error on send
+      assert bytes_sent == len(packed)
     except:
       traceback.print_exc()
 

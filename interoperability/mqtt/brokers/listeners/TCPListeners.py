@@ -110,7 +110,12 @@ class BufferedSockets:
           l %= divisor
         mybytes.append(l) # units
         header += bytearray(mybytes)
-    return self.socket.send(header + data)
+    totaldata = header + data
+    # Ensure the entire packet is sent by calling send again if necessary
+    sent = self.socket.send(totaldata)
+    while sent < len(totaldata):
+      sent += self.socket.send(totaldata[sent:])
+    return sent
 
 
 class WebSocketTCPHandler(socketserver.StreamRequestHandler):
@@ -219,27 +224,29 @@ def setBrokers(aBroker3, aBroker5):
   broker3 = aBroker3
   broker5 = aBroker5
 
-def snicallback(socket, text, context):
-  rc = None # success
-  if text:
-    logger.debug("Connection SNI info "+text)
-  elif context.allow_non_sni_connections == False:
-    logger.info("Denying TLS connection because of no SNI information")
-    rc = ssl.ALERT_DESCRIPTION_INTERNAL_ERROR # stop connection
-  return rc
+
 
 def create(port, host="", TLS=False, serve_forever=False,
     cert_reqs=ssl.CERT_REQUIRED,
     ca_certs=None, certfile=None, keyfile=None, allow_non_sni_connections=True):
   global server
   logger.info("Starting TCP listener on address '%s' port %d %s", host, port, "with TLS support" if TLS else "")
+
+  def snicallback(socket, text, context):
+    rc = None # success
+    if text:
+      logger.debug("Connection SNI info "+text)
+    elif allow_non_sni_connections == False:
+      logger.info("Denying TLS connection because of no SNI information")
+      rc = ssl.ALERT_DESCRIPTION_INTERNAL_ERROR # stop connection
+    return rc
+
   bind_address = ""
   if host not in ["", "INADDR_ANY"]:
     bind_address = host
   server = ThreadingTCPServer((bind_address, port), WebSocketTCPHandler, False)
   if TLS:
-    context = ssl.SSLContext()
-    context.allow_non_sni_connections = allow_non_sni_connections
+    context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLSv1_2)
     try:
       context.sni_callback = snicallback
     except:
