@@ -305,7 +305,7 @@ class Connects(Packets):
         curlen += len(self.WillTopic) + 2
         self.WillMessage = readBytes(buffer[curlen:])
         curlen += len(self.WillMessage) + 2
-        logger.info("[[MQTT-3.1.2-9] will topic and will message fields must be present")
+        logger.info("[MQTT-3.1.2-9] will topic and will message fields must be present")
       else:
         self.WillTopic = self.WillMessage = None
 
