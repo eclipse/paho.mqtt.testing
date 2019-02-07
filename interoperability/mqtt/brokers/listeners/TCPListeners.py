@@ -110,7 +110,12 @@ class BufferedSockets:
           l %= divisor
         mybytes.append(l) # units
         header += bytearray(mybytes)
-    return self.socket.send(header + data)
+    totaldata = header + data
+    # Ensure the entire packet is sent by calling send again if necessary
+    sent = self.socket.send(totaldata)
+    while sent < len(totaldata):
+      sent += self.socket.send(totaldata[sent:])
+    return sent
 
 
 class WebSocketTCPHandler(socketserver.StreamRequestHandler):
