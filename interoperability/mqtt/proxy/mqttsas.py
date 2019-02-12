@@ -44,18 +44,18 @@ class MyHandler(socketserver.StreamRequestHandler):
       clients = self.request
       brokers = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       brokers.connect((brokerhost, brokerport))
-      while inbuf != None:
+      while inbuf is not None:
         (i, o, e) = select.select([clients, brokers], [], [])
         for s in i:
           if s == clients:
             inbuf = MQTTV3.getPacket(clients) # get one packet
-            if inbuf == None:
+            if inbuf is None:
               break
             try:
               packet = MQTTV3.unpackPacket(inbuf)
               if packet.fh.MessageType == MQTTV3.PUBLISH and \
                   packet.topicName == "MQTTSAS topic" and \
-                  packet.data == "TERMINATE":
+                  packet.data == b"TERMINATE":
                 print("Terminating client", self.ids[id(clients)])
                 brokers.close()
                 clients.close()
@@ -68,16 +68,16 @@ class MyHandler(socketserver.StreamRequestHandler):
               print(inbuf)
             except:
               traceback.print_exc()
-            brokers.send(inbuf)       # pass it on
+            brokers.sendall(inbuf)       # pass it on
           elif s == brokers:
             inbuf = MQTTV3.getPacket(brokers) # get one packet
-            if inbuf == None:
+            if inbuf is None:
               break
             try:
               print(timestamp(), "S to C", self.ids[id(clients)], repr(MQTTV3.unpackPacket(inbuf)))
             except:
               traceback.print_exc()
-            clients.send(inbuf)
+            clients.sendall(inbuf)
       print(timestamp()+" client "+self.ids[id(clients)]+" connection closing")
     except:
       print(repr((i, o, e)), repr(inbuf))
