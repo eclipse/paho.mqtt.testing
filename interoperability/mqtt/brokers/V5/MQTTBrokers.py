@@ -28,7 +28,6 @@ logger = logging.getLogger('MQTT broker')
 mybroker = None
 
 def respond(sock, packet, maximumPacketSize=500):
-  packed = packet.pack()
   # deal with expiry
   if packet.fh.PacketType == MQTTV5.PacketTypes.PUBLISH:
     if hasattr(packet.properties, "MessageExpiryInterval"):
@@ -42,6 +41,7 @@ def respond(sock, packet, maximumPacketSize=500):
           packet.properties.MessageExpiryInterval -= timespent
         except:
           traceback.print_exc()
+  packed = packet.pack()
   # deal with packet size
   packlen = len(packed)
   if packlen > maximumPacketSize:
