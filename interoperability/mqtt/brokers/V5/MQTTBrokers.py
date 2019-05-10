@@ -276,10 +276,14 @@ class cleanupThreads(threading.Thread):
     while self.running:
       time.sleep(1)
       # will delay
+      if self.lock:
+        self.lock.acquire()
       for clientid in self.broker.willMessageClients.copy():
         client = self.broker.getClient(clientid)
         if client and time.monotonic() >= client.delayedWillTime:
           self.broker.sendWillMessage(clientid)
+      if self.lock:
+        self.lock.release()
 
   def stop(self):
     self.running = False
@@ -487,6 +491,8 @@ class MQTTBrokers:
     if me.delayedWillTime:
       me.delayedWillTime = None
       logger.info("[MQTT5-3.1.3-9] don't send delayed will if client connects in time")
+    if me.id in self.broker.willMessageClients:
+      self.broker.willMessageClients.remove(me.id)
     # the topic alias maximum in the connect properties sets the maximum outgoing topic aliases for a client
     me.topicAliasMaximum = packet.properties.TopicAliasMaximum if hasattr(packet.properties, "TopicAliasMaximum") else 0
     me.maximumPacketSize = packet.properties.MaximumPacketSize if hasattr(packet.properties, "MaximumPacketSize") else MQTTV5.MAX_PACKET_SIZE
