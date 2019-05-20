@@ -121,19 +121,20 @@ class BufferedSockets:
 class WebSocketTCPHandler(socketserver.StreamRequestHandler):
 
   def getheaders(self, data):
+    "return headers: keys are converted to upper case so that checks are case insensitive"
     headers = {}
     lines = data.splitlines()
     for curline in lines[1:]:
       if curline.find(":") != -1:
         key, value = curline.split(": ", 1)
-        headers[key] = value
+        headers[key.upper()] = value     # headers are case insensitive
     return headers
 
   def handshake(self, client):
     GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
     data = client.recv(1024).decode('utf-8')
     headers = self.getheaders(data)
-    digest = base64.b64encode(hashlib.sha1((headers['Sec-WebSocket-Key'] + GUID).encode("utf-8")).digest())
+    digest = base64.b64encode(hashlib.sha1((headers['SEC-WEBSOCKET-KEY'] + GUID).encode("utf-8")).digest())
     resp = b"HTTP/1.1 101 Switching Protocols\r\n" +\
            b"Upgrade: websocket\r\n" +\
            b"Connection: Upgrade\r\n" +\

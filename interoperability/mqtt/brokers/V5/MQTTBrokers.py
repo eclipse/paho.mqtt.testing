@@ -71,7 +71,10 @@ def respond(sock, packet, maximumPacketSize=500):
         traceback.print_exc()
     try:
       bytes_sent = sock.send(packed) # Could get socket error on send
-      assert bytes_sent == len(packed)
+      if sock.websockets:
+        assert bytes_sent >= len(packed)
+      else:
+        assert bytes_sent == len(packed)
     except:
       traceback.print_exc()
 
