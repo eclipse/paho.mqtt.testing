@@ -162,6 +162,7 @@ class WebSocketTCPHandler(socketserver.StreamRequestHandler):
             if char == b"G":    # should be websocket connection
               self.handshake(sock)
               sock.websockets = True
+              logger.info("Switching to websockets for socket %d", sock_no)
           if sock.websockets and first:
             pass
           else:
