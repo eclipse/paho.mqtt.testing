@@ -201,7 +201,7 @@ class MQTTSNBrokers:
   def shutdown(self):
     # do we need to do anything here?
     pass
-  
+
   def setBroker3(self, broker3):
     self.broker.setBroker3(broker3.broker)
 
@@ -220,6 +220,7 @@ class MQTTSNBrokers:
     try:
       if raw_packet == None:
         # will message
+        # TODO (cclauss) `sock` is an undefined name in this context
         self.disconnect(sock, None, terminate=True)
         terminate = True
       else:

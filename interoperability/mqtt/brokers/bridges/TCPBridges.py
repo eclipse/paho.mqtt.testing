@@ -59,6 +59,7 @@ class Callbacks(mqtt.clients.V5.Callback):
         "qos" : qos, "retained" : retained, "msgid" : msgid, "properties" : properties})
 
     # add to local broker
+    # TODO (cclauss) There are four undefined names in this context: aClientid, topic, message, receivedTime
     self.broker.broker.publish(aClientid, topic, message, qos, properties, receivedTime, retained)
     return True
 
@@ -104,7 +105,7 @@ class Bridges:
     self.client.subscribe(["+"], [options])
 
   def getPacket(self):
-    # get packet from remote 
+    # get packet from remote
     pass
 
   def handlePacket(self, packet):
@@ -123,7 +124,7 @@ def setBroker5(aBroker5):
   global broker5
   broker5 = aBroker5
 
-def create(port, host="", TLS=False, 
+def create(port, host="", TLS=False,
     cert_reqs=ssl.CERT_REQUIRED,
     ca_certs=None, certfile=None, keyfile=None):
 

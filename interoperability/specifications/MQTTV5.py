@@ -60,23 +60,23 @@ class Clients:
 		packet = None
 		try:
 			while True:
-				packet = MQTTV3.unpackPacket(MQTTV3.getPacket(state.sockets[sockid]))
+				packet = MQTTV5.unpackPacket(MQTTV5.getPacket(state.sockets[sockid]))
 				if packet == None:
 					break
 				if test:
 					logger.debug("received result %s", (sockid, packet))
 					test.addResult((sockid, packet))
-					if packet.fh.MessageType == MQTTV3.CONNACK:
+					if packet.fh.MessageType == MQTTV5.CONNACK:
 						self.packets.append(packet)
 				else:
 					mbt.observe((sockid, packet))
-					if packet.fh.MessageType == MQTTV3.PUBREC:
+					if packet.fh.MessageType == MQTTV5.PUBREC:
 						mbt.execution.pools["pubrecs"].append(mbt.Choices((sockid, packet)))
-					elif packet.fh.MessageType == MQTTV3.PUBLISH and packet.fh.QoS in [1, 2]:
+					elif packet.fh.MessageType == MQTTV5.PUBLISH and packet.fh.QoS in [1, 2]:
 						mbt.execution.pools["publishes"].append(mbt.Choices((sockid, packet)))
-					elif packet.fh.MessageType == MQTTV3.PUBREL:
+					elif packet.fh.MessageType == MQTTV5.PUBREL:
 						mbt.execution.pools["pubrels"].append(mbt.Choices((sockid, packet)))
-					elif packet.fh.MessageType == MQTTV3.CONNACK:
+					elif packet.fh.MessageType == MQTTV5.CONNACK:
 						self.packets.append(packet)
 		except:
 			if sys.exc_info()[0] != socket.error:
@@ -253,7 +253,7 @@ def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean",
 #	    username : "usernames", password : "passwords"
 ) -> "connackrc":
 	sock = state.sockets[sockid]
-	connect = MQTTV3.Connects()
+	connect = MQTTV5.Connects()
 	connect.ClientIdentifier = clientid
 	connect.CleanSession = cleansession
 	connect.KeepAliveTimer = 60
@@ -272,7 +272,7 @@ def connect(sockid : "socket", clientid : "clientids", cleansession : "boolean",
 	sock.send(connect.pack())
 	time.sleep(0.5)
 	checksocket(sockid)
-	response = state.clientlist[sockid].packets.pop(0) #MQTTV3.unpackPacket(MQTTV3.getPacket(sock))
+	response = state.clientlist[sockid].packets.pop(0) #MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
 	logger.debug("+++connect response", response)
 	if response == None or response.returnCode not in [0, 2]:
 		raise Exception("Return code "+str(response.returnCode)+" in connack")
@@ -292,7 +292,7 @@ def checksocket(sockid):
 @mbt.action
 def disconnect(sockid : "socket"):
 	sock = state.sockets[sockid]
-	disconnect = MQTTV3.Disconnects()
+	disconnect = MQTTV5.Disconnects()
 	sock.send(disconnect.pack())
 	checksocket(sockid)
 	#time.sleep(0.2)
@@ -301,7 +301,7 @@ def disconnect(sockid : "socket"):
 @mbt.action
 def subscribe(sockid : "socket", packetid : "packetids", topics : "topicLists", qoss : "qosLists"):
 	sock = state.sockets[sockid]
-	subscribe = MQTTV3.Subscribes()
+	subscribe = MQTTV5.Subscribes()
 	subscribe.messageIdentifier = packetid
 	count = 0
 	for t in topics:
@@ -315,7 +315,7 @@ def subscribe(sockid : "socket", packetid : "packetids", topics : "topicLists", 
 @mbt.action
 def unsubscribe(sockid : "socket", packetid : "packetids", topics : "topicLists"):
 	sock = state.sockets[sockid]
-	unsubscribe = MQTTV3.Unsubscribes()
+	unsubscribe = MQTTV5.Unsubscribes()
 	unsubscribe.messageIdentifier = packetid
 	unsubscribe.data = topics
 	sock.send(unsubscribe.pack())
@@ -326,7 +326,7 @@ def unsubscribe(sockid : "socket", packetid : "packetids", topics : "topicLists"
 @mbt.action
 def publish(sockid : "socket", packetid : "packetids", topic : "topics", payload : "payloads", qos : "QoSs", retained : "boolean"):
 	sock = state.sockets[sockid]
-	publish = MQTTV3.Publishes()
+	publish = MQTTV5.Publishes()
 	publish.fh.QoS = qos
 	publish.fh.RETAIN = retained
 	publish.messageIdentifier = packetid
@@ -341,7 +341,7 @@ def publish(sockid : "socket", packetid : "packetids", topic : "topics", payload
 def pubrel(pubrec : "pubrecs"): # pubrecs are observable events
 	sockid, pubrec = pubrec
 	sock = state.sockets[sockid]
-	pubrel = MQTTV3.Pubrels()
+	pubrel = MQTTV5.Pubrels()
 	pubrel.messageIdentifier = pubrec.messageIdentifier
 	sock.send(pubrel.pack())
 
@@ -352,11 +352,11 @@ def puback(publish : "publishes"):
 	sockid, publish = publish
 	sock = state.sockets[sockid]
 	if publish.fh.QoS == 1:
-		puback = MQTTV3.Pubacks()
+		puback = MQTTV5.Pubacks()
 		puback.messageIdentifier = publish.messageIdentifier
 		sock.send(puback.pack())
 	elif publish.fh.QoS == 2:
-		pubrec = MQTTV3.Pubrecs()
+		pubrec = MQTTV5.Pubrecs()
 		pubrec.messageIdentifier = publish.messageIdentifier
 		sock.send(pubrec.pack())
 
@@ -366,7 +366,7 @@ mbt.finishedWith(puback, "publish")
 def pubcomp(pubrel : "pubrels"):
 	sockid, pubrel = pubrel
 	sock = state.sockets[sockid]
-	pubcomp = MQTTV3.Pubcomps()
+	pubcomp = MQTTV5.Pubcomps()
 	pubcomp.messageIdentifier = pubrel.messageIdentifier
 	sock.send(pubcomp.pack())
 
@@ -377,7 +377,7 @@ mbt.finishedWith(pubcomp, "pubrel")
 This is not active yet.  How to use ping?
 """
 def pingreq():
-	pingreq = MQTTV3.Pingreqs()
+	pingreq = MQTTV5.Pingreqs()
 	state.sockets[0].send(pingreq.pack())
 
 

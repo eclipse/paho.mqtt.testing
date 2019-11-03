@@ -165,7 +165,7 @@ class Flags:
   def __setattr__(self, name, value):
     names = ["DUP", "QoS", "RETAIN", "Will", "CleanSession", "TopicIdType"]
     if name not in names:
-      raise MQTTException(name + " Attribute name must be one of "+str(names))
+      raise MQTTSNException(name + " Attribute name must be one of "+str(names))
     object.__setattr__(self, name, value)
 
   def __str__(self):
@@ -203,7 +203,7 @@ class Connects(Messages):
          ["messageType", "Flags", "ProtocolId", "Duration", "ClientId"])
     self.messageType = MessageTypes.CONNECT
     self.Flags = Flags()
-    self.ProtocolId = 1 
+    self.ProtocolId = 1
     self.Duration = 0
     self.ClientId = ""
     if buffer != None:
@@ -279,7 +279,7 @@ class Publishes(Messages):
          ["Flags", "TopicId", "MsgId", "Data"])
     object.__setattr__(self, "messageType", MessageTypes.PUBLISH)
     self.Flags = Flags()
-    self.TopicId = 1 
+    self.TopicId = 1
     self.MsgId = 0
     self.Data = b""
     if buffer != None:
@@ -317,7 +317,7 @@ class Publishes(Messages):
 
 WillTopicReqs = WillTopics = WillMsgReqs = WillMsgs = Registers = Regacks = Pubacks = None
 
-classes = [None, None, None, None, Connects, Connacks, 
+classes = [None, None, None, None, Connects, Connacks,
            WillTopicReqs, WillTopics, WillMsgReqs, WillMsgs,
            Registers, Regacks, Publishes, Pubacks]
 

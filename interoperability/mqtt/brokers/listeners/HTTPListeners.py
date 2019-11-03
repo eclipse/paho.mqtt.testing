@@ -17,7 +17,7 @@
 """
 
 import sys, traceback, socket, logging, getopt, hashlib, base64
-import threading, ssl, json, re
+import threading, ssl, json, re, cgi
 import http.server, urllib, urllib.request, urllib.parse
 
 from mqtt.brokers.SN import MQTTSNBrokers
@@ -73,10 +73,10 @@ class APIs:
 
   def __init__(self):
     self.gets = [
-      ("/api/v0001/clients$", get_clients),   
-      ("/api/v0001/clients/([^/]*)$", get_client),   
-      ("/api/v0001/subscriptions$", get_subscriptions),  
-      ("/api/v0001/retained$", get_retained_messages), 
+      ("/api/v0001/clients$", get_clients),
+      ("/api/v0001/clients/([^/]*)$", get_client),
+      ("/api/v0001/subscriptions$", get_subscriptions),
+      ("/api/v0001/retained$", get_retained_messages),
       ]
 
     self.puts = [
@@ -85,7 +85,7 @@ class APIs:
     self.patches = [
       ]
 
-    self.posts = [ 
+    self.posts = [
       ]
 
     self.deletes = [
@@ -187,9 +187,11 @@ class requestHandler(http.server.BaseHTTPRequestHandler):
     self.end_headers()
     if value:
       self.wfile.write(bytes(value + "\n", 'utf8'))
+    """
     if persistence:
       deviceAndThingDB._p_changed = True
       transaction.commit()
+    """
 
   def do_POST(self):
     logger.debug("do_POST")

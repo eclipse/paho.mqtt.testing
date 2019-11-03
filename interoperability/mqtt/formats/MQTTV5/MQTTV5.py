@@ -24,7 +24,7 @@ so that the tests that use this package can send invalid data for error testing.
 
 """
 
-import logging, struct
+import logging, struct, traceback
 
 logger = logging.getLogger('MQTT broker')
 
@@ -338,7 +338,7 @@ class FixedHeaders(object):
     return {
       "PacketType":Packets.classNames[self.PacketType],
       "DUP": self.DUP,
-      "QoS": self.QoS, 
+      "QoS": self.QoS,
       "RETAIN": self.RETAIN,
       }
 
@@ -829,7 +829,7 @@ class Connects(Packets):
       "ProtocolName": self.ProtocolName,
       "ProtocolVersion": self.ProtocolVersion,
       "CleanStart": self.CleanStart,
-      "WillFlag": self.WillFlag, 
+      "WillFlag": self.WillFlag,
       "KeepAliveTimer": self.KeepAliveTimer,
       "ClientId": self.ClientIdentifier,
       "usernameFlag": self.usernameFlag,
