@@ -54,6 +54,7 @@ class BufferedSockets:
       length = 0
       for i in range(0, 8):
         length += ord(self.socket.recv(1)) * 2**((7 - i)*8)
+    assert maskbit == True
     if maskbit:
       mask = self.socket.recv(4)
     mpayload = bytearray()
