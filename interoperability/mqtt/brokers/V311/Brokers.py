@@ -53,7 +53,11 @@ class Brokers:
 
   def connect(self, aClient):
     aClient.connected = True
-    aClient.timestamp = time.clock()
+    try:
+      aClient.timestamp = time.clock()
+    except AttributeError:
+      aClient.timestamp = time.time()
+
     self.__clients[aClient.id] = aClient
     if aClient.cleansession:
       self.cleanSession(aClient.id)
@@ -80,8 +84,11 @@ class Brokers:
         del self.__clients[aClientid]
       else:
         logger.info("[MQTT-3.1.2-4] broker must store the session data for client %s", aClientid)
-        self.__clients[aClientid].timestamp = time.clock()
-        self.__clients[aClientid].connected = False 
+        try:
+          self.__clients[aClientid].timestamp = time.clock()
+        except AttributeError:
+          self.__clients[aClientid].timestamp = time.time()
+        self.__clients[aClientid].connected = False
         logger.info("[MQTT-3.1.2-10] will message is deleted after use or disconnect, for client %s", aClientid)
         logger.info("[MQTT-3.14.4-3] on receipt of disconnect, will message is deleted")
         self.__clients[aClientid].will = None
