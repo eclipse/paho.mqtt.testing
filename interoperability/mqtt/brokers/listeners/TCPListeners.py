@@ -250,6 +250,7 @@ def create(port, host="", TLS=False, serve_forever=False,
   server = ThreadingTCPServer((bind_address, port), WebSocketTCPHandler, False)
   if TLS:
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLSv1_2)
+    context.set_ciphers('ALL:@SECLEVEL=1') /* until we have seclevel 2 TLS config */
     try:
       context.sni_callback = snicallback
     except:
