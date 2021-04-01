@@ -56,7 +56,10 @@ class Brokers:
 
   def connect(self, aClient, clean=False):
     aClient.connected = True
-    #aClient.timestamp = time.clock()
+    try:
+      aClient.timestamp = time.clock() # time.clock is deprecated
+    except:
+      aClient.timestamp = time.process_time()
     self.__clients[aClient.id] = aClient
     if clean:
       self.cleanSession(aClient.id)
