@@ -16,7 +16,7 @@ Check the readme in the interoperability directory for details.
 
 - Project Website: [https://www.eclipse.org/paho](https://www.eclipse.org/paho)
 - Eclipse Project Information: [https://projects.eclipse.org/projects/iot.paho](https://projects.eclipse.org/projects/iot.paho)
-- Paho Testing Page: [https://www.eclipse.org/paho/clients/testing/](https://www.eclipse.org/paho/clients/testing/)
+- Paho Testing Page: [https://www.eclipse.org/paho/index.php?page=components/testing/index.php](https://www.eclipse.org/paho/index.php?page=components/testing/index.php)
 - GitHub: [https://github.com/eclipse/paho.mqtt.testing](https://github.com/eclipse/paho.mqtt.testing)
 - Twitter: [@eclipsepaho](https://twitter.com/eclipsepaho)
 - Issues: [https://github.com/eclipse/paho.mqtt.testing/issues](https://github.com/eclipse/paho.mqtt.testing/issues)
