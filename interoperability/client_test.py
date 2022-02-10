@@ -35,6 +35,8 @@ class Callbacks(mqtt_client.Callback):
     logging.info("connectionLost %s", str(cause))
 
   def publishArrived(self, topicName, payload, qos, retained, msgid):
+    if topicName.startswith("$SYS/"):
+      return True
     logging.info("publishArrived %s %s %d %d %d", topicName, payload, qos, retained, msgid)
     self.messages.append((topicName, payload, qos, retained, msgid))
     return True
@@ -163,7 +165,7 @@ class Test(unittest.TestCase):
         time.sleep(1)
         aclient.disconnect()
 
-        assert len(callback.messages) == 3
+        self.assertEqual(len(callback.messages), 3)
 
         # clear retained messages
         callback.clear()
@@ -448,6 +450,8 @@ if __name__ == "__main__":
       host = a
     elif o in ("-p", "--port"):
       port = int(a)
+      sys.argv.remove("-p") if "-p" in sys.argv else sys.argv.remove("--port")
+      sys.argv.remove(a)
     elif o in ("--iterations"):
       iterations = int(a)
     else:
