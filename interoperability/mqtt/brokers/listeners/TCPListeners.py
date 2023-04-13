@@ -250,10 +250,10 @@ def create(port, host="", TLS=False, serve_forever=False,
   server = ThreadingTCPServer((bind_address, port), WebSocketTCPHandler, False)
   if TLS:
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLSv1_2)
-    try:
-      context.set_ciphers('ALL:@SECLEVEL=1') # until we have seclevel 2 TLS config
-    except:
-      pass # set_ciphers doesn't work on older Python versions
+    #try:
+    #  context.set_ciphers('ALL:@SECLEVEL=1') # until we have seclevel 2 TLS config
+    #except:
+    #  pass # set_ciphers doesn't work on older Python versions
     try:
       context.sni_callback = snicallback
     except:
