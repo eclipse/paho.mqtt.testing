@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2019 IBM Corp.
+  Copyright (c) 2013, 2021 IBM Corp. and Ian Craggs
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -18,7 +18,7 @@
 *******************************************************************
 """
 
-import sys, traceback, logging, getopt, threading, ssl
+import sys, traceback, logging, getopt, threading, ssl, signal
 
 from .V311 import MQTTBrokers as MQTTV3Brokers
 from .V5 import MQTTBrokers as MQTTV5Brokers
@@ -31,6 +31,10 @@ from mqtt.brokers.listeners import TCPListeners, UDPListeners, HTTPListeners
 from mqtt.brokers.bridges import TCPBridges
 
 logger = None
+
+def handler(signum, frame):
+    logger.info('Signal handler called with signal %d', signum)
+    raise OSError("Signal interrupt")
 
 def setup_persistence(persistence_filename):
   import ZODB, ZODB.FileStorage, BTrees.OOBTree, transaction, persistent
@@ -134,6 +138,8 @@ def run(config=None):
 
   logger.info("Python version "+sys.version)
 
+  signal.signal(signal.SIGTERM, handler)
+
   lock = threading.RLock() # shared lock
 
   options = {
@@ -192,7 +198,7 @@ def run(config=None):
     else:
       for server in servers_to_create:
         servers.append(server[0].create(**server[1]))
-  except KeyboardInterrupt:
+  except (KeyboardInterrupt, OSError):
     pass
   except:
     logger.exception("startBroker")
