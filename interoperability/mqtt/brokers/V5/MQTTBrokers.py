@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2020 IBM Corp.
+  Copyright (c) 2013, 2023 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -319,7 +319,7 @@ class MQTTBrokers:
       self.mscfile.write("msc {\n broker;\n")
 
   def shutdown(self):
-    self.disconnectAll()
+    self.disconnectAll(reasonCode="Server shutting down")
     self.cleanupThread.stop()
 
   def setBroker3(self, broker3):
@@ -436,7 +436,7 @@ class MQTTBrokers:
       for cursock in self.clients.keys():
         if self.clients[cursock].id == packet.ClientIdentifier:
           logger.info("[MQTT5-3.1.4-3] Disconnecting old client %s", packet.ClientIdentifier)
-          self.disconnect(cursock, reasonCode="Session taken over")
+          self.disconnect(cursock, reasonCode="Session taken over", sendWillMessage=True)
           break
     me = None
     clean = False
@@ -542,9 +542,9 @@ class MQTTBrokers:
     except:
       pass # doesn't matter if the socket has been closed at the other end already
 
-  def disconnectAll(self):
+  def disconnectAll(self, reasonCode=None):
     for sock in list(self.clients.keys())[:]:
-      self.disconnect(sock, None)
+      self.disconnect(sock, None, reasonCode=reasonCode)
 
   def subscribe(self, sock, packet):
     topics = []

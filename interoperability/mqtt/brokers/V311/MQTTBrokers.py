@@ -1,6 +1,6 @@
 """
 *******************************************************************
-  Copyright (c) 2013, 2018 IBM Corp.
+  Copyright (c) 2013, 2023 IBM Corp.
 
   All rights reserved. This program and the accompanying materials
   are made available under the terms of the Eclipse Public License v1.0
@@ -295,7 +295,7 @@ class MQTTBrokers:
       for s in self.clients.keys():
         if self.clients[s].id == packet.ClientIdentifier:
           logger.info("[MQTT-3.1.4-2] Disconnecting old client %s", packet.ClientIdentifier)
-          self.disconnect(s, None)
+          self.disconnect(s, None, terminate=True)
           break
     me = None
     if not packet.CleanSession:
