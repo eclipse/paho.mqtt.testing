@@ -1,4 +1,7 @@
+*.egg-info
 *.log
 *.py[cod]
 *~
+/build
+/dist
 tests
