@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "paho-mqtt-testing"
+dynamic = ["version"]
+description = ""
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = []
+authors = []
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = []
+
+[project.urls]
+Documentation = "https://github.com/eclipse/paho.mqtt.testing#readme"
+Issues = "https://github.com/eclipse/paho.mqtt.testing/issues"
+Source = "https://github.com/eclipse/paho.mqtt.testing"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["mqtt"]
