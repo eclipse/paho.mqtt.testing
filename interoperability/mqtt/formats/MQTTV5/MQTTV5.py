@@ -24,7 +24,7 @@ so that the tests that use this package can send invalid data for error testing.
 
 """
 
-import logging, struct
+import logging, traceback
 
 logger = logging.getLogger('MQTT broker')
 
@@ -56,6 +56,10 @@ class PacketTypes:
 
   # Dummy packet type for properties use - will delay only applies to will
   WILLMESSAGE = 99
+
+  @staticmethod
+  def fromInt(i):
+    return list(filter(lambda x: getattr(PacketTypes, x) == i, dir(PacketTypes)))[0]
 
 
 class Packets(object):
@@ -107,7 +111,9 @@ class ReasonCodes:
     assert identifier in self.names.keys(), identifier
     names = self.names[identifier]
     namelist = [name for name in names.keys() if packetType in names[name]]
-    assert len(namelist) == 1
+    if not len(namelist) == 1:
+      raise ValueError("Reason code %s (%s) invalid for packet type %s" % (identifier, list(names.keys()),
+                                                                           PacketTypes.fromInt(packetType)))
     return namelist[0]
 
   def getId(self, name):
@@ -143,6 +149,9 @@ class ReasonCodes:
 
   def pack(self):
     return bytes([self.value])
+
+  def __repr__(self):
+    return str(self)
 
   def __init__(self, packetType, aName="Success", identifier=-1):
     self.packetType = packetType
